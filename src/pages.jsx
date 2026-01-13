@@ -10,6 +10,7 @@ import {
   File, AlertCircle
 } from 'lucide-react';
 import { TREATMENTS, INITIAL_HOSPITALS, REVIEWS_DATA, PRIVACY_CONTENT, TERMS_CONTENT } from './data';
+import { supabase } from './supabase'; // 이거 한 줄 추가!
 
 // --- [공통] 약관 팝업 ---
 const PolicyModal = ({ isOpen, onClose, title, content }) => {
@@ -974,30 +975,47 @@ export const InquiryPage = ({ setView, mode, setMode, onClose }) => {
       }
   };
 
-  const handleFormSubmit = () => {
-      // 1. 필수값 체크 로직
-      const requiredFields = [
-          formData.firstName, 
-          formData.lastName, 
-          formData.email, 
-          formData.spokenLanguage, 
-      ];
-
-      // 하나라도 비어있으면 경고
-      if (requiredFields.some(field => !field.trim())) {
-          alert("Please fill in all required fields marked with *.");
+  const handleFormSubmit = async () => {
+      // 1. 필수값 체크
+      const requiredFields = [formData.firstName, formData.lastName, formData.email, formData.spokenLanguage];
+      if (requiredFields.some(field => !field?.trim())) {
+          alert("Please fill in all required fields (*).");
           return;
       }
-
-      // 2. 약관 동의 체크
       if (!formData.privacyAgreed) {
-          alert("Please agree to the Privacy Policy (*).");
+          alert("Please agree to the Privacy Policy.");
           return;
       }
 
-      // 3. 통과 시 성공 페이지로 이동
-      // (실제 백엔드가 있다면 여기서 API 전송)
-      setView('success'); 
+      try {
+          // 2. Supabase(DB)에 데이터 전송! 🚀
+          const { error } = await supabase
+              .from('inquiries')
+              .insert([
+                  { 
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    email: formData.email,
+                    nationality: formData.nationality,
+                    spoken_language: formData.spokenLanguage,
+                    contact_method: formData.contactMethod,
+                    contact_id: formData.contactId,
+                    preferred_date: formData.preferredDate,
+                    treatment_type: formData.treatmentType,
+                    message: formData.message,
+                    status: 'pending' // 초기 상태
+                  }
+              ]);
+
+          if (error) throw error; // 에러 나면 잡아내기
+
+          // 3. 성공 시 페이지 이동
+          setView('success');
+
+      } catch (error) {
+          console.error('Error:', error);
+          alert("Error submitting inquiry. Please try again.");
+      }
   };
 
   return (

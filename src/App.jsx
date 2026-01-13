@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { TREATMENTS, INITIAL_HOSPITALS } from './data';
 import { Header, HeroSection, CardListSection, FloatingInquiryBtn, PersonalConciergeCTA, MobileBottomNav } from './components.jsx';
 import { TreatmentDetailPage, HospitalDetailPage, InquiryPage, LoginPage, SignUpPage, SuccessPage } from './pages.jsx';
+import { AdminPage } from './AdminPage';
 
 function App() {
   const [view, setView] = useState('home');
@@ -15,11 +16,11 @@ function App() {
 
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
 
-  // ✅ [수정 1] 메뉴 이동 시 검색어를 깔끔하게 초기화하는 헬퍼 함수
+  // ✅ 메뉴 이동 시 검색어를 깔끔하게 초기화하는 헬퍼 함수
   const handleNavClick = (targetView) => {
-    setSearchTerm(''); // 검색어 초기화! (이제 xxx가 남지 않아요)
+    setSearchTerm(''); 
     setView(targetView);
-    setIsMobileMenuOpen(false); // 모바일 메뉴도 닫아줌
+    setIsMobileMenuOpen(false); 
   };
 
   const handleTreatmentClick = (id) => { setSelectedId(id); setView('detail_treatment'); };
@@ -34,8 +35,7 @@ function App() {
 
   const handleInquiryClose = () => { setView(lastView); };
 
-  // ✅ [수정 2] 검색 필터링 로직 강화 (시술 + 병원 모두 검색)
-  // 검색어가 있을 때 필터링된 결과물을 미리 계산해 둡니다.
+  // ✅ 검색 필터링 로직
   const filteredTreatments = TREATMENTS.filter(t => 
     t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     t.hospital.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -56,7 +56,6 @@ function App() {
         handleGlobalInquiry={handleGlobalInquiry}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
-        // ✅ 새로 만든 네비게이션 함수 전달
         onNavClick={handleNavClick}
       />
       
@@ -69,15 +68,16 @@ function App() {
             <div className="mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div>
           </>
         )}
+        
+        {/* ✅ 관리자 페이지 뷰 추가 */}
+        {view === 'admin' && <AdminPage setView={setView} />}
 
-        {/* ✅ [수정 3] 검색 결과 화면 로직 변경 */}
         {view === 'list_treatment' && (
           <>
             {searchTerm ? (
-              /* 검색어가 있을 때: 시술 + 병원 결과 둘 다 보여줌 (통합 검색) */
               <>
                 <div className="pt-4 px-4 text-center">
-                   <p className="text-gray-500 text-sm">Search results for <span className="text-teal-600 font-bold">"{searchTerm}"</span></p>
+                    <p className="text-gray-500 text-sm">Search results for <span className="text-teal-600 font-bold">"{searchTerm}"</span></p>
                 </div>
 
                 {filteredTreatments.length > 0 && (
@@ -106,7 +106,6 @@ function App() {
                 )}
               </>
             ) : (
-              /* 검색어가 없을 때: 그냥 전체 시술 목록 보여줌 */
               <CardListSection
                 title="Curated Treatments"
                 items={TREATMENTS}
@@ -143,12 +142,18 @@ function App() {
               onInquiry={handleGlobalInquiry} 
               onNavClick={handleNavClick}
            />
-           {/* 데스크탑 플로팅 버튼은 모바일 하단 바와 겹치지 않게 숨김 처리 */}
            <div className="hidden md:block">
               <FloatingInquiryBtn onClick={handleGlobalInquiry} />
            </div>
         </>
       )}
+
+      <button 
+        onClick={() => setView('admin')} 
+        className="fixed bottom-2 right-2 w-4 h-4 bg-transparent z-[9999]" 
+        title="Admin"
+      ></button>
+
     </div>
   );
 }

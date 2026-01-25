@@ -1,0 +1,96 @@
+﻿HEALO_REVIEW Packaging Manifest
+GeneratedAt: 2026-01-25T16:58:53.8403952+09:00
+ProjectRoot: C:\Users\user\Desktop\HEALO_Demo
+ZipPath: C:\Users\user\Desktop\HEALO_Demo\HEALO_REVIEW.zip
+
+IncludedDirs: app, src, migrations, public, scripts
+IncludedRootFilesGlobs: README*, PROJECT_ANALYSIS*, FINAL_MIGRATION_SUMMARY*, MIGRATION_PLAN*, EXECUTION_REPORT*, STATIC_CHECK_REPORT*
+
+ExcludedDirNames: node_modules, .next, dist, .git, .cursor
+ExcludedEnvPatterns: .env*
+
+Validation:
+ - ENV check: PASS
+ - Excluded dirs check: PASS
+
+ZIP top entries (first 80):
+ - app\admin\AdminWrapper.jsx
+ - app\admin\page.jsx
+ - app\admin\rag\page.tsx
+ - app\api\
+ - app\api\attachments\
+ - app\api\attachments\sign\route.ts
+ - app\api\chat\route.ts
+ - app\api\inquiries\
+ - app\api\inquiries\event\route.ts
+ - app\api\inquiries\intake\route.ts
+ - app\api\inquiries\rotate-token\route.ts
+ - app\api\inquiry\
+ - app\api\inquiry\normalize\route.ts
+ - app\api\rag\
+ - app\api\rag\ingest\route.ts
+ - app\api\rag\inquiries\route.ts
+ - app\api\rag\search\route.ts
+ - app\api\referral\
+ - app\api\referral\summary\route.ts
+ - app\auth\AuthWrapper.jsx
+ - app\ClientShell.jsx
+ - app\globals.css
+ - app\home\HomeClient.jsx
+ - app\hospitals\[id]\
+ - app\hospitals\[slug]\HospitalDetailClient.jsx
+ - app\hospitals\[slug]\page.jsx
+ - app\hospitals\page.jsx
+ - app\inquiry\InquiryWrapper.jsx
+ - app\inquiry\page.jsx
+ - app\layout.jsx
+ - app\list\PaginatedListClient.jsx
+ - app\login\page.jsx
+ - app\page.jsx
+ - app\privacy\page.jsx
+ - app\providers.jsx
+ - app\robots.js
+ - app\signup\page.jsx
+ - app\sitemap.js
+ - app\success\page.jsx
+ - app\terms\page.jsx
+ - app\treatments\[id]\
+ - app\treatments\[slug]\page.jsx
+ - app\treatments\[slug]\TreatmentDetailClient.jsx
+ - app\treatments\page.jsx
+ - EXECUTION_REPORT.md
+ - FINAL_MIGRATION_SUMMARY.md
+ - MIGRATION_PLAN.md
+ - migrations\20260125_inquiries_intake_progressive.sql
+ - migrations\20260125_inquiries_public_token_and_attachments.sql
+ - migrations\20260125_inquiry_events.sql
+ - migrations\20260125_security_encryption_functions.sql
+ - migrations\20260125_security_rls_policies.sql
+ - migrations\20260125_security_table_separation.sql
+ - migrations\SECURITY_IMPLEMENTATION_SUMMARY.md
+ - migrations\SECURITY_SETUP_GUIDE.md
+ - migrations\SECURITY_SMOKE_TEST.md
+ - PROJECT_ANALYSIS.md
+ - README.md
+ - scripts\colab_complete.py
+ - scripts\colab_complete_demo.py
+ - scripts\COLAB_GUIDE.md
+ - scripts\COLAB_INSTRUCTIONS.md
+ - scripts\colab_quick_start.py
+ - scripts\colab_setup.ipynb
+ - scripts\evaluation.ts
+ - scripts\evaluation_colab.py
+ - scripts\fix_stats.py
+ - scripts\README.md
+ - scripts\SIMPLE_GUIDE.md
+ - scripts\verify_inquiry_form_normalize.sql
+ - scripts\verify_intake_constraints.sql
+ - src\AdminPage.jsx
+ - src\App.css
+ - src\App.jsx
+ - src\assets\
+ - src\components.jsx
+ - src\components\AddressInput.jsx
+ - src\components\ErrorBoundary.jsx
+ - src\components\GoogleMap.jsx
+ - src\components\Modals.jsx

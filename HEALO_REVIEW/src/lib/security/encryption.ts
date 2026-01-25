@@ -1,0 +1,152 @@
+/**
+ * HEALO: 서버 사이드 암호화 유틸리티
+ * pgcrypto 함수를 호출하여 데이터 암호화/복호화
+ * 주의: 클라이언트에서는 사용하지 않음
+ */
+
+import { supabaseAdmin } from "../rag/supabaseAdmin";
+
+const ENCRYPTION_KEY = process.env.SUPABASE_ENCRYPTION_KEY;
+const MIN_KEY_LENGTH = 32;
+
+/**
+ * 암호화 키 검증 (서버 부팅 시/암호화 호출 전에 실행)
+ * 키가 없거나 길이가 부족하면 즉시 에러 발생
+ * @throws Error 키 누락 또는 길이 부족 시
+ */
+export function assertEncryptionKey(): void {
+  if (!ENCRYPTION_KEY) {
+    const error = new Error(
+      "[security/encryption] SUPABASE_ENCRYPTION_KEY is missing. " +
+      "암호화 키가 설정되지 않았습니다. 환경변수를 확인하세요. " +
+      "키 분실/변경 시 기존 데이터 복호화 불가."
+    );
+    console.error(error.message);
+    throw error;
+  }
+
+  if (ENCRYPTION_KEY.length < MIN_KEY_LENGTH) {
+    const error = new Error(
+      `[security/encryption] SUPABASE_ENCRYPTION_KEY is too short (${ENCRYPTION_KEY.length} < ${MIN_KEY_LENGTH}). ` +
+      `암호화 키는 최소 ${MIN_KEY_LENGTH}자 이상이어야 합니다. ` +
+      "키 분실/변경 시 기존 데이터 복호화 불가."
+    );
+    console.error(error.message);
+    throw error;
+  }
+}
+
+// 서버 부팅 시 키 검증 (모듈 로드 시점)
+// 주의: 개발 환경에서는 경고만, 프로덕션에서는 즉시 실패
+if (process.env.NODE_ENV === "production") {
+  try {
+    assertEncryptionKey();
+  } catch (error) {
+    // 프로덕션에서는 즉시 종료
+    console.error("[security/encryption] FATAL: Encryption key validation failed on startup");
+    process.exit(1);
+  }
+} else {
+  // 개발 환경에서는 경고만
+  if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < MIN_KEY_LENGTH) {
+    console.warn(
+      "[security/encryption] WARNING: SUPABASE_ENCRYPTION_KEY is missing or too short. " +
+      "암호화 기능이 정상 작동하지 않을 수 있습니다."
+    );
+  }
+}
+
+/**
+ * 텍스트 암호화 (서버에서만 사용)
+ * @param plaintext 암호화할 텍스트
+ * @returns base64 인코딩된 암호화 문자열 또는 null
+ */
+export async function encryptText(
+  plaintext: string | null | undefined
+): Promise<string | null> {
+  // 키 검증 (암호화 전에 수행)
+  assertEncryptionKey();
+
+  if (!plaintext) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("encrypt_text", {
+      plaintext: String(plaintext),
+      encryption_key: ENCRYPTION_KEY,
+    });
+
+    if (error) {
+      console.error("[security/encryption] encrypt error:", error);
+      return null;
+    }
+
+    return data as string | null;
+  } catch (error) {
+    console.error("[security/encryption] encrypt exception:", error);
+    return null;
+  }
+}
+
+/**
+ * 텍스트 복호화 (서버에서만 사용)
+ * @param ciphertext base64 인코딩된 암호화 문자열
+ * @returns 복호화된 텍스트 또는 null
+ */
+export async function decryptText(
+  ciphertext: string | null | undefined
+): Promise<string | null> {
+  // 키 검증 (복호화 전에 수행)
+  assertEncryptionKey();
+
+  if (!ciphertext) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("decrypt_text", {
+      ciphertext: String(ciphertext),
+      encryption_key: ENCRYPTION_KEY,
+    });
+
+    if (error) {
+      console.error("[security/encryption] decrypt error:", error);
+      return null;
+    }
+
+    return data as string | null;
+  } catch (error) {
+    console.error("[security/encryption] decrypt exception:", error);
+    return null;
+  }
+}
+
+/**
+ * Email 해시 생성 (검색용, 복호화 불가)
+ * @param email 이메일 주소
+ * @returns sha256 해시 (hex) 또는 null
+ */
+export async function hashEmail(
+  email: string | null | undefined
+): Promise<string | null> {
+  if (!email) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("email_hash", {
+      email: String(email),
+    });
+
+    if (error) {
+      console.error("[security/encryption] hash error:", error);
+      return null;
+    }
+
+    return data as string | null;
+  } catch (error) {
+    console.error("[security/encryption] hash exception:", error);
+    return null;
+  }
+}

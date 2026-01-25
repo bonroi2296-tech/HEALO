@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/inquiries/event/route": "app/api/inquiries/event/route.js",
+  "/api/inquiries/intake/route": "app/api/inquiries/intake/route.js",
+  "/api/inquiry/normalize/route": "app/api/inquiry/normalize/route.js",
+  "/inquiry/intake/page": "app/inquiry/intake/page.js",
+  "/inquiry/page": "app/inquiry/page.js",
+  "/page": "app/page.js",
+  "/success/page": "app/success/page.js"
+}

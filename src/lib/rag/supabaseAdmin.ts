@@ -1,11 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 // 빌드 시점에는 환경 변수가 없을 수 있으므로, 런타임에서만 체크
-// 빌드 시점 체크를 건너뛰기 위해 조건부 초기화
+// 모듈 레벨에서 환경 변수를 읽지 않도록 함수 내부에서만 읽음
 let supabaseAdminInstance: ReturnType<typeof createClient> | null = null;
 
 function getSupabaseAdmin() {
@@ -13,6 +9,11 @@ function getSupabaseAdmin() {
   if (supabaseAdminInstance) {
     return supabaseAdminInstance;
   }
+
+  // 환경 변수는 함수 내부에서만 읽기 (빌드 시점 평가 방지)
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // 환경 변수 체크 (런타임에서만 실행됨)
   if (!supabaseUrl || !serviceKey) {

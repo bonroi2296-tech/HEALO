@@ -112,14 +112,11 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
   },
 
-  // ✅ Vercel 배포 시 타입/린트 에러 무시 (임시 설정)
+  // ✅ Vercel 배포 시 타입 에러 무시 (임시 설정)
+  // 참고: Next.js 16에서는 eslint 설정을 next.config.js에서 지원하지 않음
   typescript: {
     // 빌드할 때 타입 에러가 나도 무시하고 배포합니다.
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    // 빌드할 때 린트 에러가 나도 무시하고 배포합니다.
-    ignoreDuringBuilds: true,
   },
 };
 

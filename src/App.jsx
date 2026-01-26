@@ -7,16 +7,24 @@ import { supabase } from './supabase';
 import {
   Header, HeroSection, CardListSection, FloatingInquiryBtn, PersonalConciergeCTA, MobileBottomNav
 } from './components.jsx';
-import {
-  TreatmentDetailPage, HospitalDetailPage, InquiryPage, InquiryIntakePage, LoginPage, SignUpPage, SuccessPage
-} from './pages.jsx';
-import { AdminPage } from './AdminPage';
+// ✅ 성능 최적화: 페이지 컴포넌트 동적 import (코드 스플리팅)
+import { lazy, Suspense } from 'react';
+
+const TreatmentDetailPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.TreatmentDetailPage })));
+const HospitalDetailPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.HospitalDetailPage })));
+const InquiryPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.InquiryPage })));
+const InquiryIntakePage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.InquiryIntakePage })));
+const LoginPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.LoginPage })));
+const SignUpPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.SignUpPage })));
+const SuccessPage = lazy(() => import('./pages.jsx').then(mod => ({ default: mod.SuccessPage })));
+const AdminPage = lazy(() => import('./AdminPage').then(mod => ({ default: mod.AdminPage })));
 import { Loader2 } from 'lucide-react';
 // 🔥 Mapper & ErrorBoundary import
 import { mapHospitalRow, mapTreatmentRow } from './lib/mapper';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/Toast';
 import { getLocationColumn } from './lib/language';
+import { logError } from './lib/logger';
 
 // ==========================================
 // 1. 페이지네이션 리스트 (Mapper 적용됨)
@@ -45,6 +53,9 @@ const PaginatedList = ({ type, searchTerm, onCardClick, title }) => {
                     ? `*, hospitals(name, location:${locCol})` 
                     : `*, location:${locCol}`
                 )
+                .eq('is_published', true)
+                .order('display_order', { ascending: true, nullsFirst: false })
+                .order('created_at', { ascending: false })
                 .range(from, to);
 
             if (searchTerm) {
@@ -53,7 +64,7 @@ const PaginatedList = ({ type, searchTerm, onCardClick, title }) => {
 
         const { data, error } = await query;
         if (error) {
-            console.error(`[PaginatedList ${type}] Fetch Error:`, error);
+            logError(`PaginatedList ${type}`, error);
             setItemsError(error);
             throw error;
         }
@@ -75,7 +86,7 @@ const PaginatedList = ({ type, searchTerm, onCardClick, title }) => {
             setHasMore(data.length === ITEMS_PER_PAGE);
 
         } catch (err) {
-            console.error(`[PaginatedList ${type}] Fetch Error:`, err);
+            logError(`PaginatedList ${type}`, err);
             setItemsError(err);
         } finally {
             setLoading(false);
@@ -104,7 +115,7 @@ const PaginatedList = ({ type, searchTerm, onCardClick, title }) => {
                 </div>
             )}
             
-            <div className="flex justify-center mt-8 mb-12">
+            <div className="flex justify-center mt-4 md:mt-8 mb-6 md:mb-12">
                 {loading && page === 0 ? (
                     <div className="flex items-center gap-2 text-teal-600 font-bold"><Loader2 className="animate-spin"/> Loading...</div>
                 ) : hasMore ? (
@@ -114,9 +125,7 @@ const PaginatedList = ({ type, searchTerm, onCardClick, title }) => {
                     >
                         {loading ? <Loader2 className="animate-spin"/> : "Load More +"}
                     </button>
-                ) : items.length > 0 && (
-                    <span className="text-gray-300 text-sm font-bold">End of list</span>
-                )}
+                ) : null}
             </div>
         </>
     );
@@ -139,10 +148,13 @@ const HomeView = ({ setView, searchTerm, setSearchTerm, siteConfig, navigate }) 
             const { data: tData, error: tError } = await supabase
                 .from('treatments')
                 .select(`*, hospitals(name, location:${locCol})`)
+                .eq('is_published', true)
+                .order('display_order', { ascending: true, nullsFirst: false })
+                .order('created_at', { ascending: false })
                 .limit(4);
             
             if (tError) {
-                console.error('[HomeView] Treatments fetch error:', tError);
+                logError('HomeView Treatments', tError);
                 setTreatmentsError(tError);
             } else {
                 setTreatmentsError(null);
@@ -153,10 +165,13 @@ const HomeView = ({ setView, searchTerm, setSearchTerm, siteConfig, navigate }) 
             const { data: hData, error: hError } = await supabase
                 .from('hospitals')
                 .select(`*, location:${locCol}`)
+                .eq('is_published', true)
+                .order('display_order', { ascending: true, nullsFirst: false })
+                .order('created_at', { ascending: false })
                 .limit(4);
             
             if (hError) {
-                console.error('[HomeView] Hospitals fetch error:', hError);
+                logError('HomeView Hospitals', hError);
                 setHospitalsError(hError);
             } else {
                 setHospitalsError(null);
@@ -168,13 +183,6 @@ const HomeView = ({ setView, searchTerm, setSearchTerm, siteConfig, navigate }) 
 
     return (
         <>
-            {/* DEV: Component badge */}
-            {import.meta.env.DEV && (
-                <div className="fixed bottom-4 right-4 bg-yellow-400 text-black text-xs px-2 py-1 rounded z-50 font-mono">
-                    HomeView.jsx | {Date.now()}
-                </div>
-            )}
-            
             <HeroSection setView={setView} searchTerm={searchTerm} setSearchTerm={setSearchTerm} siteConfig={siteConfig} />
             
             <div>
@@ -246,9 +254,9 @@ function AppContent() {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
     supabase.from("site_settings").select("*").single().then(({data}) => { if(data) setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url }); });
     const locCol = getLocationColumn();
-    supabase.from("treatments").select(`id, name, hospital_id, price_min, hospitals(name)`).then(({data, error}) => { 
+    supabase.from("treatments").select(`id, name, hospital_id, price_min, hospitals(name)`).eq("is_published", true).then(({data, error}) => { 
         if (error) {
-            console.error('[AppContent] Simple list fetch error:', error);
+            logError('AppContent Simple list', error);
         } else if(data) {
             setSimpleList(data.map(t => ({ id: t.id, title: t.name, hospitalId: t.hospital_id, hospital: t.hospitals?.name, price: t.price_min ? `$${t.price_min}` : '' }))); 
         }
@@ -287,13 +295,14 @@ function AppContent() {
       {/* 🔥 ErrorBoundary로 감싸서 앱 보호 */}
       <ErrorBoundary>
         <main className="pb-24">
+            <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-teal-600" size={32} /></div>}>
             <Routes>
-            <Route path="/" element={<><HomeView setView={handleSetView} searchTerm={searchTerm} setSearchTerm={setSearchTerm} siteConfig={siteConfig} navigate={navigate} /><div className="mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
+            <Route path="/" element={<><HomeView setView={handleSetView} searchTerm={searchTerm} setSearchTerm={setSearchTerm} siteConfig={siteConfig} navigate={navigate} /><div className="mt-4 md:mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
             <Route path="/admin" element={<AdminPage setView={handleSetView} />} />
             
             {/* 🔥 핵심 수정: key={type} 추가로 탭 전환 버그 해결 */}
-            <Route path="/treatments" element={<><PaginatedList key="treatment" type="treatment" title="All Treatments" searchTerm={searchTerm} onCardClick={(id) => navigate(`/treatments/${id}`)} /><div className="mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
-            <Route path="/hospitals" element={<><PaginatedList key="hospital" type="hospital" title="Partner Hospitals" searchTerm={searchTerm} onCardClick={(id) => navigate(`/hospitals/${id}`)} /><div className="mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
+            <Route path="/treatments" element={<><PaginatedList key="treatment" type="treatment" title="All Treatments" searchTerm={searchTerm} onCardClick={(id) => navigate(`/treatments/${id}`)} /><div className="mt-4 md:mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
+            <Route path="/hospitals" element={<><PaginatedList key="hospital" type="hospital" title="Partner Hospitals" searchTerm={searchTerm} onCardClick={(id) => navigate(`/hospitals/${id}`)} /><div className="mt-4 md:mt-10"><PersonalConciergeCTA onClick={handleGlobalInquiry} /></div></>} />
             
             <Route path="/treatments/:id" element={<TreatmentDetailWrapper setView={handleSetView} setInquiryMode={setInquiryMode} />} />
             <Route path="/hospitals/:id" element={<HospitalDetailWrapper setView={handleSetView} />} />
@@ -304,6 +313,7 @@ function AppContent() {
             <Route path="/success" element={<SuccessPage setView={handleSetView} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
         </main>
       </ErrorBoundary>
 

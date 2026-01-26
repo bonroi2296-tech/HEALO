@@ -1,5 +1,6 @@
 import { mapHospitalRow, mapTreatmentRow } from "../mapper";
 import { supabaseServer } from "./supabaseServer";
+import { logError } from "../logger";
 
 const HOSPITAL_SELECT =
   "id, slug, name, location_en, location_kr, address_detail, description, tags, rating, reviews_count, images, latitude, longitude, operating_hours, doctor_profile";
@@ -9,11 +10,13 @@ export const getFeaturedHospitals = async (limit = 6) => {
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
+    .eq("is_published", true)
+    .order("display_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
-    console.error("[getFeaturedHospitals]", error);
+    logError("[getFeaturedHospitals]", error);
     return [];
   }
 
@@ -24,10 +27,12 @@ export const getAllHospitals = async () => {
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
+    .eq("is_published", true)
+    .order("display_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("[getAllHospitals]", error);
+    logError("[getAllHospitals]", error);
     return [];
   }
 
@@ -42,7 +47,7 @@ export const getHospitalList = async ({ limit = 1000 } = {}) => {
     .limit(limit);
 
   if (error) {
-    console.error("[getHospitalList]", error);
+    logError("[getHospitalList]", error);
     return [];
   }
 
@@ -57,7 +62,7 @@ export const getHospitalById = async (id) => {
     .single();
 
   if (error) {
-    console.error("[getHospitalById]", error);
+    logError("[getHospitalById]", error);
     return null;
   }
 
@@ -73,7 +78,7 @@ export const getHospitalBySlug = async (slug) => {
     .maybeSingle();
 
   if (error) {
-    if (error?.message) console.error("[getHospitalBySlug]", error);
+    if (error?.message) logError("getHospitalBySlug", error);
     return null;
   }
 
@@ -89,7 +94,7 @@ export const getHospitalSlugById = async (id) => {
     .single();
 
   if (error) {
-    console.error("[getHospitalSlugById]", error);
+    logError("[getHospitalSlugById]", error);
     return null;
   }
 
@@ -104,10 +109,12 @@ export const getHospitalTreatments = async (hospitalId) => {
       "id, slug, name, description, full_description, hospital_id, price_min, tags, images, benefits, hospitals(slug, name, location_en, location_kr)"
     )
     .eq("hospital_id", hospitalId)
+    .eq("is_published", true)
+    .order("display_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("[getHospitalTreatments]", error);
+    logError("[getHospitalTreatments]", error);
     return [];
   }
 

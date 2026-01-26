@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabaseClient } from "../src/lib/data/supabaseClient";
 import { SITE_INFO } from "../src/lib/siteSettings";
 import { getLangCodeFromCookie, t } from "../src/lib/i18n";
-import { pageview } from "../src/lib/ga";
+// import { pageview } from "../src/lib/ga"; // 임시 비활성화: 자동 새로고침 문제
 import {
   Header,
   MobileBottomNav,
@@ -17,7 +17,8 @@ import { useToast } from "../src/components/Toast";
 export default function ClientShell({ children }) {
   const router = useRouter();
   const pathname = usePathname() || "/";
-  const searchParams = useSearchParams();
+  // useSearchParams 제거: 자동 새로고침 문제 해결
+  // const searchParams = useSearchParams();
   const toast = useToast();
 
   const [session, setSession] = useState(null);
@@ -27,32 +28,43 @@ export default function ClientShell({ children }) {
 
   useEffect(() => {
     setLangCode(getLangCodeFromCookie());
+    
+    let mounted = true;
     supabaseClient.auth
       .getSession()
-      .then(({ data: { session } }) => setSession(session));
+      .then(({ data: { session } }) => {
+        if (mounted) setSession(session);
+      });
+      
     const { data } = supabaseClient.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
+      (_event, session) => {
+        if (mounted) setSession(session);
+      }
     );
+    
     supabaseClient
       .from("site_settings")
       .select("*")
       .single()
       .then(({ data }) => {
-        if (data) setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url });
+        if (mounted && data) {
+          setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url });
+        }
       });
+      
     return () => {
+      mounted = false;
       if (data?.subscription) data.subscription.unsubscribe();
     };
   }, []);
 
-  const lastPageviewRef = useRef("");
-  useEffect(() => {
-    const query = searchParams?.toString();
-    const url = query ? `${pathname}?${query}` : pathname;
-    if (lastPageviewRef.current === url) return;
-    lastPageviewRef.current = url;
-    pageview(url);
-  }, [pathname, searchParams]);
+  // pageview 추적 임시 비활성화: 자동 새로고침 문제 해결
+  // const lastPageviewRef = useRef("");
+  // useEffect(() => {
+  //   if (lastPageviewRef.current === pathname) return;
+  //   lastPageviewRef.current = pathname;
+  //   pageview(pathname);
+  // }, [pathname]);
 
   const handleSetView = (viewName) => {
     setIsMobileMenuOpen(false);

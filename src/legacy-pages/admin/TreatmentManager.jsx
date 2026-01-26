@@ -37,7 +37,7 @@ export const TreatmentManager = ({
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold">시술 목록</h2>
         {selectedHospitalId && (
-          <button onClick={()=>{setEditingTreatmentId(null); setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [] });}} className="bg-teal-600 text-white p-1 rounded">
+          <button onClick={()=>{setEditingTreatmentId(null); setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [], displayOrder: null, isPublished: true });}} className="bg-teal-600 text-white p-1 rounded">
             <Plus size={16}/>
           </button>
         )}
@@ -90,6 +90,34 @@ export const TreatmentManager = ({
                 <div>
                   <input type="number" placeholder="최소 가격 ($)" value={treatmentForm.priceMin} onChange={e=>setTreatmentForm({...treatmentForm, priceMin: e.target.value})} className="w-full p-2 border rounded"/>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input 
+                  type="number" 
+                  placeholder="메인 페이지 표시 순서 (숫자가 작을수록 앞에 표시, 비워두면 최신순)" 
+                  value={treatmentForm.displayOrder || ''} 
+                  onChange={e=>setTreatmentForm({...treatmentForm, displayOrder: e.target.value ? e.target.value : null})} 
+                  className="w-full p-2 border rounded text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="text-sm font-bold text-gray-700 flex-1">프론트 노출 여부</label>
+                <button
+                  type="button"
+                  onClick={() => setTreatmentForm({...treatmentForm, isPublished: !treatmentForm.isPublished})}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    treatmentForm.isPublished ? 'bg-teal-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      treatmentForm.isPublished ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className="text-xs text-gray-600 w-16">
+                  {treatmentForm.isPublished ? '노출' : '숨김'}
+                </span>
               </div>
               <input placeholder="간략 설명 (카드용)" value={treatmentForm.desc} onChange={e=>setTreatmentForm({...treatmentForm, desc: e.target.value})} className="w-full p-2 border rounded"/>
               <textarea placeholder="상세 설명 (페이지용)" rows="4" value={treatmentForm.fullDescription} onChange={e=>setTreatmentForm({...treatmentForm, fullDescription: e.target.value})} className="w-full p-2 border rounded"/>

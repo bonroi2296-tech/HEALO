@@ -138,7 +138,9 @@ export const AdminPage = ({ setView }) => {
       hoursMonFri: '09:00 - 18:00', hoursSat: '09:00 - 13:00', 
       doctorName: '', doctorTitle: '', doctorImage: '', 
       doctorSchool: '', doctorYears: '', doctorSpecialties: [], 
-      doctorMetricValue: '99%', doctorMetricLabel: '만족도' 
+      doctorMetricValue: '99%', doctorMetricLabel: '만족도',
+      displayOrder: null, // ✅ 메인 페이지 표시 순서
+      isPublished: true // ✅ 프론트 노출 여부
   });
 
   // 시술 폼
@@ -147,7 +149,9 @@ export const AdminPage = ({ setView }) => {
   const [treatmentForm, setTreatmentForm] = useState({ 
       title: '', desc: '', fullDescription: '', 
       priceMin: '', recoveryTime: '', 
-      benefits: [], tags: [], images: [] 
+      benefits: [], tags: [], images: [],
+      displayOrder: null, // ✅ 메인 페이지 표시 순서
+      isPublished: true // ✅ 프론트 노출 여부
   });
 
   // ==========================================
@@ -254,7 +258,23 @@ export const AdminPage = ({ setView }) => {
 
 
   const handleStatusChange = async (id, newStatus) => { await supabase.from('inquiries').update({ status: newStatus }).eq('id', id); fetchInquiries(); };
-  const handleDelete = async (table, id, cb) => { if(confirm("정말 삭제하시겠습니까? 복구할 수 없습니다.")) { await supabase.from(table).delete().eq('id', id); cb(); } };
+  const handleDelete = async (table, id, cb) => { 
+      if(!confirm("정말 삭제하시겠습니까? 복구할 수 없습니다.")) return;
+      
+      try {
+          const { error } = await supabase.from(table).delete().eq('id', id);
+          if (error) {
+              console.error(`[AdminPage] Delete ${table} error:`, error);
+              toast.error("삭제 실패: " + error.message);
+              return;
+          }
+          toast.success("삭제되었습니다.");
+          if (cb) cb();
+      } catch (err) {
+          console.error(`[AdminPage] Delete ${table} exception:`, err);
+          toast.error("삭제 실패: " + err.message);
+      }
+  };
   const handleFileClick = (url) => { setSelectedFile(url); };
   const getFileType = (url) => { const ext = url.split('.').pop().toLowerCase(); return ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext) ? 'image' : (ext === 'pdf' ? 'pdf' : 'other'); };
 
@@ -286,6 +306,11 @@ export const AdminPage = ({ setView }) => {
       setLoading(true);
       const generatedSlug = hospitalForm.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '') || `hospital-${Date.now()}`;
       
+      // ✅ 이미지 배열 타입 보장 (text[] 타입에 맞춤)
+      const imagesArray = Array.isArray(hospitalForm.images) 
+          ? hospitalForm.images 
+          : (hospitalForm.images ? [hospitalForm.images] : []);
+      
       const payload = {
           name: hospitalForm.name, slug: generatedSlug, 
           location_kr: hospitalForm.location_kr?.trim() || null,
@@ -293,38 +318,246 @@ export const AdminPage = ({ setView }) => {
           address_detail: hospitalForm.address_detail?.trim() || null,
           description: hospitalForm.description, 
           latitude: hospitalForm.latitude, longitude: hospitalForm.longitude,
-          tags: hospitalForm.tags, images: hospitalForm.images, 
+          tags: hospitalForm.tags, images: imagesArray, 
           supported_languages: hospitalForm.languages, amenities: hospitalForm.amenities,
           operating_hours: { mon_fri: hospitalForm.hoursMonFri, sat: hospitalForm.hoursSat },
           doctor_profile: { 
               name: hospitalForm.doctorName, title: hospitalForm.doctorTitle, image: hospitalForm.doctorImage, 
               school: hospitalForm.doctorSchool, years: hospitalForm.doctorYears, specialties: hospitalForm.doctorSpecialties, 
               heroMetric: { value: hospitalForm.doctorMetricValue, label: hospitalForm.doctorMetricLabel } 
-          }
+          },
+          display_order: hospitalForm.displayOrder ? Number(hospitalForm.displayOrder) : null, // ✅ 메인 페이지 표시 순서
+          is_published: hospitalForm.isPublished !== undefined ? hospitalForm.isPublished : true // ✅ 프론트 노출 여부
       };
+      
+      console.log('[AdminPage] Hospital payload:', { ...payload, images: imagesArray });
 
       try {
-          if(editingHospitalId) await supabase.from('hospitals').update(payload).eq('id', editingHospitalId);
-          else await supabase.from('hospitals').insert([payload]);
+          // ✅ display_order 중복 방지: 새로운 순서가 설정되어 있고, 다른 항목이 이미 사용 중이면 재정렬
+          if (payload.display_order !== null && payload.display_order !== undefined) {
+              // 현재 편집 중인 항목의 기존 순서 확인
+              let oldOrder = null;
+              if (editingHospitalId) {
+                  const { data: current } = await supabase
+                      .from('hospitals')
+                      .select('display_order')
+                      .eq('id', editingHospitalId)
+                      .single();
+                  oldOrder = current?.display_order || null;
+              }
+              
+              // 중복 확인 (현재 편집 중인 항목 제외)
+              const { data: conflicts } = await supabase
+                  .from('hospitals')
+                  .select('id, display_order')
+                  .eq('display_order', payload.display_order)
+                  .neq('id', editingHospitalId || '00000000-0000-0000-0000-000000000000');
+              
+              if (conflicts && conflicts.length > 0) {
+                  // 중복이 있으면 재정렬
+                  if (oldOrder === null || payload.display_order < oldOrder) {
+                      // 순서를 앞으로 이동: 새로운 순서 이상, 기존 순서 미만인 항목들을 +1
+                      const { data: toShift } = await supabase
+                          .from('hospitals')
+                          .select('id, display_order')
+                          .gte('display_order', payload.display_order)
+                          .lt('display_order', oldOrder || 999999)
+                          .neq('id', editingHospitalId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('hospitals')
+                                  .update({ display_order: (item.display_order || 0) + 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  } else if (payload.display_order > oldOrder) {
+                      // 순서를 뒤로 이동: 기존 순서 초과, 새로운 순서 이하인 항목들을 -1
+                      const { data: toShift } = await supabase
+                          .from('hospitals')
+                          .select('id, display_order')
+                          .gt('display_order', oldOrder || -1)
+                          .lte('display_order', payload.display_order)
+                          .neq('id', editingHospitalId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('hospitals')
+                                  .update({ display_order: (item.display_order || 0) - 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  } else {
+                      // 같은 순서로 변경하려고 하면 기존 항목을 +1
+                      const { data: toShift } = await supabase
+                          .from('hospitals')
+                          .select('id, display_order')
+                          .eq('display_order', payload.display_order)
+                          .neq('id', editingHospitalId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('hospitals')
+                                  .update({ display_order: (item.display_order || 0) + 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  }
+              }
+          }
+          
+          let result;
+          if(editingHospitalId) {
+              result = await supabase.from('hospitals').update(payload).eq('id', editingHospitalId);
+          } else {
+              result = await supabase.from('hospitals').insert([payload]);
+          }
+          
+          if (result.error) {
+              console.error('[AdminPage] Hospital save error:', result.error);
+              toast.error("저장 실패: " + result.error.message);
+              return;
+          }
           
           toast.success("병원 정보가 저장되었습니다! 🏥");
-          setEditingHospitalId(null); fetchHospitals();
-          setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도' });
-      } catch (err) { toast.error("저장 실패: " + err.message); } finally { setLoading(false); }
+          setEditingHospitalId(null); 
+          await fetchHospitals();
+          setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도', displayOrder: null, isPublished: true });
+      } catch (err) { 
+          console.error('[AdminPage] Hospital save exception:', err);
+          toast.error("저장 실패: " + err.message); 
+      } finally { 
+          setLoading(false); 
+      }
   };
 
   const handleSaveTreatment = async () => { 
       if(!selectedHospitalId || !treatmentForm.title) return toast.error("병원 선택과 시술명은 필수입니다.");
       setLoading(true);
-      const payload = { hospital_id: selectedHospitalId, name: treatmentForm.title, description: treatmentForm.desc, full_description: treatmentForm.fullDescription, price_min: Number(treatmentForm.priceMin)||0, recovery_time: treatmentForm.recoveryTime, benefits: treatmentForm.benefits, tags: treatmentForm.tags, images: treatmentForm.images };
-      try { 
-          if(editingTreatmentId) await supabase.from('treatments').update(payload).eq('id', editingTreatmentId); 
-          else await supabase.from('treatments').insert([payload]); 
+      // ✅ 이미지 배열 타입 보장 (text[] 타입에 맞춤)
+      const imagesArray = Array.isArray(treatmentForm.images) 
+          ? treatmentForm.images 
+          : (treatmentForm.images ? [treatmentForm.images] : []);
+      
+      // ✅ recovery_time 컬럼이 DB에 없을 수 있으므로 제외
+      const payload = { 
+          hospital_id: selectedHospitalId, 
+          name: treatmentForm.title, 
+          description: treatmentForm.desc, 
+          full_description: treatmentForm.fullDescription, 
+          price_min: Number(treatmentForm.priceMin)||0, 
+          // recovery_time: treatmentForm.recoveryTime, // ❌ DB에 컬럼이 없어서 제거
+          benefits: treatmentForm.benefits, 
+          tags: treatmentForm.tags, 
+          images: imagesArray,
+          display_order: treatmentForm.displayOrder ? Number(treatmentForm.displayOrder) : null, // ✅ 메인 페이지 표시 순서
+          is_published: treatmentForm.isPublished !== undefined ? treatmentForm.isPublished : true // ✅ 프론트 노출 여부
+      };
+      
+      console.log('[AdminPage] Treatment payload:', { ...payload, images: imagesArray });
+      try {
+          // ✅ display_order 중복 방지: 새로운 순서가 설정되어 있고, 다른 항목이 이미 사용 중이면 재정렬
+          if (payload.display_order !== null && payload.display_order !== undefined) {
+              // 현재 편집 중인 항목의 기존 순서 확인
+              let oldOrder = null;
+              if (editingTreatmentId) {
+                  const { data: current } = await supabase
+                      .from('treatments')
+                      .select('display_order')
+                      .eq('id', editingTreatmentId)
+                      .single();
+                  oldOrder = current?.display_order || null;
+              }
+              
+              // 중복 확인 (현재 편집 중인 항목 제외)
+              const { data: conflicts } = await supabase
+                  .from('treatments')
+                  .select('id, display_order')
+                  .eq('display_order', payload.display_order)
+                  .neq('id', editingTreatmentId || '00000000-0000-0000-0000-000000000000');
+              
+              if (conflicts && conflicts.length > 0) {
+                  // 중복이 있으면 재정렬
+                  if (oldOrder === null || payload.display_order < oldOrder) {
+                      // 순서를 앞으로 이동: 새로운 순서 이상, 기존 순서 미만인 항목들을 +1
+                      const { data: toShift } = await supabase
+                          .from('treatments')
+                          .select('id, display_order')
+                          .gte('display_order', payload.display_order)
+                          .lt('display_order', oldOrder || 999999)
+                          .neq('id', editingTreatmentId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('treatments')
+                                  .update({ display_order: (item.display_order || 0) + 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  } else if (payload.display_order > oldOrder) {
+                      // 순서를 뒤로 이동: 기존 순서 초과, 새로운 순서 이하인 항목들을 -1
+                      const { data: toShift } = await supabase
+                          .from('treatments')
+                          .select('id, display_order')
+                          .gt('display_order', oldOrder || -1)
+                          .lte('display_order', payload.display_order)
+                          .neq('id', editingTreatmentId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('treatments')
+                                  .update({ display_order: (item.display_order || 0) - 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  } else {
+                      // 같은 순서로 변경하려고 하면 기존 항목을 +1
+                      const { data: toShift } = await supabase
+                          .from('treatments')
+                          .select('id, display_order')
+                          .eq('display_order', payload.display_order)
+                          .neq('id', editingTreatmentId || '00000000-0000-0000-0000-000000000000');
+                      
+                      if (toShift && toShift.length > 0) {
+                          for (const item of toShift) {
+                              await supabase
+                                  .from('treatments')
+                                  .update({ display_order: (item.display_order || 0) + 1 })
+                                  .eq('id', item.id);
+                          }
+                      }
+                  }
+              }
+          }
+          
+          let result;
+          if(editingTreatmentId) {
+              result = await supabase.from('treatments').update(payload).eq('id', editingTreatmentId);
+          } else {
+              result = await supabase.from('treatments').insert([payload]);
+          }
+          
+          if (result.error) {
+              console.error('[AdminPage] Treatment save error:', result.error);
+              toast.error("저장 실패: " + result.error.message);
+              return;
+          }
           
           toast.success("시술 정보가 저장되었습니다! 💉");
-          setEditingTreatmentId(null); fetchTreatments(selectedHospitalId);
-          setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [] }); 
-      } catch (err) { toast.error("저장 실패: " + err.message); } finally { setLoading(false); }
+          setEditingTreatmentId(null); 
+          await fetchTreatments(selectedHospitalId);
+          setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [], displayOrder: null, isPublished: true }); 
+      } catch (err) { 
+          console.error('[AdminPage] Treatment save exception:', err);
+          toast.error("저장 실패: " + err.message); 
+      } finally { 
+          setLoading(false); 
+      }
   };
 
   const handleSaveSettings = async () => {
@@ -342,6 +575,14 @@ export const AdminPage = ({ setView }) => {
   const handleEditHospital = (h) => {
       setEditingHospitalId(h.id);
       const doc = h.doctor_profile || {};
+      
+      // ✅ 이미지 배열 타입 보장 (DB에서 text[]로 오면 이미 배열이지만, 혹시 모를 경우 대비)
+      const imagesArray = Array.isArray(h.images) 
+          ? h.images 
+          : (h.images ? [h.images] : []);
+      
+      console.log('[AdminPage] Editing hospital:', { id: h.id, name: h.name, images: h.images, imagesArray });
+      
       setHospitalForm({
           name: h.name, 
           location_kr: h.location_kr || h.location || '',
@@ -349,15 +590,39 @@ export const AdminPage = ({ setView }) => {
           address_detail: h.address_detail || '',
           description: h.description, 
           latitude: h.latitude || null, longitude: h.longitude || null,
-          tags: h.tags||[], images: h.images||[], 
+          tags: h.tags||[], images: imagesArray, 
           languages: h.supported_languages || [], amenities: h.amenities || [],           
           hoursMonFri: h.operating_hours?.mon_fri||'', hoursSat: h.operating_hours?.sat||'',
           doctorName: doc.name||'', doctorTitle: doc.title||'', doctorImage: doc.image||'', 
           doctorSchool: doc.school||'', doctorYears: doc.years||'', doctorSpecialties: doc.specialties || [], 
-          doctorMetricValue: doc.heroMetric?.value || '99%', doctorMetricLabel: doc.heroMetric?.label || '만족도'
+          doctorMetricValue: doc.heroMetric?.value || '99%', doctorMetricLabel: doc.heroMetric?.label || '만족도',
+          displayOrder: h.display_order || null,
+          isPublished: h.is_published !== undefined ? h.is_published : true
       });
   };
-  const handleEditTreatment = (t) => { setEditingTreatmentId(t.id); setTreatmentForm({ title: t.name, desc: t.description, fullDescription: t.full_description||'', priceMin: t.price_min, recoveryTime: t.recovery_time||'', benefits: t.benefits||[], tags: t.tags||[], images: t.images||[] }); };
+  const handleEditTreatment = (t) => { 
+      setEditingTreatmentId(t.id); 
+      
+      // ✅ 이미지 배열 타입 보장 (DB에서 text[]로 오면 이미 배열이지만, 혹시 모를 경우 대비)
+      const imagesArray = Array.isArray(t.images) 
+          ? t.images 
+          : (t.images ? [t.images] : []);
+      
+      console.log('[AdminPage] Editing treatment:', { id: t.id, name: t.name, images: t.images, imagesArray });
+      
+      setTreatmentForm({ 
+          title: t.name, 
+          desc: t.description, 
+          fullDescription: t.full_description||'', 
+          priceMin: t.price_min, 
+          recoveryTime: t.recovery_time||'', 
+          benefits: t.benefits||[], 
+          tags: t.tags||[], 
+          images: imagesArray,
+          displayOrder: t.display_order || null,
+          isPublished: t.is_published !== undefined ? t.is_published : true
+      }); 
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

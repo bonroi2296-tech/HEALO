@@ -27,7 +27,7 @@ export const HospitalManager = ({
         <button
           onClick={() => {
             setEditingHospitalId(null);
-            setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도' });
+            setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도', displayOrder: null, isPublished: true });
           }}
           className="bg-teal-600 text-white p-1 rounded"
         >
@@ -79,7 +79,35 @@ export const HospitalManager = ({
         <div className="space-y-6">
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-gray-400">기본 정보 (필수)</h3>
-            <input type="text" placeholder="병원명 (영어/한국어)" value={hospitalForm.name} onChange={e=>setHospitalForm({...hospitalForm, name: e.target.value})} className="w-full p-2 border rounded"/>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="text" placeholder="병원명 (영어/한국어)" value={hospitalForm.name} onChange={e=>setHospitalForm({...hospitalForm, name: e.target.value})} className="w-full p-2 border rounded"/>
+              <input 
+                type="number" 
+                placeholder="메인 페이지 표시 순서 (숫자가 작을수록 앞에 표시, 비워두면 최신순)" 
+                value={hospitalForm.displayOrder || ''} 
+                onChange={e=>setHospitalForm({...hospitalForm, displayOrder: e.target.value ? e.target.value : null})} 
+                className="w-full p-2 border rounded text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="text-sm font-bold text-gray-700 flex-1">프론트 노출 여부</label>
+              <button
+                type="button"
+                onClick={() => setHospitalForm({...hospitalForm, isPublished: !hospitalForm.isPublished})}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  hospitalForm.isPublished ? 'bg-teal-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    hospitalForm.isPublished ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-600 w-16">
+                {hospitalForm.isPublished ? '노출' : '숨김'}
+              </span>
+            </div>
             
             {/* 주소 입력 (Korean search + English auto) */}
             <AddressInput

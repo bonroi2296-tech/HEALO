@@ -20,12 +20,8 @@ export default function HomeClient() {
   const [treatmentsError, setTreatmentsError] = useState(null);
   const [hospitalsError, setHospitalsError] = useState(null);
   const isDev = process.env.NODE_ENV !== "production";
-  const [debugStamp, setDebugStamp] = useState(null);
 
   useEffect(() => {
-    if (isDev) {
-      setDebugStamp(Date.now());
-    }
     const fetchFeatured = async () => {
       const { data: settingsData } = await supabaseClient
         .from("site_settings")
@@ -42,6 +38,9 @@ export default function HomeClient() {
       const { data: tData, error: tError } = await supabaseClient
         .from("treatments")
         .select(`*, hospitals(slug, name, location:${locCol})`)
+        .eq("is_published", true)
+        .order("display_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
         .limit(4);
 
       if (tError) {
@@ -56,6 +55,9 @@ export default function HomeClient() {
       const { data: hData, error: hError } = await supabaseClient
         .from("hospitals")
         .select(`*, location:${locCol}`)
+        .eq("is_published", true)
+        .order("display_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
         .limit(4);
 
       if (hError) {
@@ -72,12 +74,6 @@ export default function HomeClient() {
 
   return (
     <>
-      {isDev && debugStamp && (
-        <div className="fixed bottom-4 right-4 bg-yellow-400 text-black text-xs px-2 py-1 rounded z-50 font-mono">
-          HomeClient.jsx | {debugStamp}
-        </div>
-      )}
-
       <HeroSection
         setView={() => router.push("/treatments")}
         searchTerm={searchTerm}
@@ -133,7 +129,7 @@ export default function HomeClient() {
         </div>
       )}
 
-      <div className="mt-10">
+      <div className="mt-4 md:mt-10">
         <PersonalConciergeCTA onClick={() => router.push("/inquiry")} />
       </div>
     </>

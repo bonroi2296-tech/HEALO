@@ -125,7 +125,10 @@ export const TreatmentDetailPage = ({
         const { data: tRow, error: tErr } = await tQuery.single();
 
         if (tErr) {
-          console.error("[TreatmentDetail] Treatment fetch error:", tErr);
+          // logError는 클라이언트에서만 사용 가능하므로 조건부 처리
+          if (process.env.NODE_ENV === 'development') {
+            console.error("[TreatmentDetail] Treatment fetch error:", tErr);
+          }
           setTreatmentError(tErr);
           throw tErr;
         }

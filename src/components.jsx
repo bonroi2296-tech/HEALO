@@ -2,6 +2,7 @@
 
 // src/components.jsx
 import React, { useEffect, useRef, useState } from 'react';
+// ✅ 성능 최적화: optimizePackageImports로 tree-shaking 최적화 (next.config.js에서 설정됨)
 import {
   Search, MapPin, Globe, Menu, Star, Zap, ChevronDown, CheckCircle,
   MessageCircle, X, ArrowRight, Stethoscope, Building2, Settings,
@@ -54,11 +55,19 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
   const isAdmin = session?.user?.email === 'admin@healo.com';
   const langCode = getLangCodeFromLabel(currentLang);
   
+  // 초기 마운트 시에만 쿠키에서 언어 읽기
   useEffect(() => {
     setCurrentLang(getLangFromCookie());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLanguageChange = (langLabel) => {
+      // 이미 같은 언어면 변경하지 않음
+      if (currentLang === langLabel) {
+        setIsLangOpen(false);
+        return;
+      }
+      
       let googleLangCode = 'en';
       switch (langLabel) {
           case 'KOR': googleLangCode = 'ko'; break;
@@ -70,7 +79,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
       document.cookie = `googtrans=/en/${googleLangCode}; path=/;`;
       setCurrentLang(langLabel);
       setIsLangOpen(false);
-      window.location.reload();
+      // window.location.reload() 제거: 무한 새로고침 문제 해결
   };
 
   // 활성 탭 스타일링
@@ -202,7 +211,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
 export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) => {
   const langCode = useLangCode();
   return (
-    <section className="relative mb-12">
+    <section className="relative mb-6 md:mb-12">
       <div className="relative pt-12 pb-16 md:pt-24 md:pb-20 text-center overflow-hidden bg-teal-900">
         <div className="absolute inset-0 z-0">
           <img 
@@ -213,12 +222,13 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
           <div className="absolute inset-0 bg-gradient-to-b from-teal-950/80 via-teal-900/60 to-teal-800/90 mix-blend-multiply"></div>
         </div>
         <div className="relative z-10 max-w-5xl mx-auto px-4 flex flex-col items-center">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 leading-tight drop-shadow-lg tracking-tight">
-              {t("hero.title.line1", langCode)}<br className="hidden md:block"/> 
-              <span className="text-teal-200">{t("hero.title.highlight", langCode)}</span>
+            <h1 className="text-[26px] sm:text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 leading-[1.2] drop-shadow-lg tracking-tight">
+              <span className="inline-block">{t("hero.title.line1", langCode)}</span>
+              <span className="text-teal-200"> {t("hero.title.highlight", langCode)}</span>
             </h1>
-            <p className="text-teal-50 text-sm md:text-lg max-w-2xl mx-auto font-medium opacity-90 drop-shadow-md">
-              {t("hero.subtitle.line1", langCode)}<br className="hidden md:block"/>
+            <p className="text-teal-50 text-xs sm:text-sm md:text-lg max-w-2xl mx-auto font-medium opacity-90 drop-shadow-md leading-relaxed">
+              {t("hero.subtitle.line1", langCode)}
+              <br className="hidden sm:block"/>
               {t("hero.subtitle.line2", langCode)}
             </p>
         </div>
@@ -250,15 +260,15 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
 export const CardListSection = ({ title, items, onCardClick, type }) => {
   const langCode = useLangCode();
   return (
-    <section className="max-w-6xl mx-auto px-4 py-8">
-      <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 mb-6">{title}</h2>
+    <section className="max-w-6xl mx-auto px-4 py-4 md:py-8">
+      <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 mb-4 md:mb-6">{title}</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
         {items.map((item) => (
           <div
             key={item.id}
             onClick={() => onCardClick(item.id)}
-            className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer group flex flex-row h-36 md:h-56"
+            className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer group flex flex-row min-h-[140px] md:h-56"
           >
           <div className="w-40 md:w-auto md:h-full md:aspect-square relative bg-gray-200 overflow-hidden shrink-0">
             <img
@@ -297,7 +307,7 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
                   ))}
                 </div>
               )}
-              <div className="hidden md:block text-xs text-gray-500 line-clamp-2 leading-relaxed">
+              <div className="text-[10px] md:text-xs text-gray-500 line-clamp-2 leading-relaxed">
                 {type === 'hospital' ? item.description : item.desc}
               </div>
             </div>
@@ -350,17 +360,21 @@ export const PersonalConciergeCTA = ({
   className = "",
 }) => (
     <section className={`max-w-6xl mx-auto px-4 ${className}`}>
-      <div className="rounded-3xl border border-teal-100 bg-teal-50/50 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
+      <div className="rounded-3xl border border-teal-100 bg-teal-50/50 p-4 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 text-center md:text-left">
         <div className="min-w-0">
           <div className="flex items-center justify-center md:justify-start gap-2 text-teal-700 text-xs font-extrabold tracking-widest">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-100">✨</span>
             <span>{badge}</span>
           </div>
-          <h3 className="mt-3 text-2xl md:text-3xl font-extrabold text-gray-900">{title}</h3>
-          <p className="mt-2 text-gray-700 text-sm md:text-base text-balance leading-relaxed">{subtitle}</p>
+          <h3 className="mt-2 md:mt-3 text-xl md:text-3xl font-extrabold text-gray-900 leading-tight">
+            <span className="inline-block">{title}</span>
+          </h3>
+          <p className="mt-1.5 md:mt-2 text-gray-700 text-xs md:text-base text-balance leading-relaxed">
+            <span className="inline-block">{subtitle}</span>
+          </p>
         </div>
         <div className="shrink-0 mt-2 md:mt-0">
-          <button onClick={onClick} className="w-full md:w-auto px-8 py-4 rounded-full bg-teal-600 text-white font-extrabold shadow-lg hover:bg-teal-700 transition">
+          <button onClick={onClick} className="w-full md:w-auto px-6 md:px-8 py-3 md:py-4 rounded-full bg-teal-600 text-white font-extrabold text-sm md:text-base shadow-lg hover:bg-teal-700 transition">
             {buttonText}
           </button>
         </div>

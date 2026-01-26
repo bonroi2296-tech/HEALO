@@ -43,6 +43,7 @@ export default function InquiryWrapper() {
     supabaseClient
       .from("treatments")
       .select("id, name, hospital_id, price_min, hospitals(name)")
+      .eq("is_published", true)
       .then(({ data, error }) => {
         if (!isMounted) return;
         if (error) {

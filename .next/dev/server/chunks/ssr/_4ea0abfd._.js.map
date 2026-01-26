@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/user/Desktop/HEALO_Demo/app/inquiry/intake/page.jsx"],"sourcesContent":["\"use client\";\n\nimport { InquiryIntakePage } from \"../../../src/legacy-pages/InquiryIntakePage\";\nimport { useRouter } from \"next/navigation\";\n\nexport default function InquiryIntake() {\n  const router = useRouter();\n  const setView = (viewName) => {\n    if (viewName === \"home\") router.push(\"/\");\n    else router.push(\"/\");\n  };\n  return <InquiryIntakePage setView={setView} />;\n}\n"],"names":[],"mappings":";;;;;AAEA;AACA;AAHA;;;;AAKe,SAAS;IACtB,MAAM,SAAS,IAAA,+IAAS;IACxB,MAAM,UAAU,CAAC;QACf,IAAI,aAAa,QAAQ,OAAO,IAAI,CAAC;aAChC,OAAO,IAAI,CAAC;IACnB;IACA,qBAAO,8OAAC,iKAAiB;QAAC,SAAS;;;;;;AACrC"}}]
-}

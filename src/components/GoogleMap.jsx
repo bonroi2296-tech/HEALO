@@ -1,8 +1,8 @@
 "use client";
 
 // src/components/GoogleMap.jsx
-import React, { useMemo, useState } from 'react';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import React, { useMemo } from 'react';
+import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 
 const containerStyle = {
@@ -52,6 +52,13 @@ export const GoogleMapComponent = ({ location, hospitalName, latitude, longitude
     return parseLocation(location);
   }, [location, latitude, longitude]);
 
+  // ✅ useLoadScript 훅 사용 (중복 로드 방지)
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: apiKey || '',
+    // 중복 로드 방지를 위한 옵션
+    preventGoogleFontsLoading: true,
+  });
+
   // API 키가 없으면 placeholder 표시
   if (!apiKey) {
     return (
@@ -67,49 +74,60 @@ export const GoogleMapComponent = ({ location, hospitalName, latitude, longitude
     );
   }
 
-  const [mapLoaded, setMapLoaded] = useState(false);
-
-  return (
-    <LoadScript 
-      googleMapsApiKey={apiKey}
-      onLoad={() => setMapLoaded(true)}
-    >
-      {mapLoaded ? (
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={15}
-          options={{
-            disableDefaultUI: false,
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: true,
-            styles: [
-              {
-                featureType: 'poi',
-                elementType: 'labels',
-                stylers: [{ visibility: 'off' }],
-              },
-            ],
-          }}
-        >
-          <Marker
-            position={center}
-            title={hospitalName || 'Hospital Location'}
-            icon={{
-              url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-            }}
-          />
-        </GoogleMap>
-      ) : (
-        <div className="w-full h-full min-h-[200px] flex items-center justify-center bg-gray-100">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 size={24} className="animate-spin text-teal-600" />
-            <span className="text-xs text-gray-500">Loading map...</span>
-          </div>
+  // 로딩 중
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-full min-h-[200px] flex items-center justify-center bg-gray-100">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 size={24} className="animate-spin text-teal-600" />
+          <span className="text-xs text-gray-500">Loading map...</span>
         </div>
-      )}
-    </LoadScript>
+      </div>
+    );
+  }
+
+  // 로드 에러
+  if (loadError) {
+    return (
+      <div className="bg-gray-100 w-full h-full min-h-[200px] flex items-center justify-center text-gray-400 font-bold">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-xs">Failed to load Google Maps</span>
+          <span className="text-[10px] text-gray-300">
+            {loadError.message || 'Please check your API key'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 지도 렌더링
+  return (
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={center}
+      zoom={15}
+      options={{
+        disableDefaultUI: false,
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: true,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }],
+          },
+        ],
+      }}
+    >
+      <Marker
+        position={center}
+        title={hospitalName || 'Hospital Location'}
+        icon={{
+          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+        }}
+      />
+    </GoogleMap>
   );
 };

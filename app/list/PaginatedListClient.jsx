@@ -35,6 +35,9 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
               ? `*, hospitals(slug, name, location:${locCol})`
               : `*, location:${locCol}`
           )
+          .eq("is_published", true)
+          .order("display_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: false })
           .range(from, to);
 
         const { data, error } = await query;
@@ -109,13 +112,11 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
           >
             {loading ? <Loader2 className="animate-spin" /> : "Load More +"}
           </button>
-        ) : items.length > 0 ? (
-          <span className="text-gray-300 text-sm font-bold">End of list</span>
         ) : null}
       </div>
 
       {withCta && (
-        <div className="mt-10">
+        <div className="mt-4 md:mt-10">
           <PersonalConciergeCTA onClick={() => router.push("/inquiry")} />
         </div>
       )}

@@ -57,11 +57,22 @@ function createDummySupabaseClient() {
 // Proxy를 사용하여 런타임에만 초기화
 export const supabaseClient = new Proxy({}, {
   get(_target, prop) {
-    const client = initSupabaseClient();
-    const value = client[prop];
-    if (typeof value === 'function') {
-      return value.bind(client);
+    try {
+      const client = initSupabaseClient();
+      const value = client[prop];
+      if (typeof value === 'function') {
+        return value.bind(client);
+      }
+      return value;
+    } catch (error) {
+      // 환경 변수가 없을 때 더미 클라이언트 반환 (에러 방지)
+      console.error('[supabaseClient] Environment variables missing:', error.message);
+      const dummy = createDummySupabaseClient();
+      const value = dummy[prop];
+      if (typeof value === 'function') {
+        return value.bind(dummy);
+      }
+      return value;
     }
-    return value;
   },
 });

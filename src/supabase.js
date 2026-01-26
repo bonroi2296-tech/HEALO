@@ -65,17 +65,23 @@ export const supabase = new Proxy({}, {
       }
       return value;
     } catch (error) {
-      // 빌드 시점에 환경 변수가 없으면 더미 클라이언트 반환
-      if (typeof window === 'undefined') {
-        const dummy = createDummySupabaseClient();
-        const value = dummy[prop];
-        if (typeof value === 'function') {
-          return value.bind(dummy);
+      // 환경 변수가 없을 때 더미 클라이언트 반환 (에러 방지)
+      // 빌드 시점 또는 클라이언트에서 환경 변수가 없을 때
+      if (typeof window === 'undefined' || process.env.NODE_ENV === 'development') {
+        // 개발 환경에서는 콘솔에 경고만 출력
+        if (typeof window !== 'undefined') {
+          console.warn('[supabase] Environment variables missing, using dummy client:', error.message);
         }
-        return value;
+      } else {
+        // 프로덕션에서는 에러 로그만 출력
+        console.error('[supabase] Environment variables missing:', error.message);
       }
-      // 런타임에는 에러 재발생
-      throw error;
+      const dummy = createDummySupabaseClient();
+      const value = dummy[prop];
+      if (typeof value === 'function') {
+        return value.bind(dummy);
+      }
+      return value;
     }
   },
 });

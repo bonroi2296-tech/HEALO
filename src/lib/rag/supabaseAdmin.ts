@@ -31,15 +31,57 @@ function getSupabaseAdmin() {
   return supabaseAdminInstance;
 }
 
+// 더미 클라이언트 (빌드 시점용)
+const createDummyAdminClient = () => {
+  const dummyQuery = {
+    select: () => dummyQuery,
+    eq: () => dummyQuery,
+    neq: () => dummyQuery,
+    ilike: () => dummyQuery,
+    or: () => dummyQuery,
+    in: () => dummyQuery,
+    order: () => dummyQuery,
+    limit: () => Promise.resolve({ data: [], error: null }),
+    range: () => Promise.resolve({ data: [], error: null }),
+    single: () => Promise.resolve({ data: null, error: null }),
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    insert: () => Promise.resolve({ data: null, error: null }),
+    update: () => Promise.resolve({ data: null, error: null }),
+    delete: () => Promise.resolve({ data: null, error: null }),
+  };
+  return {
+    from: () => dummyQuery,
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: null } }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+  };
+};
+
 // Proxy를 사용하여 런타임에만 초기화 (빌드 시점에는 에러 발생하지 않음)
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
   get(_target, prop) {
-    const admin = getSupabaseAdmin();
-    const value = admin[prop as keyof typeof admin];
-    // 함수인 경우 this 바인딩 유지
-    if (typeof value === 'function') {
-      return value.bind(admin);
+    try {
+      const admin = getSupabaseAdmin();
+      const value = admin[prop as keyof typeof admin];
+      // 함수인 경우 this 바인딩 유지
+      if (typeof value === 'function') {
+        return value.bind(admin);
+      }
+      return value;
+    } catch (error) {
+      // 빌드 시점에 환경 변수가 없으면 더미 클라이언트 반환
+      if (typeof window === 'undefined') {
+        const dummy = createDummyAdminClient();
+        const value = dummy[prop as keyof typeof dummy];
+        if (typeof value === 'function') {
+          return value.bind(dummy);
+        }
+        return value;
+      }
+      // 런타임에는 에러 재발생
+      throw error;
     }
-    return value;
   },
 });

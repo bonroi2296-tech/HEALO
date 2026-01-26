@@ -21,11 +21,18 @@ export default async function sitemap() {
   // 환경 변수가 있을 때만 데이터 가져오기
   if (hasEnvVars) {
     try {
+      // 타임아웃 보호: 10초 내에 완료되지 않으면 빈 배열 반환
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sitemap data fetch timeout')), 10000)
+      );
+      
       // NOTE: For large datasets, increase limit or paginate in chunks.
-      [treatments, hospitals] = await Promise.all([
+      const dataPromise = Promise.all([
         getTreatmentList({ limit: DEFAULT_LIMIT }),
         getHospitalList({ limit: DEFAULT_LIMIT }),
       ]);
+      
+      [treatments, hospitals] = await Promise.race([dataPromise, timeoutPromise]);
     } catch (error) {
       // 에러 발생 시 빈 배열 반환 (빌드 실패 방지)
       console.warn("[sitemap] Failed to fetch data:", error?.message);

@@ -63,15 +63,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
         // 이미지 파일 캐시
         source: '/:path*\\.(jpg|jpeg|png|gif|webp|svg|ico)',
         headers: [

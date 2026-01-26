@@ -26,26 +26,25 @@ function initSupabaseClient() {
 }
 
 // 더미 클라이언트 (빌드 시점용)
+// 모든 메서드 체이닝을 지원하도록 재귀적으로 자기 자신을 반환
 function createDummySupabaseClient() {
+  const createDummyQuery = () => {
+    const dummyQuery = {
+      select: () => dummyQuery,
+      eq: () => dummyQuery,
+      neq: () => dummyQuery,
+      ilike: () => dummyQuery,
+      order: () => dummyQuery, // 중복 호출 지원
+      limit: () => Promise.resolve({ data: [], error: null }),
+      range: () => Promise.resolve({ data: [], error: null }),
+      single: () => Promise.resolve({ data: null, error: null }),
+      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    };
+    return dummyQuery;
+  };
+  
   return {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
-            single: () => Promise.resolve({ data: null, error: null }),
-            maybeSingle: () => Promise.resolve({ data: null, error: null }),
-          }),
-          single: () => Promise.resolve({ data: null, error: null }),
-          maybeSingle: () => Promise.resolve({ data: null, error: null }),
-        }),
-        order: () => ({
-          limit: () => Promise.resolve({ data: [], error: null }),
-        }),
-        limit: () => Promise.resolve({ data: [], error: null }),
-        single: () => Promise.resolve({ data: null, error: null }),
-      }),
-    }),
+    from: () => createDummyQuery(),
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: null } }),

@@ -214,11 +214,18 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
     <section className="relative mb-6 md:mb-12">
       <div className="relative pt-12 pb-16 md:pt-24 md:pb-20 text-center overflow-hidden bg-teal-900">
         <div className="absolute inset-0 z-0">
-          <img 
-            src={siteConfig?.hero || "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=2000"} 
-            alt="Hero Background" 
-            className="w-full h-full object-cover opacity-60" 
-          />
+          {/* ✅ 명시적으로 설정된 이미지가 있을 때만 표시 */}
+          {siteConfig?.hero && (
+            <img 
+              src={siteConfig.hero} 
+              alt="Hero Background" 
+              className="w-full h-full object-cover opacity-60" 
+              loading="eager"
+              fetchPriority="high"
+              decoding="sync"
+            />
+          )}
+          {/* 그라데이션 오버레이 (이미지 있든 없든 적용) */}
           <div className="absolute inset-0 bg-gradient-to-b from-teal-950/80 via-teal-900/60 to-teal-800/90 mix-blend-multiply"></div>
         </div>
         <div className="relative z-10 max-w-5xl mx-auto px-4 flex flex-col items-center">
@@ -276,6 +283,8 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
               onError={(e) => e.target.src = `https://placehold.co/600x600?text=${type}`}
               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
               alt="img"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           <div className="flex-1 p-3 md:p-5 flex flex-col justify-between min-w-0">

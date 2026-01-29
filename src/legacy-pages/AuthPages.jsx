@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Clock, FileText, Sparkles, Check, MessageCircle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../supabase';
+import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 import { useToast } from '../components/Toast';
 import { PolicyModal } from '../components/Modals';
 import { PRIVACY_CONTENT, TERMS_CONTENT } from '../lib/policyContent';
+
+// ✅ SSR-safe browser client (쿠키 기반 세션)
+const supabase = createSupabaseBrowserClient();
 
 
 //  문의 완료 성공 페이지
@@ -175,17 +178,17 @@ export const LoginPage = ({ setView }) => {
 
         if (error) {
             toast.error("Login failed. Please check your email and password.");
+            setLoading(false);
         } else {
-            // 2. 로그인 성공! (사장님 vs 손님 구분)
+            // 2. 로그인 성공!
             console.log("Logged in:", data.user.email);
             
-            if (data.user.email === 'admin@healo.com') {
-                setView('admin'); // 사장님
-            } else {
-                setView('home');  // 손님
-            }
+            // ✅ 쿠키가 설정되도록 잠시 대기 후 리다이렉트
+            setTimeout(() => {
+                // 페이지 새로고침하여 middleware가 세션 확인하도록 함
+                window.location.href = '/admin';
+            }, 100);
         }
-        setLoading(false);
     };
 
     return (

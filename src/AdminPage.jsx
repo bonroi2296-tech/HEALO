@@ -2,7 +2,10 @@
 
 // src/AdminPage.jsx
 import React, { useEffect, useState, useRef } from 'react';
-import { supabase } from './supabase';
+import { createSupabaseBrowserClient } from './lib/supabase/browser';
+
+// ✅ SSR-safe browser client (쿠키 기반 세션)
+const supabase = createSupabaseBrowserClient();
 import {
   RefreshCw, Loader2, Paperclip, X,
   LayoutDashboard, Building2, 
@@ -158,7 +161,48 @@ export const AdminPage = ({ setView }) => {
   // API Calls & Logic
   // ==========================================
   
-  const fetchInquiries = async () => { const { data } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false }); setInquiries(data || []); };
+  const fetchInquiries = async () => { 
+    try {
+      // ✅ 1. 세션에서 access_token 가져오기
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      
+      if (!accessToken) {
+        console.warn('[AdminPage] No access token, redirecting to login');
+        setView('login');
+        return;
+      }
+
+      // ✅ 2. 관리자 전용 복호화 API 호출 (Bearer token 사용)
+      const response = await fetch('/api/admin/inquiries?limit=200&decrypt=true', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (result.ok) {
+        console.log('[AdminPage] ✅ Inquiries loaded and decrypted:', result.inquiries?.length || 0);
+        setInquiries(result.inquiries || []);
+      } else {
+        console.error('[AdminPage] API failed:', result.error, result.debug);
+        if (result.error === 'unauthorized') {
+          setView('login');
+        } else {
+          // fallback: DB 직접 조회 (암호화된 데이터)
+          const { data } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false }).limit(200);
+          setInquiries(data || []);
+        }
+      }
+    } catch (error) {
+      console.error('[AdminPage] fetchInquiries error:', error);
+      // fallback: DB 직접 조회 (암호화된 데이터)
+      const { data } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false }).limit(200);
+      setInquiries(data || []);
+    }
+  };
   const fetchHospitals = async () => {
       const { data, error } = await supabase.from('hospitals').select('*').order('created_at', { ascending: false });
       if (error) {

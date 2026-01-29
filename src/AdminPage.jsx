@@ -161,14 +161,31 @@ export const AdminPage = ({ setView }) => {
   // API Calls & Logic
   // ==========================================
 
-  // 🚪 로그아웃 핸들러
+  // 🚪 로그아웃 핸들러 (완전 세션 정리)
   const handleLogout = async () => {
     try {
+      // 1. Supabase 로그아웃
       await supabase.auth.signOut();
-      console.log('[AdminPage] ✅ Logged out successfully');
-      window.location.href = '/'; // 홈으로 이동
+      
+      // 2. 모든 로컬 스토리지 정리
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 3. Supabase 쿠키 수동 삭제 (혹시 모를 경우 대비)
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      console.log('[AdminPage] ✅ Logged out - all sessions cleared');
+      
+      // 4. 홈으로 강제 이동 (캐시 무효화)
+      window.location.href = '/?t=' + Date.now();
     } catch (error) {
       console.error('[AdminPage] Logout error:', error);
+      // 에러 발생해도 강제로 홈으로 이동
+      window.location.href = '/';
     }
   };
   

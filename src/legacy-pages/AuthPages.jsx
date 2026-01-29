@@ -159,6 +159,7 @@ export const SuccessPage = ({ setView }) => {
 // --- 4. 로그인 페이지 ---
 export const LoginPage = ({ setView }) => {
     const toast = useToast(); // Toast 사용 준비
+    const router = useRouter(); // Next.js router
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -182,12 +183,12 @@ export const LoginPage = ({ setView }) => {
         } else {
             // 2. 로그인 성공!
             console.log("Logged in:", data.user.email);
+            toast.success(`Welcome, ${data.user.email}!`);
             
-            // ✅ 쿠키가 설정되도록 잠시 대기 후 리다이렉트
-            setTimeout(() => {
-                // 페이지 새로고침하여 middleware가 세션 확인하도록 함
-                window.location.href = '/admin';
-            }, 100);
+            // ✅ Next.js router로 클라이언트 사이드 네비게이션
+            // 세션이 자동으로 업데이트되고 Header가 즉시 반영됨
+            router.push('/admin');
+            setLoading(false);
         }
     };
 

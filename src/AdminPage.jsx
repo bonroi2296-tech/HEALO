@@ -160,6 +160,17 @@ export const AdminPage = ({ setView }) => {
   // ==========================================
   // API Calls & Logic
   // ==========================================
+
+  // 🚪 로그아웃 핸들러
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      console.log('[AdminPage] ✅ Logged out successfully');
+      window.location.href = '/'; // 홈으로 이동
+    } catch (error) {
+      console.error('[AdminPage] Logout error:', error);
+    }
+  };
   
   const fetchInquiries = async () => { 
     try {
@@ -685,7 +696,7 @@ export const AdminPage = ({ setView }) => {
                     </a>
                 </div>
             </nav>
-            <button onClick={() => setView('home')} className="flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold px-2 py-2"><LogOut size={16}/> 관리자 나가기</button>
+            <button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold px-2 py-2"><LogOut size={16}/> 로그아웃</button>
         </div>
 
         <div className="ml-64 flex-1 p-8 md:p-12 max-w-7xl">

@@ -91,33 +91,7 @@ export async function GET(request: NextRequest) {
   try {
     let query = supabaseAdmin
       .from("inquiries")
-      .select(
-        `
-        id,
-        public_token,
-        email,
-        message,
-        first_name,
-        last_name,
-        nationality,
-        spoken_language,
-        contact_method,
-        treatment_type,
-        preferred_date,
-        preferred_date_flex,
-        status,
-        status_reason,
-        lead_quality,
-        priority_score,
-        lead_tags,
-        intake,
-        attachment,
-        attachments,
-        created_at,
-        updated_at
-      `,
-        { count: "exact" }
-      )
+      .select("*", { count: "exact" })
       .order("id", { ascending: false })
       .range(offset, offset + limit - 1);
 

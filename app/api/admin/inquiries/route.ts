@@ -96,7 +96,6 @@ export async function GET(request: NextRequest) {
         id,
         public_token,
         email,
-        contact_id,
         message,
         first_name,
         last_name,

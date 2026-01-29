@@ -215,20 +215,20 @@ export const AdminPage = ({ setView }) => {
         console.log('[AdminPage] ✅ Inquiries loaded and decrypted:', result.inquiries?.length || 0);
         setInquiries(result.inquiries || []);
       } else {
-        console.error('[AdminPage] API failed:', result.error, result.debug);
+        console.error('[AdminPage] ❌ API failed:', result.error, result.debug);
         if (result.error === 'unauthorized') {
           setView('login');
         } else {
-          // fallback: DB 직접 조회 (암호화된 데이터)
-          const { data } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false }).limit(200);
-          setInquiries(data || []);
+          // 에러 표시 (fallback 제거 - 암호문 표시 방지)
+          alert(`문의 로딩 실패: ${result.error}\n\n관리자에게 문의하세요.`);
+          setInquiries([]);
         }
       }
     } catch (error) {
-      console.error('[AdminPage] fetchInquiries error:', error);
-      // fallback: DB 직접 조회 (암호화된 데이터)
-      const { data } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false }).limit(200);
-      setInquiries(data || []);
+      console.error('[AdminPage] ❌ fetchInquiries error:', error);
+      // 에러 표시 (fallback 제거 - 암호문 표시 방지)
+      alert(`문의 로딩 실패: ${error.message}\n\n새로고침 후 다시 시도하세요.`);
+      setInquiries([]);
     }
   };
   const fetchHospitals = async () => {

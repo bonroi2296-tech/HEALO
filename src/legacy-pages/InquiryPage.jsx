@@ -63,6 +63,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       preferredDateFlex: false,
       message: '', file: null, privacyAgreed: false
   });
+  
+  // ✅ 실시간 검증 에러 상태
+  const [emailError, setEmailError] = useState('');
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -125,6 +128,15 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
     if (!formData.spokenLanguage?.trim()) { toast.error("Please enter Spoken Language."); return; }
     if (!hasContact) { toast.error("Please provide Email or Messenger (method + ID)."); return; }
     if (!hasPreferred) { toast.error("Please set Preferred Date or check Flexible."); return; }
+    
+    // ✅ 이메일 형식 검증 (이메일이 입력된 경우) - 정규식 사용
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.email && !emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address (e.g., example@email.com)");
+      setEmailError('Please enter a valid email address (e.g., example@email.com)');
+      return;
+    }
+    
     if (!formData.privacyAgreed) {
       toast.error("Please agree to the Privacy Policy.");
       return;
@@ -149,35 +161,62 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
           ? new Date(formData.preferredDate).toISOString().split('T')[0]
           : null);
 
-        const { data: insertedRow, error } = await supabase
-          .from('inquiries')
-          .insert([
-            {
-              first_name: formData.firstName || null,
-              last_name: formData.lastName || null,
-              email: formData.email || null,
-              nationality: formData.nationality,
-              spoken_language: formData.spokenLanguage,
-              contact_method: formData.contactMethod || null,
-              contact_id: formData.contactId || null,
-              treatment_type: formData.treatmentType,
-              preferred_date: preferredDateVal,
-              preferred_date_flex: !!formData.preferredDateFlex,
-              message: formData.message || null,
-              attachment: attachmentPath,
-              attachments: attachmentsList,
-              intake: {},
-              status: '대기중',
-            },
-          ])
-          .select('id, public_token')
-          .single();
+        // 🔒 RLS 보안: 서버 API 경유로 변경 (클라이언트 직접 insert 차단)
+        // Before: supabase.from('inquiries').insert() (RLS에 의해 차단됨)
+        // After: /api/inquiries/create (service_role로 RLS 우회)
+        const createResponse = await fetch('/api/inquiries/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: formData.firstName || null,
+            lastName: formData.lastName || null,
+            email: formData.email || null,
+            nationality: formData.nationality,
+            spokenLanguage: formData.spokenLanguage,
+            contactMethod: formData.contactMethod || null,
+            contactId: formData.contactId || null,
+            treatmentType: formData.treatmentType,
+            preferredDate: preferredDateVal,
+            preferredDateFlex: !!formData.preferredDateFlex,
+            message: formData.message || null,
+            attachment: attachmentPath,
+            attachments: attachmentsList,
+          }),
+        });
 
-        if (error) throw error;
+        const createResult = await createResponse.json();
 
-        const inquiryId = insertedRow?.id;
-        const publicToken = insertedRow?.public_token;
+        if (!createResult.ok) {
+          // 🔧 에러 타입에 따라 구체적인 메시지 표시
+          let errorMessage = 'Failed to submit inquiry. Please try again.';
+          
+          switch (createResult.error) {
+            case 'invalid_email':
+              errorMessage = 'Please enter a valid email address (e.g., example@email.com)';
+              break;
+            case 'missing_contact':
+              errorMessage = 'Please provide either Email or Messenger contact information';
+              break;
+            case 'missing_required_fields':
+              errorMessage = 'Please fill in all required fields';
+              break;
+            case 'rate_limit_exceeded':
+              errorMessage = `Too many requests. Please try again in ${createResult.retryAfter || 60} seconds`;
+              break;
+            case 'encryption_failed':
+              errorMessage = 'Security error occurred. Please contact support';
+              break;
+            default:
+              errorMessage = createResult.detail || createResult.error || 'Failed to submit inquiry';
+          }
+          
+          throw new Error(errorMessage);
+        }
 
+        const inquiryId = createResult.inquiryId;
+        const publicToken = createResult.publicToken;
+
+        // ✅ RAG 시스템을 위한 normalize API 호출
         if (inquiryId) {
           try {
             const res = await fetch('/api/inquiry/normalize', {
@@ -192,6 +231,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             if (!res.ok) {
               const j = await res.json().catch(() => ({}));
               console.error('[InquiryForm] normalize API error:', res.status, j);
+            } else {
+              console.log('[InquiryForm] ✅ normalize API success');
             }
           } catch (e) {
             console.error('[InquiryForm] normalize call failed:', e);
@@ -224,7 +265,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
         setView('success');
     } catch (error) {
         console.error('Error:', error);
-        toast.error("Failed to submit inquiry. Please try again.");
+        // ✅ API에서 받은 구체적인 에러 메시지 표시
+        toast.error(error.message || "Failed to submit inquiry. Please try again.");
     }
   };
 
@@ -412,7 +454,30 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 연락: 이메일 OR 메신저 (둘 중 하나 필수) */}
                 <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Email <span className="text-gray-400 font-normal">(or Messenger below)</span></label>
-                    <input type="email" value={formData.email} onChange={(e)=>setFormData({...formData, email: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="your@email.com"/>
+                    <input 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData({...formData, email: value});
+                        
+                        // ✅ 실시간 이메일 검증 (정규식)
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (value && !emailRegex.test(value)) {
+                          setEmailError('Please enter a valid email address (e.g., example@email.com)');
+                        } else {
+                          setEmailError('');
+                        }
+                      }}
+                      className={`w-full p-3 rounded-xl border ${emailError ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-teal-500'} outline-none transition text-sm bg-gray-50/50`}
+                      placeholder="your@email.com"
+                    />
+                    {emailError && (
+                      <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1">
+                        <AlertCircle size={12} />
+                        {emailError}
+                      </p>
+                    )}
                 </div>
 
                 {/* 메신저: 선택 시에만 ID 입력칸 노출 */}

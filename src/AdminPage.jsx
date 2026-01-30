@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Building2, 
   Stethoscope, MessageSquare, Plus, Save, Trash2,
   ImageIcon, User, LogOut, Globe, Coffee, Trophy, UploadCloud, Info, Settings,
-  BarChart3, TrendingUp, DollarSign, Activity, AlertCircle, Target, ArrowRightCircle
+  BarChart3, TrendingUp, DollarSign, Activity, AlertCircle, Target, ArrowRightCircle, Clock
 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { AddressInput } from './components/AddressInput';
@@ -20,6 +20,7 @@ import { InquiryManager } from './legacy-pages/admin/InquiryManager';
 import { HospitalManager } from './legacy-pages/admin/HospitalManager';
 import { TreatmentManager } from './legacy-pages/admin/TreatmentManager';
 import { SiteSettings as SiteSettingsTab } from './legacy-pages/admin/SiteSettings';
+import { AdminAuditPage } from './legacy-pages/AdminAuditPage';
 
 // ==========================================
 // 1. 텍스트 입력용 동적 리스트
@@ -113,6 +114,7 @@ export const AdminPage = ({ setView }) => {
   const [activeTab, setActiveTab] = useState('analytics'); 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [accessToken, setAccessToken] = useState(null); // ✅ Admin Audit Page용
 
   const [inquiries, setInquiries] = useState([]);
   const [hospitalsList, setHospitalsList] = useState([]);
@@ -193,18 +195,22 @@ export const AdminPage = ({ setView }) => {
     try {
       // ✅ 1. 세션에서 access_token 가져오기
       const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
+      const token = sessionData?.session?.access_token;
       
-      if (!accessToken) {
+      if (!token) {
         console.warn('[AdminPage] No access token, redirecting to login');
         setView('login');
         return;
       }
 
-      // ✅ 2. 관리자 전용 복호화 API 호출 (Bearer token 사용)
-      const response = await fetch('/api/admin/inquiries?limit=200&decrypt=true', {
+      // ✅ Admin Audit Page용 token 저장
+      setAccessToken(token);
+
+      // ✅ 2. 관리자 전용 API 호출 (목록은 마스킹, 상세만 복호화)
+      // 🔒 보안 강화: 목록 조회 시 decrypt=false (마스킹된 데이터)
+      const response = await fetch('/api/admin/inquiries?limit=200&decrypt=false', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${token}`,
         },
         credentials: 'include'
       });
@@ -212,7 +218,8 @@ export const AdminPage = ({ setView }) => {
       const result = await response.json();
       
       if (result.ok) {
-        console.log('[AdminPage] ✅ Inquiries loaded and decrypted:', result.inquiries?.length || 0);
+        const status = result.masked ? 'masked' : 'decrypted';
+        console.log(`[AdminPage] ✅ Inquiries loaded (${status}):`, result.inquiries?.length || 0);
         setInquiries(result.inquiries || []);
       } else {
         console.error('[AdminPage] ❌ API failed:', result.error, result.debug);
@@ -329,7 +336,13 @@ export const AdminPage = ({ setView }) => {
   }, [inquiries, hospitalsList]);
 
 
-  const handleStatusChange = async (id, newStatus) => { await supabase.from('inquiries').update({ status: newStatus }).eq('id', id); fetchInquiries(); };
+  // 🔒 RLS 보안: 클라이언트에서 직접 update 금지
+  // Status 변경은 추후 /api/admin/inquiries/[id] PATCH로 구현 필요
+  const handleStatusChange = async (id, newStatus) => { 
+    alert('⚠️ Status 변경은 현재 비활성화되어 있습니다.\n관리자 API를 통해 구현 예정입니다.');
+    // await supabase.from('inquiries').update({ status: newStatus }).eq('id', id); 
+    // fetchInquiries(); 
+  };
   const handleDelete = async (table, id, cb) => { 
       if(!confirm("정말 삭제하시겠습니까? 복구할 수 없습니다.")) return;
       
@@ -707,6 +720,7 @@ export const AdminPage = ({ setView }) => {
                 <button onClick={() => setActiveTab('hospitals')} className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition ${activeTab === 'hospitals' ? 'bg-teal-50 text-teal-700' : 'text-gray-500 hover:bg-gray-50'}`}><Building2 size={18}/> 병원 관리</button>
                 <button onClick={() => setActiveTab('treatments')} className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition ${activeTab === 'treatments' ? 'bg-teal-50 text-teal-700' : 'text-gray-500 hover:bg-gray-50'}`}><Stethoscope size={18}/> 시술 관리</button>
                 <div className="pt-4 mt-4 border-t border-gray-100 space-y-2">
+                    <button onClick={() => setActiveTab('audit')} className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition ${activeTab === 'audit' ? 'bg-teal-50 text-teal-700' : 'text-gray-500 hover:bg-gray-50'}`}><Clock size={18}/> 감사 로그</button>
                     <button onClick={() => setActiveTab('settings')} className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition ${activeTab === 'settings' ? 'bg-teal-50 text-teal-700' : 'text-gray-500 hover:bg-gray-50'}`}><Settings size={18}/> 사이트 설정</button>
                     <a href="/admin/rag" className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50">
                       <Target size={18} /> RAG 테스트
@@ -729,6 +743,10 @@ export const AdminPage = ({ setView }) => {
                     handleStatusChange={handleStatusChange}
                     handleFileClick={handleFileClick}
                 />
+            )}
+
+            {activeTab === 'audit' && (
+                <AdminAuditPage authToken={accessToken} />
             )}
 
             {activeTab === 'hospitals' && (

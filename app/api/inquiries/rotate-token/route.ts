@@ -2,7 +2,14 @@
  * HEALO: public_token 회전(재발급) API (서버 전용)
  * 유출 대응을 위해 토큰 재발급
  * 보안: INTERNAL_ADMIN_SECRET 환경변수로 보호
+ * 
+ * ✅ P0 수정: 런타임 명시 (Node.js)
+ * 
+ * 이유:
+ * - DB 관리자 접근 (SERVICE_ROLE_KEY 사용)
+ * - Edge 런타임에서 발생할 수 있는 예측 불가 오류 방지
  */
+export const runtime = "nodejs";
 
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";

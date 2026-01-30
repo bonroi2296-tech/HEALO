@@ -29,16 +29,24 @@ export default function ClientShell({ children }) {
   useEffect(() => {
     setLangCode(getLangCodeFromCookie());
     
+    console.log("[ClientShell] 🔍 Mounting, checking session...");
+    
     let mounted = true;
     supabaseClient.auth
       .getSession()
       .then(({ data: { session } }) => {
-        if (mounted) setSession(session);
+        if (mounted) {
+          console.log("[ClientShell] ✅ Initial session:", session?.user?.email || "none");
+          setSession(session);
+        }
       });
       
     const { data } = supabaseClient.auth.onAuthStateChange(
       (_event, session) => {
-        if (mounted) setSession(session);
+        if (mounted) {
+          console.log("[ClientShell] 🔔 Auth state changed:", _event, session?.user?.email || "none");
+          setSession(session);
+        }
       }
     );
     

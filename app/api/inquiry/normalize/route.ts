@@ -1,3 +1,15 @@
+/**
+ * ✅ P0 수정: 런타임 명시 (Node.js)
+ * ✅ 운영 안정화: Rate limit + 운영 로그 추가
+ * 
+ * 이유:
+ * - 암호화 처리 (Node.js crypto 의존)
+ * - DB 관리자 접근 (SERVICE_ROLE_KEY 사용)
+ * - Edge 런타임에서 발생할 수 있는 예측 불가 오류 방지
+ * - 봇/도배 방지 및 운영 추적성 확보
+ */
+export const runtime = "nodejs";
+
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
 import {
   createEmptyIntake,
@@ -8,7 +20,13 @@ import {
   bodyPartFromText,
   contraindicationsAndFlagsFromMessage,
 } from "../../../../src/lib/intakeExtract";
-import { encryptText, hashEmail, assertEncryptionKey } from "../../../../src/lib/security/encryption";
+import { encryptString, encryptStringNullable } from "../../../../src/lib/security/encryptionV2";
+import crypto from "crypto";
+import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
+import { logOperational, logRateLimitExceeded, logEncryptionFailed, logInquiryFailed } from "../../../../src/lib/operationalLog";
+import { evaluateLeadQuality } from "../../../../src/lib/leadQuality/scoring";
+import { trackFunnelEvent } from "../../../../src/lib/events/funnelTracking";
+import { checkEncryptionFailures, alertHighPriorityLead } from "../../../../src/lib/alerts/operationalAlerts";
 
 const detectLanguage = (value: string | null | undefined) => {
   const v = String(value || "").toLowerCase();
@@ -137,16 +155,34 @@ function buildIntakeFromTextOnly(text: string): Intake {
 }
 
 export async function POST(request: Request) {
-  // ✅ Security: 암호화 키 검증 (fail-fast)
-  try {
-    assertEncryptionKey();
-  } catch (error: any) {
-    console.error("[api/inquiry/normalize] encryption key validation failed:", error);
+  const clientIp = getClientIp(request);
+  const apiPath = '/api/inquiry/normalize';
+
+  // ✅ 운영 안정화: Rate limit 체크 (봇/도배 방지)
+  const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.NORMALIZE);
+  if (!rateLimitResult.allowed) {
+    logRateLimitExceeded(
+      apiPath,
+      clientIp,
+      RATE_LIMITS.NORMALIZE.maxRequests,
+      RATE_LIMITS.NORMALIZE.windowMs
+    );
+    
     return Response.json(
-      { ok: false, error: "encryption_key_missing", detail: error?.message },
-      { status: 500 }
+      { 
+        ok: false, 
+        error: "rate_limit_exceeded",
+        message: rateLimitResult.reason,
+        retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+      },
+      { 
+        status: 429,
+        headers: getRateLimitHeaders(rateLimitResult)
+      }
     );
   }
+
+  // ✅ Security: 암호화 키 검증 (encryptionV2는 자동 검증)
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -269,19 +305,74 @@ export async function POST(request: Request) {
     if (page != null) constraints.page = page;
     if (utm != null) constraints.utm = utm;
 
-    // ✅ Security: 민감 데이터 암호화 (에러 시 null로 fallback)
+    /**
+     * ✅ P0 수정: Fail-Closed 원칙 적용 (암호화)
+     * 
+     * 수정 전:
+     * - 암호화 실패 시 null로 fallback하여 평문 데이터가 저장될 가능성
+     * - "best-effort" 패턴으로 개인정보 보호 리스크
+     * 
+     * 수정 후:
+     * - 암호화 실패 시 DB insert를 중단하고 500 에러 반환
+     * - 개인정보는 반드시 암호화된 상태로만 저장
+     * 
+     * 이유:
+     * - 개인정보 보호법 준수 및 법적 리스크 제거
+     * - 고객 신뢰 유지 (평문 저장 절대 방지)
+     */
     let rawMessageEnc: string | null = null;
     let emailEnc: string | null = null;
     let contactIdEnc: string | null = null;
     let emailHash: string | null = null;
+    
     try {
-      rawMessageEnc = rawMessage ? await encryptText(rawMessage) : null;
-      emailEnc = inquiryRow?.email ? await encryptText(inquiryRow.email) : null;
-      contactIdEnc = inquiryRow?.contact_id ? await encryptText(inquiryRow.contact_id) : null;
-      emailHash = inquiryRow?.email ? await hashEmail(inquiryRow.email) : null;
+      // ✅ 새 암호화 방식 (encryptionV2 - Node.js crypto 직접 사용)
+      rawMessageEnc = rawMessage ? encryptString(rawMessage) : null;
+      emailEnc = inquiryRow?.email ? encryptString(inquiryRow.email) : null;
+      contactIdEnc = inquiryRow?.contact_id ? encryptString(inquiryRow.contact_id) : null;
+      
+      // ✅ 이메일 해시 (검색용 - SHA256)
+      if (inquiryRow?.email) {
+        emailHash = crypto
+          .createHash('sha256')
+          .update(inquiryRow.email.toLowerCase().trim())
+          .digest('hex');
+      }
     } catch (encryptErr: any) {
-      console.error("[api/inquiry/normalize] encryption error (continuing without encryption):", encryptErr?.message);
-      // 암호화 실패해도 계속 진행 (best-effort)
+      console.error("[api/inquiry/normalize] encryption failed - aborting DB insert:", encryptErr?.message);
+      // ✅ 운영 로그: 암호화 실패 기록
+      logEncryptionFailed(apiPath, clientIp, encryptErr?.message || 'unknown_error');
+      
+      // ✅ P2: 운영 알림 - 암호화 실패 누적 체크
+      checkEncryptionFailures().catch(err => console.error('[alert] checkEncryptionFailures failed:', err));
+      
+      // ✅ 암호화 실패 시 즉시 에러 반환 (DB insert 중단)
+      return Response.json(
+        { 
+          ok: false, 
+          error: "encryption_failed", 
+          detail: "개인정보 암호화에 실패했습니다. 데이터 저장을 중단합니다." 
+        },
+        { status: 500 }
+      );
+    }
+    
+    // ✅ 추가 검증: 개인정보가 있는데 암호화되지 않은 경우도 차단
+    if (rawMessage && !rawMessageEnc) {
+      console.error("[api/inquiry/normalize] raw_message exists but encryption returned null");
+      logInquiryFailed(apiPath, clientIp, 'encryption_returned_null', { field: 'raw_message' });
+      return Response.json(
+        { ok: false, error: "encryption_returned_null" },
+        { status: 500 }
+      );
+    }
+    if (inquiryRow?.email && !emailEnc) {
+      console.error("[api/inquiry/normalize] email exists but encryption returned null");
+      logInquiryFailed(apiPath, clientIp, 'encryption_returned_null', { field: 'email' });
+      return Response.json(
+        { ok: false, error: "email_encryption_returned_null" },
+        { status: 500 }
+      );
     }
 
     // 주의: raw_message는 암호화된 값 저장 (복호화는 서버에서만 가능)
@@ -313,8 +404,80 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error("[api/inquiry/normalize] normalized_inquiries insert failed:", insertError);
+      logInquiryFailed(apiPath, clientIp, 'db_insert_failed', { error: insertError.message });
       return Response.json({ ok: true, normalized: null });
     }
+
+    // ✅ P2: 리드 품질 평가 (원본 문의가 있는 경우만)
+    if (inquiryRow && effectiveInquiryId) {
+      try {
+        const leadEvaluation = evaluateLeadQuality({
+          country: inquiryRow.nationality,
+          language: inquiryRow.spoken_language,
+          treatmentType: inquiryRow.treatment_type,
+          utmSource: utm?.source,
+          messageLength: rawMessage?.length || 0,
+          missingFieldsCount: missing_fields.length,
+          emailDomain: inquiryRow.email?.split('@')[1],
+          intakeCompleteness: hasIntake ? 0.8 : 0.3,
+        });
+
+        // DB 업데이트 (리드 품질 정보)
+        await supabaseAdmin
+          .from("inquiries")
+          .update({
+            lead_quality: leadEvaluation.quality,
+            priority_score: leadEvaluation.priorityScore,
+            lead_tags: leadEvaluation.tags,
+            quality_signals: leadEvaluation.signals,
+            quality_evaluated_at: new Date().toISOString(),
+          })
+          .eq("id", effectiveInquiryId);
+
+        // ✅ P2: 고가치 리드 알림
+        if (leadEvaluation.quality === 'hot') {
+          alertHighPriorityLead({
+            inquiryId: effectiveInquiryId,
+            priorityScore: leadEvaluation.priorityScore,
+            country: inquiryRow.nationality,
+            treatmentType: inquiryRow.treatment_type,
+          }).catch(err => console.error('[alert] alertHighPriorityLead failed:', err));
+        }
+
+        console.log('[api/inquiry/normalize] Lead quality evaluated:', {
+          inquiryId: effectiveInquiryId,
+          quality: leadEvaluation.quality,
+          score: leadEvaluation.priorityScore,
+        });
+      } catch (evalError) {
+        // 리드 품질 평가 실패해도 메인 로직 영향 없음
+        console.error('[api/inquiry/normalize] Lead quality evaluation failed:', evalError);
+      }
+    }
+
+    // ✅ P2: 퍼널 이벤트 추적
+    trackFunnelEvent({
+      stage: 'form_complete',
+      sessionId: sessionId,
+      page: page,
+      utm: utm,
+      language: language,
+      country: inquiryRow?.nationality,
+      treatmentType: inquiryRow?.treatment_type,
+    });
+
+    // ✅ 운영 로그: 정규화 성공
+    logOperational('info', {
+      event: 'normalize_success',
+      api: apiPath,
+      clientIp: clientIp || undefined,
+      statusCode: 200,
+      context: { 
+        sourceType,
+        language,
+        hasInquiryId: !!effectiveInquiryId 
+      }
+    });
 
     return Response.json({ ok: true, normalized: inserted });
   } catch (error: any) {

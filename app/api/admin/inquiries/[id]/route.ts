@@ -19,11 +19,16 @@ export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../../../src/lib/rag/supabaseAdmin";
-import { checkAdminAuth } from "../../../../../src/lib/auth/checkAdminAuth";
+import { requireAdminAuth } from "../../../../../src/lib/auth/requireAdminAuth";
 import {
   decryptInquiryForAdmin,
   decryptNormalizedInquiryForAdmin,
 } from "../../../../../src/lib/security/decryptForAdmin";
+import {
+  logAdminAction,
+  getIpFromRequest,
+  getUserAgentFromRequest,
+} from "../../../../../src/lib/audit/adminAuditLog";
 
 /**
  * GET: 문의 상세 조회 (관리자 전용, PII 복호화)
@@ -45,44 +50,40 @@ import {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   // ✅ 환경변수 검증
   assertSupabaseEnv();
 
-  const inquiryId = parseInt(params.id);
-
-  if (!inquiryId || isNaN(inquiryId)) {
+  // ========================================
+  // ID 검증: 숫자 형식만 허용
+  // ========================================
+  // Next.js 15+: params는 Promise입니다
+  const params = await context.params;
+  const rawId = params.id;
+  
+  // 숫자 형식 체크
+  if (!rawId || !/^\d+$/.test(rawId)) {
     return Response.json(
       {
         ok: false,
         error: "invalid_inquiry_id",
-        detail: "유효하지 않은 문의 ID입니다",
+        detail: "ID must be a positive integer",
       },
       { status: 400 }
     );
   }
 
-  // ========================================
-  // 1. 관리자 권한 확인 (Bearer 토큰 우선, 쿠키 fallback)
-  // ========================================
-  const authResult = await checkAdminAuth(request);
+  const inquiryId = Number(rawId);
 
-  if (!authResult.isAdmin) {
-    console.warn(
-      `[admin/inquiries/${inquiryId}] Unauthorized access attempt: ${authResult.error}`
-    );
-    return Response.json(
-      {
-        ok: false,
-        error: "unauthorized",
-        detail: "관리자 권한이 필요합니다",
-      },
-      { status: 403 }
-    );
+  // ========================================
+  // 1. 관리자 권한 확인 (자동 audit log 포함)
+  // ========================================
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) {
+    return auth.response; // 403 + audit log 자동 처리
   }
-
-  console.log(`[admin/inquiries/${inquiryId}] Admin access: ${authResult.email}`);
+  const { authResult } = auth;
 
   // ========================================
   // 2. Query Parameters 파싱
@@ -96,9 +97,26 @@ export async function GET(
   // 3. inquiry 조회
   // ========================================
   try {
+    // 🔒 보안: detail API는 필요한 필드만 SELECT
+    const DETAIL_FIELDS = [
+      "id",
+      "created_at",
+      "first_name",
+      "last_name",
+      "email",
+      "message",
+      "treatment_type",
+      "contact_method",
+      "nationality",
+      "status",
+      "attachment",
+      "preferred_date",
+      "contact_id",
+    ].join(",");
+
     const { data: inquiry, error: inquiryError } = await supabaseAdmin
       .from("inquiries")
-      .select("*")
+      .select(DETAIL_FIELDS)
       .eq("id", inquiryId)
       .single();
 
@@ -108,14 +126,15 @@ export async function GET(
         return Response.json(
           {
             ok: false,
-            error: "inquiry_not_found",
-            detail: "문의를 찾을 수 없습니다",
+            error: "not_found",
+            detail: "Inquiry not found",
           },
           { status: 404 }
         );
       }
 
-      console.error(`[admin/inquiries/${inquiryId}] DB query error:`, inquiryError);
+      // 🚨 에러 로깅 시 PII 제외
+      console.error(`[admin/inquiries/${inquiryId}] DB query error:`, inquiryError.message);
       return Response.json(
         {
           ok: false,
@@ -141,9 +160,10 @@ export async function GET(
         .maybeSingle();
 
       if (normalizedError) {
+        // 🚨 에러 로깅 시 PII 제외
         console.error(
           `[admin/inquiries/${inquiryId}] normalized_inquiries query error:`,
-          normalizedError
+          normalizedError.message
         );
         // Fail-safe: 에러가 나도 inquiry는 반환
       } else {
@@ -160,15 +180,16 @@ export async function GET(
     if (shouldDecrypt) {
       try {
         decryptedInquiry = await decryptInquiryForAdmin(inquiry);
-        console.log(`[admin/inquiries/${inquiryId}] Inquiry decrypted`);
+        console.log(`[admin/inquiries/${inquiryId}] ✅ Inquiry decrypted`);
 
         if (normalized) {
           decryptedNormalized = await decryptNormalizedInquiryForAdmin(normalized);
-          console.log(`[admin/inquiries/${inquiryId}] Normalized inquiry decrypted`);
+          console.log(`[admin/inquiries/${inquiryId}] ✅ Normalized inquiry decrypted`);
         }
       } catch (decryptError: any) {
+        // 🚨 복호화 실패 시 에러 메시지만 로깅 (PII 제외)
         console.error(
-          `[admin/inquiries/${inquiryId}] Decryption error:`,
+          `[admin/inquiries/${inquiryId}] Decryption failed:`,
           decryptError.message
         );
         // Fail-safe: 복호화 실패해도 응답은 반환 (암호문 상태로)
@@ -176,7 +197,29 @@ export async function GET(
     }
 
     // ========================================
-    // 6. 응답 반환
+    // 6. 감사 로그 기록 (성공 시에만)
+    // ========================================
+    // ⚠️ 중요: 조회 성공 후에만 audit log 적재 (PII 제외)
+    // ✅ inquiry_ids는 INT4[] (number[])로 전달
+    // 백그라운드로 실행 (메인 로직 블로킹 방지)
+    logAdminAction({
+      adminEmail: authResult.email || "unknown",
+      adminUserId: authResult.userId,
+      action: "VIEW_INQUIRY",
+      inquiryIds: [inquiryId], // ✅ number[] (not string[])
+      ipAddress: getIpFromRequest(request),
+      userAgent: getUserAgentFromRequest(request),
+      metadata: {
+        decrypt: shouldDecrypt,
+        include_normalized: includeNormalized,
+      },
+    }).catch((err) => {
+      // 감사 로그 실패는 조용히 처리 (에러 메시지만 로깅)
+      console.error(`[admin/inquiries/${inquiryId}] Audit log failed:`, err.message);
+    });
+
+    // ========================================
+    // 7. 응답 반환
     // ========================================
     return Response.json({
       ok: true,
@@ -185,7 +228,8 @@ export async function GET(
       decrypted: shouldDecrypt,
     });
   } catch (error: any) {
-    console.error(`[admin/inquiries/${inquiryId}] Error:`, error);
+    // 🚨 에러 로깅 시 PII 제외 (error.message만 로깅)
+    console.error(`[admin/inquiries/${inquiryId}] Internal error:`, error.message);
     return Response.json(
       {
         ok: false,

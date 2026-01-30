@@ -11,6 +11,7 @@ const DICTIONARY = {
     "auth.signup": "Sign Up",
     "auth.logout": "Log Out",
     "auth.greeting": "Hi",
+    "auth.signedInAs": "Signed in as",
     "footer.company": "Company",
     "footer.legal": "Legal",
     "hero.title.line1": "Find the Best Hospital in Korea",

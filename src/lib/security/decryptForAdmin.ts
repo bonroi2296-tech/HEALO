@@ -20,8 +20,11 @@
  * const { data } = await supabaseAdmin.from("inquiries").select("*");
  * const decryptedData = await decryptInquiryForAdmin(data[0]);
  * ```
+ * 
+ * 🔒 보안: 이 파일은 서버에서만 사용됩니다 (클라이언트 번들 차단)
  */
 
+import "server-only";
 import { decryptAuto } from "./encryptionV2";
 import { decryptPiiInObject } from "./piiJson";
 

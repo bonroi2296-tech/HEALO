@@ -1,5 +1,6 @@
 // src/supabase.js
-import { createClient } from '@supabase/supabase-js';
+// ✅ OAuth callback과 동일한 쿠키 기반 세션 관리
+import { createBrowserClient } from '@supabase/ssr';
 
 // 빌드 시점에는 환경 변수가 없을 수 있으므로, 런타임에서만 체크
 let supabaseInstance = null;
@@ -24,7 +25,8 @@ function getSupabase() {
   }
 
   if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+    // ✅ 쿠키 기반 클라이언트로 변경 (OAuth callback과 동일한 세션 저장소)
+    supabaseInstance = createBrowserClient(supabaseUrl, supabaseKey);
   }
 
   return supabaseInstance;

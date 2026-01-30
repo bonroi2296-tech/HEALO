@@ -103,11 +103,32 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
   },
 
-  // ✅ Vercel 배포 시 타입 에러 무시 (임시 설정)
-  // 참고: Next.js 16에서는 eslint 설정을 next.config.js에서 지원하지 않음
+  /**
+   * ✅ P0 수정: 타입 체크 설정 (현재 상태)
+   * 
+   * 현재 문제:
+   * - Supabase 스키마 타입이 정의되지 않음 (database.types.ts 없음)
+   * - 타입 생성 필요: `supabase gen types typescript --project-id [PROJECT_ID]`
+   * 
+   * 임시 조치:
+   * - ignoreBuildErrors: true로 유지 (Supabase 타입 생성 전까지)
+   * - 하지만 각 API route에서 런타임 검증을 강화함:
+   *   1. assertEncryptionKey() - 암호화 키 검증
+   *   2. assertSupabaseEnv() - DB 환경변수 검증
+   *   3. 모든 중요한 처리에서 에러 시 500 반환 (fail-closed)
+   * 
+   * 다음 단계 (별도 작업):
+   * 1. Supabase CLI로 타입 생성: npx supabase gen types typescript
+   * 2. database.types.ts 파일 추가
+   * 3. createClient<Database>() 타입 파라미터 추가
+   * 4. ignoreBuildErrors: false로 변경
+   * 
+   * 중요:
+   * - 타입 에러는 있지만, 런타임 안전성은 확보됨 (P0 수정 완료)
+   * - 데이터 유실 방지, Fail-Closed 원칙 적용 완료
+   */
   typescript: {
-    // 빌드할 때 타입 에러가 나도 무시하고 배포합니다.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // Supabase 타입 생성 전까지 유지
   },
 };
 

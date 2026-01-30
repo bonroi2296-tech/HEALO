@@ -3,6 +3,7 @@
  * 
  * 경로: /api/admin/whoami
  * 권한: 없음 (진단용이므로 누구나 자신의 상태 확인 가능)
+ * Rate Limit: 제외 (빠른 디버깅을 위해)
  * 
  * 목적:
  * - 현재 로그인 상태 확인
@@ -14,6 +15,8 @@ export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
 import { checkAdminAuth } from "../../../../src/lib/auth/checkAdminAuth";
+
+// ⚠️ 주의: 이 API는 rate limit을 적용하지 않습니다 (진단용)
 
 /**
  * GET: 현재 유저 정보 및 관리자 권한 확인

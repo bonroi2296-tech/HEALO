@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Search, MapPin, Globe, Menu, Star, Zap, ChevronDown, CheckCircle,
   MessageCircle, X, ArrowRight, Stethoscope, Building2, Settings,
-  FileText, UserCheck, Clock, ShieldCheck, Sparkles
+  FileText, UserCheck, Clock, ShieldCheck, Sparkles, User, LogOut
 } from 'lucide-react';
 import { getLangCodeFromCookie, getLangCodeFromLabel, t } from "./lib/i18n";
 
@@ -46,6 +46,77 @@ const useLangCode = () => {
     setLangCode(getLangCodeFromCookie());
   }, []);
   return langCode;
+};
+
+/**
+ * User Avatar Menu Component
+ * - 엘레강스한 아바타 + chevron 디자인
+ * - 고정 폭으로 레이아웃 안정성 보장
+ */
+const UserMenu = ({ session, onLogout, langCode }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useOutsideClose(isOpen, () => setIsOpen(false));
+
+  // 이메일에서 이니셜 추출 (최대 2글자)
+  const getInitials = (email) => {
+    if (!email) return 'U';
+    const name = email.split('@')[0];
+    if (name.length === 1) return name.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(session?.user?.email);
+
+  return (
+    <div className="relative flex-shrink-0 w-[64px]" ref={menuRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 hover:opacity-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-600 rounded-full group"
+        title={session?.user?.email}
+        aria-label="Account menu"
+      >
+        {/* Avatar with border */}
+        <div className="h-8 w-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white font-semibold text-sm group-hover:bg-white/15 group-hover:border-white/25 transition-all shadow-sm">
+          {initials}
+        </div>
+        {/* Chevron */}
+        <ChevronDown
+          size={14}
+          className={`text-white/60 group-hover:text-white/80 transition-all ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <>
+          <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 text-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Email section */}
+            <div className="px-4 py-3.5 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+              <div className="text-[11px] uppercase tracking-wide text-gray-500 font-medium mb-1.5">
+                {t("auth.signedInAs", langCode)}
+              </div>
+              <div className="text-sm font-medium text-gray-900 break-words leading-relaxed">
+                {session?.user?.email}
+              </div>
+            </div>
+            {/* Logout button */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onLogout();
+              }}
+              className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 transition-colors flex items-center gap-2.5 text-red-600 font-medium group"
+            >
+              <LogOut size={16} className="group-hover:scale-110 transition-transform" />
+              <span>{t("auth.logout", langCode)}</span>
+            </button>
+          </div>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsOpen(false)} />
+        </>
+      )}
+    </div>
+  );
 };
 
 // --- 1. 헤더 ---
@@ -119,17 +190,15 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
                 <button onClick={() => onNavClick('list_hospital')} className={getNavLinkClass('hospital')}>{t("nav.hospitals", langCode)}</button>
               </nav>
               <div className="w-px h-5 bg-white/20" />
-              <div className="flex items-center gap-4">
+              {/* 고정폭 슬롯: 로그인 상태와 무관하게 동일한 폭 유지 */}
+              <div className="flex items-center gap-4 w-[120px] justify-end flex-shrink-0">
                 {session ? (
-                  <>
-                    <span className="text-xs font-bold text-teal-100">{t("auth.greeting", langCode)}, {session.user.email.split('@')[0]}</span>
-                    <button onClick={onLogout} className="text-sm font-bold text-white/80 hover:text-red-200 transition">{t("auth.logout", langCode)}</button>
-                  </>
+                  <UserMenu session={session} onLogout={onLogout} langCode={langCode} />
                 ) : (
-                  <>
-                    <button onClick={() => setView('login')} className="text-sm font-bold text-white/80 hover:text-white transition">{t("auth.login", langCode)}</button>
-                    <button onClick={() => setView('signup')} className="text-sm font-bold text-white/80 hover:text-white transition">{t("auth.signup", langCode)}</button>
-                  </>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setView('login')} className="text-sm font-bold text-white/80 hover:text-white transition whitespace-nowrap">{t("auth.login", langCode)}</button>
+                    <button onClick={() => setView('signup')} className="text-sm font-bold text-white/80 hover:text-white transition whitespace-nowrap">{t("auth.signup", langCode)}</button>
+                  </div>
                 )}
               </div>
               <div className="w-px h-5 bg-white/20" />
@@ -162,9 +231,14 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
           </div>
 
           <div className="md:hidden flex items-center gap-3 z-20">
-             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white">
-               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-             </button>
+            {session && (
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">
+                {session.user.email.split('@')[0].substring(0, 2).toUpperCase()}
+              </div>
+            )}
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white">
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
       </header>
@@ -188,17 +262,23 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
                  <button onClick={() => onNavClick('list_treatment')} className="text-left py-2 flex items-center justify-between">Treatments <ArrowRight size={16} className="text-gray-300"/></button>
                  <button onClick={() => onNavClick('list_hospital')} className="text-left py-2 flex items-center justify-between">Hospitals <ArrowRight size={16} className="text-gray-300"/></button>
                  <hr className="border-gray-100 my-2"/>
-                {session ? (
-                   <>
-                     <div className="text-sm text-gray-500 py-1">{t("auth.greeting", langCode)}, {session.user.email.split('@')[0]}</div>
-                     <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="text-left py-2 text-red-500 hover:text-red-700">{t("auth.logout", langCode)}</button>
-                   </>
-                 ) : (
-                   <>
-                     <button onClick={() => { setView('login'); setIsMobileMenuOpen(false); }} className="text-left py-2 text-gray-500 hover:text-teal-600">{t("auth.login", langCode)}</button>
-                     <button onClick={() => { setView('signup'); setIsMobileMenuOpen(false); }} className="text-left py-2 text-gray-500 hover:text-teal-600">{t("auth.signup", langCode)}</button>
-                   </>
-                 )}
+               {session ? (
+                  <>
+                    <div className="bg-gray-50 rounded-lg p-3 mb-2">
+                      <div className="text-xs text-gray-500 mb-1">{t("auth.signedInAs", langCode)}</div>
+                      <div className="text-sm font-medium text-gray-900 truncate">{session.user.email}</div>
+                    </div>
+                    <button onClick={() => { onLogout(); setIsMobileMenuOpen(false); }} className="text-left py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2">
+                      <LogOut size={18} />
+                      {t("auth.logout", langCode)}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => { setView('login'); setIsMobileMenuOpen(false); }} className="text-left py-2 text-gray-500 hover:text-teal-600">{t("auth.login", langCode)}</button>
+                    <button onClick={() => { setView('signup'); setIsMobileMenuOpen(false); }} className="text-left py-2 text-gray-500 hover:text-teal-600">{t("auth.signup", langCode)}</button>
+                  </>
+                )}
               </nav>
            </div>
         </div>

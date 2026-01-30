@@ -13,16 +13,16 @@ import {
   getAllRecipients,
   addRecipient,
 } from "../../../../src/lib/notifications/recipients";
-import { checkAdminAuth } from "../../../../src/lib/auth/checkAdminAuth";
+import { requireAdminAuth } from "../../../../src/lib/auth/requireAdminAuth";
 
 /**
  * GET: 수신자 목록 조회
  */
 export async function GET(request: NextRequest) {
-  // ✅ 관리자 인증 확인
-  const authResult = await checkAdminAuth(request);
-  if (!authResult.isAdmin) {
-    return Response.json({ ok: false, error: "unauthorized" }, { status: 403 });
+  // ✅ 관리자 인증 확인 (자동 audit log 포함)
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) {
+    return auth.response; // 403 + audit log 자동 처리
   }
 
   const result = await getAllRecipients();
@@ -52,10 +52,10 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
-  // ✅ 관리자 인증 확인 (Bearer 토큰 우선, 쿠키 fallback)
-  const authResult = await checkAdminAuth(request);
-  if (!authResult.isAdmin) {
-    return Response.json({ ok: false, error: "unauthorized" }, { status: 403 });
+  // ✅ 관리자 인증 확인 (자동 audit log 포함)
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) {
+    return auth.response; // 403 + audit log 자동 처리
   }
 
   try {

@@ -2,7 +2,15 @@
  * HEALO: Referral Summary API
  * normalizedInquiryId + publicToken → 병원 전달용 요약 (JSON + Markdown)
  * 보안: publicToken 검증 및 attachment path 검증 후 signed URL 발급
+ * 
+ * ✅ P0 수정: 런타임 명시 (Node.js)
+ * 
+ * 이유:
+ * - DB 관리자 접근 (SERVICE_ROLE_KEY 사용)
+ * - Signed URL 발급 (buildReferralSummary 내부에서 사용)
+ * - Edge 런타임에서 발생할 수 있는 예측 불가 오류 방지
  */
+export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";

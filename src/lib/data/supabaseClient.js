@@ -1,6 +1,7 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+// ✅ OAuth callback과 동일한 쿠키 기반 세션 관리
+import { createBrowserClient } from "@supabase/ssr";
 
 // 런타임에만 초기화 (빌드 시점에는 에러 발생하지 않음)
 // 환경 변수가 있으면 즉시 초기화, 없으면 나중에 초기화
@@ -21,7 +22,8 @@ function initSupabaseClient() {
     throw new Error(`Supabase environment variables are missing: ${!supabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : ''} ${!supabaseKey ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY' : ''}`);
   }
 
-  supabaseClientInstance = createClient(supabaseUrl, supabaseKey);
+  // ✅ 쿠키 기반 클라이언트로 변경 (OAuth callback과 동일한 세션 저장소)
+  supabaseClientInstance = createBrowserClient(supabaseUrl, supabaseKey);
   return supabaseClientInstance;
 }
 

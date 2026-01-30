@@ -1,113 +1,172 @@
 /**
- * HEALO: Next.js Middleware (Production)
+ * HEALO: Next.js Middleware (서버 레벨 보호)
  * 
  * 목적:
- * - Supabase SSR 기반 인증 시스템
- * - 쿠키 동기화 (클라이언트 ↔ 서버)
- * - /admin 경로 보호 (로그인 필수)
- * - /api/admin/* API 보호
+ * - /admin 경로를 서버 레벨에서 보호
+ * - Admin 권한이 없으면 /login으로 redirect
+ * - Client-side 체크 전에 실행되어 UI 노출 차단
  * 
- * 중요:
- * - 모든 요청에서 쿠키를 동기화하여 서버가 세션을 읽을 수 있게 함
- * - createServerClient가 자동으로 쿠키를 업데이트함
+ * 실행 순서:
+ * 1. Middleware (서버) ← 여기서 먼저 차단
+ * 2. Server Component
+ * 3. Client Component
  */
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
+/**
+ * ✅ Middleware에서 admin 권한 체크
+ * 
+ * 판정 기준:
+ * 1. user.user_metadata.role === "admin"
+ * 2. user.app_metadata.role === "admin"
+ * 3. ADMIN_EMAIL_ALLOWLIST에 포함된 이메일
+ */
+async function checkAdminInMiddleware(request: NextRequest): Promise<{
+  isAdmin: boolean;
+  email?: string;
+}> {
+  try {
+    // Supabase 클라이언트 생성 (middleware용)
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
       },
+    });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              request.cookies.set(name, value)
+            );
+            response = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    // 세션 확인
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return { isAdmin: false };
     }
-  )
 
-  // ✅ 중요: getUser() 호출로 세션 새로고침 및 쿠키 동기화
-  const { data: { user }, error } = await supabase.auth.getUser()
+    const userEmail = user.email?.trim().toLowerCase();
 
-  // 디버그 로그 (개발 환경)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Middleware]', request.nextUrl.pathname, 'user:', user?.email || 'none', 'error:', error?.message || 'none')
-  }
-
-  // 보호된 경로 설정 (/admin, /api/admin)
-  const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
-  const isAdminApi = request.nextUrl.pathname.startsWith('/api/admin')
-
-  if ((isAdminPath || isAdminApi) && !user) {
-    if (isAdminApi) {
-      // API는 401 반환 (리다이렉트 안 함)
-      return NextResponse.json(
-        { ok: false, error: 'unauthorized', detail: '로그인이 필요합니다' },
-        { status: 401 }
-      )
+    // 1. user_metadata.role === "admin"
+    if (user.user_metadata?.role === "admin") {
+      return { isAdmin: true, email: userEmail };
     }
-    // 페이지는 /login으로 리다이렉트
-    console.log('[Middleware] Redirecting to /login: no user')
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    return NextResponse.redirect(redirectUrl)
-  }
 
-  // 로그인 된 상태에서 로그인 페이지 접근 시 리다이렉트
-  if (request.nextUrl.pathname === '/login' && user) {
-    console.log('[Middleware] Redirecting to /admin: user logged in')
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/admin'
-    return NextResponse.redirect(redirectUrl)
-  }
+    // 2. app_metadata.role === "admin"
+    if (user.app_metadata?.role === "admin") {
+      return { isAdmin: true, email: userEmail };
+    }
 
-  return response
+    // 3. ADMIN_EMAIL_ALLOWLIST 체크
+    const allowlistEnv = process.env.ADMIN_EMAIL_ALLOWLIST;
+    if (allowlistEnv && userEmail) {
+      const allowlist = allowlistEnv
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => email.length > 0);
+
+      if (allowlist.includes(userEmail)) {
+        return { isAdmin: true, email: userEmail };
+      }
+    }
+
+    // ❌ Admin 권한 없음
+    return { isAdmin: false, email: userEmail };
+  } catch (error: any) {
+    console.error("[middleware] Admin check error:", error.message);
+    return { isAdmin: false };
+  }
 }
 
+/**
+ * ✅ Middleware 실행
+ */
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ========================================
+  // 예외 경로: 인증 없이 통과
+  // ========================================
+  const publicPaths = [
+    "/login",
+    "/signup",
+    "/auth/callback", // ⚠️ OAuth 콜백 예외 처리 (필수)
+    "/api",
+  ];
+
+  // 예외 경로는 middleware 건너뛰기
+  if (publicPaths.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  // ========================================
+  // /admin 경로 보호 (서버 레벨)
+  // ========================================
+  if (pathname.startsWith("/admin")) {
+    // /admin/whoami는 진단용이므로 제외 (누구나 접근 가능)
+    if (pathname === "/admin/whoami") {
+      return NextResponse.next();
+    }
+
+    // Admin 권한 체크
+    const { isAdmin, email } = await checkAdminInMiddleware(request);
+
+    if (!isAdmin) {
+      console.warn(
+        `[middleware] ❌ Unauthorized admin access blocked: ${pathname} | email: ${email || "none"}`
+      );
+
+      // /login으로 redirect
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname); // 원래 가려던 경로 저장
+      return NextResponse.redirect(loginUrl);
+    }
+
+    console.log(
+      `[middleware] ✅ Admin access granted: ${pathname} | email: ${email}`
+    );
+  }
+
+  return NextResponse.next();
+}
+
+/**
+ * ✅ Middleware 적용 경로
+ */
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};

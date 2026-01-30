@@ -1,7 +1,24 @@
+/**
+ * ✅ P0 수정: 런타임 명시 (Node.js)
+ * ✅ 운영 안정화: Rate limit + 운영 로그 추가
+ * 
+ * 이유:
+ * - 암호화 처리 (Node.js crypto 의존)
+ * - DB 관리자 접근 (SERVICE_ROLE_KEY 사용)
+ * - LLM API 호출 (OpenAI/Google)
+ * - Edge 런타임에서 발생할 수 있는 예측 불가 오류 방지
+ * - 봇/도배 방지 및 운영 추적성 확보
+ */
+export const runtime = "nodejs";
+
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { supabaseAdmin } from "../../../src/lib/rag/supabaseAdmin";
+import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../src/lib/rateLimit";
+import { logRateLimitExceeded, logEncryptionFailed, logOperational } from "../../../src/lib/operationalLog";
+import { trackFunnelEvent } from "../../../src/lib/events/funnelTracking";
+import { checkBlockRate } from "../../../src/lib/alerts/operationalAlerts";
 import {
   createEmptyIntake,
   computeMissingFields,
@@ -143,11 +160,45 @@ function buildIntakeFromQuery(query: string): Intake {
 }
 
 export async function POST(request: Request) {
+  const clientIp = getClientIp(request);
+  const apiPath = '/api/chat';
+
+  // ✅ 운영 안정화: Rate limit 체크 (봇/도배 방지)
+  const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.CHAT);
+  if (!rateLimitResult.allowed) {
+    logRateLimitExceeded(
+      apiPath,
+      clientIp,
+      RATE_LIMITS.CHAT.maxRequests,
+      RATE_LIMITS.CHAT.windowMs
+    );
+
+    // ✅ P2: 차단율 모니터링
+    checkBlockRate().catch(err => console.error('[alert] checkBlockRate failed:', err));
+
+    // ✅ P2: 퍼널 이벤트 추적 (차단)
+    trackFunnelEvent({
+      stage: 'chat_blocked',
+      dropReason: 'rate_limit_exceeded',
+    });
+    
+    return jsonError(
+      429,
+      "rate_limit_exceeded",
+      rateLimitResult.reason,
+      {
+        retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000),
+        headers: getRateLimitHeaders(rateLimitResult)
+      }
+    );
+  }
+
   // ✅ Security: 암호화 키 검증 (fail-fast)
   try {
     assertEncryptionKey();
   } catch (error: any) {
     console.error("[api/chat] encryption key validation failed:", error);
+    logEncryptionFailed(apiPath, clientIp, error?.message || 'encryption_key_missing');
     return jsonError(500, "encryption_key_missing", error?.message || "encryption_key_missing");
   }
 
@@ -172,43 +223,97 @@ export async function POST(request: Request) {
     return jsonError(400, "user_message_required", "last user message is empty");
   }
 
-  // Log normalized inquiry (best effort). constraints.intake + meta 동일 스키마 적재.
-  void (async () => {
-    try {
-      let intake: Intake = buildIntakeFromQuery(query);
-      const meta: IntakeMeta = {
-        pipeline_version: "v1",
-        source_type: "ai_agent",
-        model: getModelName(),
-        prompt_version: null,
-      };
-      const missing_fields = computeMissingFields(intake);
-      const extraction_confidence = computeExtractionConfidence(intake, missing_fields);
-      const constraints: Record<string, unknown> = {
-        intake,
-        meta,
-      };
-      if (sessionId != null) constraints.session_id = sessionId;
-      if (page != null) constraints.page = page;
-      if (utm != null) constraints.utm = utm;
+  /**
+   * ✅ P0 수정: 서버리스 환경에서 비동기 작업 유실 방지
+   * ✅ 운영 안정화: 저장 성공/실패 로그 추가
+   * 
+   * 수정 전:
+   * - void IIFE로 DB insert를 백그라운드에서 실행
+   * - Vercel 등 서버리스 환경에서 응답 종료 시 작업이 중단될 수 있음
+   * 
+   * 수정 후:
+   * - DB insert를 await로 응답 전에 완료
+   * - 저장 실패 시에도 로그를 남기고 계속 진행 (채팅 응답은 유지)
+   * 
+   * 이유:
+   * - 데이터 유실 방지 (리드/문의 추적 데이터 확보)
+   * - 서버리스 환경에서 안정적인 동작 보장
+   * - 운영자가 저장 실패 추적 가능
+   */
+  // ✅ Log normalized inquiry (응답 전 완료)
+  try {
+    let intake: Intake = buildIntakeFromQuery(query);
+    const meta: IntakeMeta = {
+      pipeline_version: "v1",
+      source_type: "ai_agent",
+      model: getModelName(),
+      prompt_version: null,
+    };
+    const missing_fields = computeMissingFields(intake);
+    const extraction_confidence = computeExtractionConfidence(intake, missing_fields);
+    const constraints: Record<string, unknown> = {
+      intake,
+      meta,
+    };
+    if (sessionId != null) constraints.session_id = sessionId;
+    if (page != null) constraints.page = page;
+    if (utm != null) constraints.utm = utm;
 
-      // ✅ Security: raw_message 암호화
-      const rawMessageEnc = await encryptText(query);
+    // ✅ Security: raw_message 암호화
+    const rawMessageEnc = await encryptText(query);
 
-      await supabaseAdmin.from("normalized_inquiries").insert({
-        source_type: "ai_agent",
-        language: lang,
-        raw_message: rawMessageEnc, // 암호화된 값
-        constraints,
-        treatment_slug: null,
-        objective: null,
-        extraction_confidence,
-        missing_fields: missing_fields.length ? missing_fields : null,
-      });
-    } catch (error) {
-      console.error("[api/chat] normalized_inquiries insert failed:", error);
+    // ✅ DB insert를 await로 완료 (서버리스 환경에서 유실 방지)
+    const { error: insertError } = await supabaseAdmin.from("normalized_inquiries").insert({
+      source_type: "ai_agent",
+      language: lang,
+      raw_message: rawMessageEnc, // 암호화된 값
+      constraints,
+      treatment_slug: null,
+      objective: null,
+      extraction_confidence,
+      missing_fields: missing_fields.length ? missing_fields : null,
+    });
+
+    if (insertError) {
+      throw insertError;
     }
-  })();
+
+    // ✅ 운영 로그: 채팅 수신 성공
+    logOperational('info', {
+      event: 'chat_received',
+      api: apiPath,
+      clientIp: clientIp || undefined,
+      statusCode: 200,
+      context: { language: lang, hasSession: !!sessionId }
+    });
+
+    // ✅ P2: 퍼널 이벤트 추적 (채팅 메시지)
+    trackFunnelEvent({
+      stage: 'chat_message',
+      sessionId: sessionId,
+      page: page,
+      utm: utm,
+      language: lang,
+    });
+  } catch (error: any) {
+    // 저장 실패해도 채팅 응답은 계속 진행 (사용자 경험 유지)
+    console.error("[api/chat] normalized_inquiries insert failed:", error);
+    logOperational('error', {
+      event: 'chat_blocked',
+      api: apiPath,
+      clientIp: clientIp || undefined,
+      reason: 'db_insert_failed',
+      statusCode: 500,
+      context: { error: error?.message }
+    });
+
+    // ✅ P2: 퍼널 이벤트 추적 (에러)
+    trackFunnelEvent({
+      stage: 'chat_error',
+      sessionId: sessionId,
+      dropReason: 'db_insert_failed',
+    });
+  }
 
   // RAG retrieval (top 6).
   let ragChunks: any[] = [];

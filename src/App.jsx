@@ -1,8 +1,22 @@
+/**
+ * @deprecated 이 파일은 더 이상 사용되지 않습니다.
+ * 
+ * Next.js App Router로 마이그레이션되었습니다.
+ * 실제 루트: app/layout.jsx → app/ClientShell.jsx
+ * 
+ * 인증 관리: app/ClientShell.jsx에서 수행
+ * Header 렌더링: app/ClientShell.jsx → src/components.jsx
+ * 
+ * 이 파일은 레거시 호환성을 위해 유지되지만 실제로는 사용되지 않습니다.
+ * 안전하게 삭제 가능합니다.
+ */
+
 "use client";
 
 // src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
+// ✅ 쿠키 기반 Supabase 클라이언트 (OAuth와 동일한 세션 저장소 사용)
 import { supabase } from './supabase';
 import {
   Header, HeroSection, CardListSection, FloatingInquiryBtn, PersonalConciergeCTA, MobileBottomNav
@@ -249,9 +263,17 @@ function AppContent() {
   const [siteConfig, setSiteConfig] = useState({ logo: '', hero: '' });
   const [simpleList, setSimpleList] = useState([]);
 
+  // ✅ 쿠키 기반 세션 관리 (OAuth와 동일한 저장소 사용)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    console.log("[App] 🔍 Checking session...");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[App] ✅ Initial session:", session?.user?.email || "none");
+      setSession(session);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("[App] 🔔 Auth state changed:", _event, session?.user?.email || "none");
+      setSession(session);
+    });
     supabase.from("site_settings").select("*").single().then(({data}) => { if(data) setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url }); });
     const locCol = getLocationColumn();
     supabase.from("treatments").select(`id, name, hospital_id, price_min, hospitals(name)`).eq("is_published", true).then(({data, error}) => { 

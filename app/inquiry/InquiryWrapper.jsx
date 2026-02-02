@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { InquiryPage } from "../../src/legacy-pages/InquiryPage";
+import { InquiryPage } from "./_legacy/InquiryPage";
 import { supabaseClient } from "../../src/lib/data/supabaseClient";
 
 export default function InquiryWrapper() {

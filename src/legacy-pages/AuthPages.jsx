@@ -195,14 +195,23 @@ export const LoginPage = ({ setView }) => {
                 if (whoamiResponse.ok) {
                     const whoamiResult = await whoamiResponse.json();
                     
+                    // 🔍 디버그 정보 출력
+                    console.log('[LoginPage] whoami result:', {
+                        isAdmin: whoamiResult.isAdmin,
+                        email: whoamiResult.email,
+                        reason: whoamiResult.reason,
+                        error: whoamiResult.error,
+                        debug: whoamiResult.debug
+                    });
+                    
                     if (whoamiResult.isAdmin) {
                         // Admin 권한 있음 → /admin으로
-                        console.log('[LoginPage] Admin detected, redirecting to /admin');
+                        console.log('[LoginPage] ✅ Admin detected, redirecting to /admin');
                         router.push('/admin');
                     } else {
                         // Admin 권한 없음 → 홈으로
                         console.log('[LoginPage] Non-admin user, redirecting to home');
-                        toast.info('You are logged in, but do not have admin privileges.');
+                        // ❌ 일반 사용자에게 불필요한 토스트 제거
                         router.push('/');
                     }
                 } else {
@@ -340,26 +349,6 @@ export const LoginPage = ({ setView }) => {
                                 {oauthLoading ? 'Connecting to Google...' : 'Continue with Google'}
                             </span>
                         </button>
-
-                        {/* 다른 소셜 로그인 (Coming soon) */}
-                        <div className="mt-3 grid grid-cols-3 gap-3">
-                            {['Apple', 'WeChat', 'LINE'].map((social) => (
-                                <button 
-                                    key={social} 
-                                    onClick={() => toast.info("Coming soon!")} 
-                                    className="flex flex-col items-center justify-center p-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition group"
-                                >
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition ${
-                                        social === 'Apple' ? 'bg-gray-100 text-black' : 
-                                        social === 'WeChat' ? 'bg-green-100 text-[#07C160]' :
-                                        'bg-green-100 text-[#00B900]'
-                                    }`}>
-                                        {social[0]}
-                                    </div>
-                                    <span className="text-[10px] font-bold text-gray-500">{social}</span>
-                                </button>
-                            ))}
-                        </div>
                     </div>
                 </div>
 
@@ -584,18 +573,52 @@ export const SignUpPage = ({ setView }) => {
                 {/* 하단 섹션 (구분선, 소셜 로그인 등) */}
                 <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                    <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">Or continue with</span></div>
+                    <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">Or sign up faster with Google</span></div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-3 mb-8">
-                    {['Google', 'Apple', 'WeChat', 'LINE'].map((social, idx) => (
-                         <button key={idx} onClick={() => toast.info("Coming soon!")} className="flex flex-col items-center justify-center p-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition group">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition ${social === 'Google' ? 'bg-orange-100 text-orange-600' : social === 'Apple' ? 'bg-gray-100 text-black' : 'bg-green-100 text-[#07C160]'}`}>
-                                {social[0]}
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-500">{social}</span>
-                        </button>
-                    ))}
+                <div className="mb-8">
+                    {/* Google 회원가입 버튼 */}
+                    <button
+                        onClick={async () => {
+                            console.log('[SignUpPage] 🔵 Google sign-up clicked!');
+                            setLoading(true);
+                            try {
+                                const redirectUrl = `${window.location.origin}/auth/callback`;
+                                const { data, error } = await supabase.auth.signInWithOAuth({
+                                    provider: 'google',
+                                    options: {
+                                        redirectTo: redirectUrl,
+                                    },
+                                });
+                                
+                                if (error) {
+                                    console.error('[SignUpPage] ❌ OAuth error:', error);
+                                    toast.error('Google sign-up failed. Please try again.');
+                                    setLoading(false);
+                                } else {
+                                    console.log('[SignUpPage] ✅ OAuth initiated, redirecting to Google...');
+                                }
+                            } catch (err) {
+                                console.error('[SignUpPage] ❌ Google OAuth exception:', err);
+                                toast.error('An error occurred. Please try again.');
+                                setLoading(false);
+                            }
+                        }}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+                    >
+                        {/* Google 로고 SVG */}
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        
+                        <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
+                            {loading ? 'Connecting to Google...' : 'Sign up with Google'}
+                        </span>
+                    </button>
                 </div>
 
                 <div className="text-center text-sm text-gray-500">

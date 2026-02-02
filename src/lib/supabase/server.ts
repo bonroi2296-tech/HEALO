@@ -26,10 +26,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 /**
  * ✅ 서버용 Supabase 클라이언트 생성 (쿠키 기반)
  * 
+ * ⚠️ Next.js 15: cookies()는 async 함수이므로 await 필요
+ * 
  * @returns Supabase client
  */
-export function createSupabaseServerClient(): SupabaseClient {
-  const cookieStore = cookies()
+export async function createSupabaseServerClient(): Promise<SupabaseClient> {
+  const cookieStore = await cookies()
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

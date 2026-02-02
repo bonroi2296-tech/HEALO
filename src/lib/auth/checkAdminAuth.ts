@@ -114,7 +114,7 @@ export async function checkAdminAuth(request?: any): Promise<{
     // ========================================
     if (!user) {
       try {
-        const supabase = createSupabaseServerClient();
+        const supabase = await createSupabaseServerClient();
         const { data, error } = await supabase.auth.getUser();
         
         user = data?.user;

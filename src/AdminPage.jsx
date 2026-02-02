@@ -122,6 +122,7 @@ export const AdminPage = ({ setView }) => {
   const [hospitalsError, setHospitalsError] = useState(null);
   const [treatmentsError, setTreatmentsError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewError, setPreviewError] = useState(false);
   const [siteSettings, setSiteSettings] = useState({ logo_url: '', hero_background_url: '' });
 
   // 통계 데이터 상태
@@ -360,8 +361,138 @@ export const AdminPage = ({ setView }) => {
           toast.error("삭제 실패: " + err.message);
       }
   };
-  const handleFileClick = (url) => { setSelectedFile(url); };
-  const getFileType = (url) => { const ext = url.split('.').pop().toLowerCase(); return ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext) ? 'image' : (ext === 'pdf' ? 'pdf' : 'other'); };
+  
+  const closeFilePreview = () => {
+    setSelectedFile(null);
+    setPreviewError(false);
+  };
+  
+  const handleDownload = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      console.log('[AdminPage] Starting download:', selectedFile);
+      
+      // Fetch the file as blob
+      const response = await fetch(selectedFile);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Extract filename from URL
+      const urlParts = selectedFile.split('/');
+      const filename = urlParts[urlParts.length - 1].split('?')[0] || 'attachment';
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup
+      window.URL.revokeObjectURL(blobUrl);
+      
+      console.log('[AdminPage] Download completed:', filename);
+    } catch (error) {
+      console.error('[AdminPage] Download error:', error);
+      toast.error("다운로드 실패: " + error.message);
+    }
+  };
+  
+  const handleFileClick = async (storagePath) => {
+    try {
+      console.log('[AdminPage] Raw attachment path:', storagePath);
+      
+      if (!storagePath) {
+        toast.error("첨부파일 경로가 없습니다.");
+        return;
+      }
+      
+      let normalizedPath = storagePath.trim();
+      
+      // URL 형식인 경우 path만 추출 (오래된 데이터 대응)
+      if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+        console.log('[AdminPage] Detected full URL, extracting path...');
+        try {
+          const url = new URL(normalizedPath);
+          // /storage/v1/object/public/attachments/inquiry/xxx 에서 inquiry/xxx만 추출
+          const pathParts = url.pathname.split('/');
+          const attachmentsIndex = pathParts.indexOf('attachments');
+          if (attachmentsIndex !== -1 && pathParts.length > attachmentsIndex + 1) {
+            normalizedPath = pathParts.slice(attachmentsIndex + 1).join('/');
+            console.log('[AdminPage] Extracted path from URL:', normalizedPath);
+          } else {
+            throw new Error('Cannot extract path from URL');
+          }
+        } catch (urlError) {
+          console.error('[AdminPage] URL parsing failed:', urlError);
+          toast.error("첨부파일 URL 형식이 잘못되었습니다.");
+          return;
+        }
+      }
+      
+      // 경로 정규화: 'attachments/' 중복 제거
+      if (normalizedPath.startsWith('attachments/')) {
+        normalizedPath = normalizedPath.substring('attachments/'.length);
+      }
+      console.log('[AdminPage] Normalized path:', normalizedPath);
+      
+      // 1차 시도: Signed URL 생성
+      const { data, error } = await supabase
+        .storage
+        .from('attachments')
+        .createSignedUrl(normalizedPath, 3600);
+      
+      if (error) {
+        console.error('[AdminPage] Signed URL error:', error);
+        console.error('[AdminPage] Error details:', { 
+          message: error.message, 
+          statusCode: error.statusCode,
+          path: normalizedPath 
+        });
+        
+        // 2차 시도: Public URL 사용 (파일이 public이라면)
+        console.log('[AdminPage] Trying public URL as fallback...');
+        const { data: publicData } = supabase
+          .storage
+          .from('attachments')
+          .getPublicUrl(normalizedPath);
+        
+        if (publicData?.publicUrl) {
+          console.log('[AdminPage] Using public URL:', publicData.publicUrl);
+          setPreviewError(false);
+          setSelectedFile(publicData.publicUrl);
+          return;
+        }
+        
+        toast.error("첨부파일을 찾을 수 없습니다. 파일이 삭제되었거나 경로가 잘못되었습니다.");
+        return;
+      }
+      
+      console.log('[AdminPage] Signed URL generated successfully');
+      setPreviewError(false);
+      setSelectedFile(data.signedUrl);
+    } catch (err) {
+      console.error('[AdminPage] handleFileClick exception:', err);
+      toast.error("첨부파일 로드 실패: " + (err.message || '알 수 없는 오류'));
+    }
+  };
+  const getFileType = (url) => {
+    // Signed URL은 쿼리스트링이 포함되므로 제거
+    const clean = url.split('?')[0];
+    const ext = clean.split('.').pop().toLowerCase();
+    const fileType = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif'].includes(ext) 
+      ? 'image' 
+      : (ext === 'pdf' ? 'pdf' : 'other');
+    
+    console.debug('[getFileType]', { url: url.substring(0, 80) + '...', clean, ext, fileType });
+    return fileType;
+  };
 
   const uploadToSupabase = async (file) => {
       if (!file) return null;
@@ -806,18 +937,80 @@ export const AdminPage = ({ setView }) => {
             )}
         </div>
         {selectedFile && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100]" onClick={() => setSelectedFile(null)}>
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100]" onClick={closeFilePreview}>
                 <div className="bg-white rounded-xl p-5 max-w-6xl w-full h-[85vh] flex flex-col relative" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-bold text-gray-800">미리보기</h3>
-                        <button onClick={() => setSelectedFile(null)}>
-                            <X size={20} />
-                        </button>
+                        <h3 className="text-lg font-bold text-gray-800">첨부파일 미리보기</h3>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleDownload}
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition flex items-center gap-1"
+                            >
+                                <UploadCloud size={14} className="rotate-180" />
+                                다운로드
+                            </button>
+                            <a 
+                                href={selectedFile} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm rounded-lg transition flex items-center gap-1"
+                            >
+                                새 창에서 열기
+                            </a>
+                            <button onClick={closeFilePreview} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-4 flex justify-center items-start">
-                        {getFileType(selectedFile) === 'image' && <img src={selectedFile} className="max-w-full max-h-full" alt="preview"/>}
+                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-4">
+                        {getFileType(selectedFile) === 'image' && (
+                            <>
+                                {!previewError ? (
+                                    <div className="w-full flex justify-center">
+                                        <img 
+                                            src={selectedFile} 
+                                            className="w-full h-auto" 
+                                            alt="preview"
+                                            style={{ maxWidth: '100%' }}
+                                            onError={() => {
+                                                console.warn('[AdminPage] Image preview failed:', selectedFile);
+                                                setPreviewError(true);
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full">
+                                        <div className="text-center p-8">
+                                            <AlertCircle size={48} className="mx-auto text-yellow-500 mb-4" />
+                                            <p className="text-gray-700 font-bold mb-2">이미지 미리보기 실패</p>
+                                            <p className="text-sm text-gray-500 mb-6">
+                                                이 브라우저에서 미리보기가 제한될 수 있습니다.<br/>
+                                                새 창에서 열기 또는 다운로드를 이용하세요.
+                                            </p>
+                                            <a 
+                                                href={selectedFile} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="inline-block px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold"
+                                            >
+                                                새 창에서 열기
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                         {getFileType(selectedFile) === 'pdf' && <iframe src={selectedFile} className="w-full h-full border" title="pdf"/>}
-                        {getFileType(selectedFile) === 'other' && <a href={selectedFile} target="_blank" rel="noopener noreferrer" className="text-teal-600 underline">새 창에서 열기</a>}
+                        {getFileType(selectedFile) === 'other' && (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <p className="text-gray-600 mb-4">이 파일은 미리보기를 지원하지 않습니다.</p>
+                                    <a href={selectedFile} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg">
+                                        다운로드
+                                    </a>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

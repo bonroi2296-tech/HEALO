@@ -1,11 +1,17 @@
-import AuthWrapper from "../auth/AuthWrapper";
-import { LoginPage } from "../../src/legacy-pages/AuthPages";
+"use client";
 
-export const metadata = {
-  title: "Login",
-  description: "Log in to manage your HEALO account.",
-};
+import { useRouter } from "next/navigation";
+import { LoginPage } from "./LoginClient";
 
 export default function Login() {
-  return <AuthWrapper Component={LoginPage} />;
+  const router = useRouter();
+  const setView = (viewName) => {
+    if (viewName === "signup") {
+      router.push("/signup");
+    } else {
+      router.push("/");
+    }
+  };
+
+  return <LoginPage setView={setView} />;
 }

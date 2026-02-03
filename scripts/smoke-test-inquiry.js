@@ -1,125 +1,62 @@
 /**
- * Smoke Test: Inquiry Flow
- * 
- * Tests:
- * - GET /inquiry returns 200
- * - GET /inquiry/intake returns 200
- * - GET /success returns 200
- * 
+ * Smoke Test: Inquiry Flow (ESM)
  * Usage:
- * node scripts/smoke-test-inquiry.js
- * 
- * Prerequisites:
- * - Next.js dev server running on http://localhost:3000
+ *   BASE_URL=http://localhost:3000 node scripts/smoke-test-inquiry.js
+ *   (or) npm run test:smoke:inquiry
+ *
+ * Prereq: npm run dev running
  */
 
-const http = require('http');
-
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const TIMEOUT_MS = 10_000;
 
-// Helper function to make HTTP requests
-function makeRequest(path) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(path, BASE_URL);
-    
-    const req = http.get(url, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        resolve({
-          statusCode: res.statusCode,
-          headers: res.headers,
-          body: data,
-        });
-      });
-    });
+async function request(path) {
+  const url = new URL(path, BASE_URL).toString();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    req.setTimeout(10000, () => {
-      req.destroy();
-      reject(new Error('Request timeout'));
-    });
-  });
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, redirect: 'manual' });
+    return { status: res.status };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
-// Test cases
 const tests = [
-  {
-    name: 'GET /inquiry',
-    path: '/inquiry',
-    expectedStatus: 200,
-  },
-  {
-    name: 'GET /inquiry/intake',
-    path: '/inquiry/intake',
-    expectedStatus: 200,
-  },
-  {
-    name: 'GET /success',
-    path: '/success',
-    expectedStatus: 200,
-  },
+  ['/inquiry', 200],
+  ['/inquiry/intake', 200],
+  ['/success', 200],
 ];
 
-// Run tests
-async function runTests() {
-  console.log('🧪 Starting Smoke Test: Inquiry Flow');
-  console.log(`📍 Base URL: ${BASE_URL}\n`);
+(async () => {
+  // server check
+  try {
+    await request('/');
+  } catch (e) {
+    console.error(`❌ Cannot connect: ${BASE_URL}`);
+    console.error('   Start server first: npm run dev');
+    process.exit(1);
+  }
 
-  let passed = 0;
+  console.log(`🧪 Smoke Test (base: ${BASE_URL})\n`);
+
   let failed = 0;
-
-  for (const test of tests) {
+  for (const [path, expected] of tests) {
     try {
-      console.log(`🔍 Testing: ${test.name}`);
-      const result = await makeRequest(test.path);
-      
-      if (result.statusCode === test.expectedStatus) {
-        console.log(`✅ PASS: ${test.name} (${result.statusCode})\n`);
-        passed++;
+      const { status } = await request(path);
+      if (status === expected) {
+        console.log(`✅ ${path} (${status})`);
       } else {
-        console.log(`❌ FAIL: ${test.name}`);
-        console.log(`   Expected: ${test.expectedStatus}`);
-        console.log(`   Got: ${result.statusCode}\n`);
         failed++;
+        console.log(`❌ ${path} expected ${expected}, got ${status}`);
       }
-    } catch (error) {
-      console.log(`❌ FAIL: ${test.name}`);
-      console.log(`   Error: ${error.message}\n`);
+    } catch (e) {
       failed++;
+      console.log(`❌ ${path} error: ${e.name || ''} ${e.message || e}`);
     }
   }
 
-  console.log('━'.repeat(50));
-  console.log(`📊 Results: ${passed} passed, ${failed} failed`);
-  console.log('━'.repeat(50));
-
-  if (failed > 0) {
-    console.log('\n⚠️  Some tests failed. Please check the logs above.');
-    process.exit(1);
-  } else {
-    console.log('\n✨ All tests passed!');
-    process.exit(0);
-  }
-}
-
-// Check if server is running
-async function checkServer() {
-  try {
-    await makeRequest('/');
-    return true;
-  } catch (error) {
-    console.error('❌ Cannot connect to server at', BASE_URL);
-    console.error('   Please start the dev server first: npm run dev');
-    process.exit(1);
-  }
-}
-
-// Main
-(async () => {
-  await checkServer();
-  await runTests();
+  console.log(`\nResult: ${failed === 0 ? 'PASS' : `FAIL (${failed})`}`);
+  process.exit(failed === 0 ? 0 : 1);
 })();

@@ -1,11 +1,17 @@
-import AuthWrapper from "../auth/AuthWrapper";
-import { SignUpPage } from "../../src/legacy-pages/AuthPages";
+"use client";
 
-export const metadata = {
-  title: "Sign Up",
-  description: "Create a HEALO account to access concierge services.",
-};
+import { useRouter } from "next/navigation";
+import { SignUpPage } from "./SignupClient";
 
 export default function SignUp() {
-  return <AuthWrapper Component={SignUpPage} />;
+  const router = useRouter();
+  const setView = (viewName) => {
+    if (viewName === "login") {
+      router.push("/login");
+    } else {
+      router.push("/");
+    }
+  };
+
+  return <SignUpPage setView={setView} />;
 }

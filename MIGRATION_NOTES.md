@@ -94,13 +94,82 @@ npm run build
 ### 5. 스모크 테스트 (Phase 1.5 대기)
 Playwright 또는 Node 스크립트로 자동화된 테스트 추가 예정
 
-## 다음 단계 (Phase 2+)
+---
+
+# Phase 2: Login & Signup Migration (2026-02-03)
+
+## 개요
+`src/legacy-pages/AuthPages.jsx`에서 `/login`과 `/signup` 라우트를 `app/**` 디렉토리로 마이그레이션했습니다.
+
+## 변경 사항
+
+### 1. 파일 생성
+
+**새로 생성:**
+```
+app/login/LoginClient.jsx
+app/signup/SignupClient.jsx
+```
+
+### 2. Import 경로 업데이트
+
+- `app/login/page.jsx`: `src/legacy-pages/AuthPages` → `./LoginClient`
+- `app/signup/page.jsx`: `src/legacy-pages/AuthPages` → `./SignupClient`
+- `AuthWrapper` 제거 (불필요한 래퍼)
+
+### 3. 추가된 테스트
+
+- `scripts/smoke-test-auth.js` (GET /login, /signup → 200)
+- `package.json`: `test:smoke:auth` 스크립트 추가
+
+## 보존된 기능
+
+### Login Page (/login)
+- ✅ 이메일/비밀번호 로그인 (`supabase.auth.signInWithPassword`)
+- ✅ Google OAuth 로그인
+- ✅ Admin 권한 체크 (`/api/admin/whoami`)
+- ✅ 로그인 성공 시 Admin → `/admin`, 일반 사용자 → `/`
+- ✅ "Forgot Password" 버튼 (Coming soon 메시지)
+- ✅ Signup 페이지로 이동 링크
+
+### Signup Page (/signup)
+- ✅ 이름, 이메일, 비밀번호 회원가입
+- ✅ Google OAuth 회원가입
+- ✅ 비밀번호 확인 검증
+- ✅ 약관 동의 체크박스 (Privacy Policy, Terms)
+- ✅ 마케팅 이메일 수신 동의
+- ✅ 회원가입 성공 시 Login 페이지로 리다이렉트
+- ✅ Login 페이지로 이동 링크
+
+## 검증 결과
+
+### 빌드 테스트
+```bash
+npm run build
+```
+✅ 빌드 성공 (6.3초 소요, 2026-02-03)
+
+### Legacy Import 확인
+```bash
+grep -r "from.*legacy-pages/AuthPages" app/
+```
+✅ 검색 결과: 0개 (모든 레거시 import 제거 완료)
+
+### 스모크 테스트
+```bash
+npm run test:smoke:auth
+```
+✅ `/login` → 200
+✅ `/signup` → 200
+
+## 다음 단계 (Phase 3+)
 
 **마이그레이션 대기 중인 레거시 페이지:**
-- `/login`, `/signup` (`src/legacy-pages/AuthPages.jsx`)
 - `/hospitals/[slug]` (`src/legacy-pages/HospitalDetailPage.jsx`)
 - `/treatments/[slug]` (`src/legacy-pages/TreatmentDetailPage.jsx`)
 - `/admin` 관련 컴포넌트들 (`src/legacy-pages/admin/*`)
+
+**참고:** `src/legacy-pages/AuthPages.jsx`에는 여전히 `SuccessPage`가 남아있지만, Phase 1에서 이미 `/success` 라우트로 마이그레이션 완료되었습니다. `LoginPage`와 `SignUpPage`는 Phase 2에서 완전히 제거 가능합니다.
 
 ## 롤백 방법
 

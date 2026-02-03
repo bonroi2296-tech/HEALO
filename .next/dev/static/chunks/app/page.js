@@ -32,7 +32,7 @@ eval(__webpack_require__.ts("Promise.resolve(/*! import() eager */).then(__webpa
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules
 /******/ var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-/******/ __webpack_require__.O(0, ["supabase-vendor","vendor","_app-pages-browser_src_lib_data_supabaseClient_js-_app-pages-browser_src_lib_i18n_index_js","_app-pages-browser_src_components_jsx","_app-pages-browser_src_lib_language_js-_app-pages-browser_src_lib_mapper_js","main-app"], () => (__webpack_exec__("(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22C%3A%5C%5CUsers%5C%5Cuser%5C%5CDesktop%5C%5CHEALO_Demo%5C%5Capp%5C%5Chome%5C%5CHomeClient.jsx%22%2C%22ids%22%3A%5B%22default%22%5D%7D&server=false!")));
+/******/ __webpack_require__.O(0, ["supabase-vendor","vendor","_app-pages-browser_src_components_jsx-_app-pages-browser_src_lib_data_supabaseClient_js","_app-pages-browser_src_lib_language_js-_app-pages-browser_src_lib_mapper_js","main-app"], () => (__webpack_exec__("(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22C%3A%5C%5CUsers%5C%5Cuser%5C%5CDesktop%5C%5CHEALO_Demo%5C%5Capp%5C%5Chome%5C%5CHomeClient.jsx%22%2C%22ids%22%3A%5B%22default%22%5D%7D&server=false!")));
 /******/ var __webpack_exports__ = __webpack_require__.O();
 /******/ _N_E = __webpack_exports__;
 /******/ }

@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{js,jsx}\"",
-    "eval": "tsx scripts/evaluation.ts"
+    "eval": "tsx scripts/evaluation.ts",
+    "test:smoke:inquiry": "node scripts/smoke-test-inquiry.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.22",

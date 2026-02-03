@@ -1,11 +1,17 @@
-import AuthWrapper from "../auth/AuthWrapper";
-import { SuccessPage } from "../../src/legacy-pages/AuthPages";
+"use client";
 
-export const metadata = {
-  title: "Success",
-  description: "Your inquiry has been received by HEALO.",
-};
+import { useRouter } from "next/navigation";
+import { SuccessPage } from "./SuccessClient";
 
 export default function Success() {
-  return <AuthWrapper Component={SuccessPage} />;
+  const router = useRouter();
+  const setView = (viewName) => {
+    if (viewName === "home") {
+      router.push("/");
+    } else {
+      router.push("/");
+    }
+  };
+
+  return <SuccessPage setView={setView} />;
 }

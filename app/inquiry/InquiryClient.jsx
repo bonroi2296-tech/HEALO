@@ -1,14 +1,13 @@
 "use client";
 
-// src/pages/InquiryPage.jsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Bot, MessageCircle, ClipboardList, ArrowRight, AlertCircle, Headset, UploadCloud, File, X, Check } from 'lucide-react';
-import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../../src/lib/policyContent';
-import { supabase } from '../../../src/supabase'; 
-import { PolicyModal } from '../../../src/components/Modals';
-import { useToast } from '../../../src/components/Toast';
-import { getLangCodeFromCookie } from '../../../src/lib/i18n';
-import { event } from '../../../src/lib/ga';
+import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
+import { supabase } from '../../src/supabase'; 
+import { PolicyModal } from '../../src/components/Modals';
+import { useToast } from '../../src/components/Toast';
+import { getLangCodeFromCookie } from '../../src/lib/i18n';
+import { event } from '../../src/lib/ga';
 import { useChat } from 'ai/react';
 
 // ✅ [수정 1] props에 treatments 추가 (App.jsx에서 받아옴)

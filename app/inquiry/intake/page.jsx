@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { InquiryIntakePage } from "../_legacy/InquiryIntakePage";
+import { InquiryIntakePage } from "./IntakeClient";
 import { useRouter } from "next/navigation";
 
 function InquiryIntakeContent() {

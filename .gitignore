@@ -29,3 +29,29 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# snapshots
+HEALO_full_snapshot/
+*.zip
+
+
+# snapshots
+HEALO_full_snapshot/
+*.zip
+
+
+# Next.js build output
+.next/
+
+
+# Next.js build output
+.next/
+
+
+# Next.js build output
+.next/
+
+
+# Next.js build output
+.next/
+

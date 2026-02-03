@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { HospitalDetailPage } from "../../../src/legacy-pages/HospitalDetailPage";
+import { HospitalDetailPage } from "./HospitalDetailLegacyClient";
 
 export default function HospitalDetailClient({ id }) {
   const router = useRouter();

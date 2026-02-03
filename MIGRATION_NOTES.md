@@ -162,14 +162,83 @@ npm run test:smoke:auth
 ✅ `/login` → 200
 ✅ `/signup` → 200
 
-## 다음 단계 (Phase 3+)
+---
+
+# Phase 3: Hospital & Treatment Details Migration (2026-02-03)
+
+## 개요
+`src/legacy-pages/HospitalDetailPage.jsx`와 `TreatmentDetailPage.jsx`를 `app/**` 디렉토리로 마이그레이션했습니다.
+
+## 변경 사항
+
+### 1. 파일 이동
+
+**Hospital Details:**
+- 원본: `src/legacy-pages/HospitalDetailPage.jsx`
+- 새 위치: `app/hospitals/[slug]/HospitalDetailLegacyClient.jsx`
+- Import 업데이트: `app/hospitals/[slug]/HospitalDetailClient.jsx`
+
+**Treatment Details:**
+- 원본: `src/legacy-pages/TreatmentDetailPage.jsx`
+- 새 위치: `app/treatments/[slug]/TreatmentDetailLegacyClient.jsx`
+- Import 업데이트: `app/treatments/[slug]/TreatmentDetailClient.jsx`
+
+### 2. Import 경로 업데이트
+
+**HospitalDetailClient.jsx:**
+```javascript
+// Before: from "../../../src/legacy-pages/HospitalDetailPage"
+// After:  from "./HospitalDetailLegacyClient"
+```
+
+**TreatmentDetailClient.jsx:**
+```javascript
+// Before: from "../../../src/legacy-pages/TreatmentDetailPage"
+// After:  from "./TreatmentDetailLegacyClient"
+```
+
+**TreatmentDetailLegacyClient.jsx 내부:**
+- 모든 상대 경로를 `../../../src/` 형태로 수정
+
+## 보존된 기능
+
+### Hospital Detail Page
+- ✅ DB 조회 (hospitals, treatments)
+- ✅ UUID/slug 기반 조회
+- ✅ 이미지 갤러리
+- ✅ Medical Director 프로필
+- ✅ Reviews, FAQ
+- ✅ GA 이벤트 (`view_hospital`)
+
+### Treatment Detail Page
+- ✅ DB 조회 (treatments, hospitals, reviews)
+- ✅ UUID/slug 기반 조회
+- ✅ Treatment overview, benefits
+- ✅ Verified reviews
+- ✅ Google Maps
+- ✅ Related treatments
+- ✅ GA 이벤트 (`view_treatment`)
+
+## 검증 결과
+
+### 빌드 테스트
+```bash
+npm run build
+```
+✅ 빌드 성공 (3.6초 소요, 2026-02-03)
+
+### Legacy Import 확인
+✅ `app/**`에 legacy-pages import 없음
+
+## 다음 단계 (Phase 4+)
 
 **마이그레이션 대기 중인 레거시 페이지:**
-- `/hospitals/[slug]` (`src/legacy-pages/HospitalDetailPage.jsx`)
-- `/treatments/[slug]` (`src/legacy-pages/TreatmentDetailPage.jsx`)
 - `/admin` 관련 컴포넌트들 (`src/legacy-pages/admin/*`)
 
-**참고:** `src/legacy-pages/AuthPages.jsx`에는 여전히 `SuccessPage`가 남아있지만, Phase 1에서 이미 `/success` 라우트로 마이그레이션 완료되었습니다. `LoginPage`와 `SignUpPage`는 Phase 2에서 완전히 제거 가능합니다.
+**완료된 마이그레이션:**
+- ✅ Phase 1: Inquiry flow
+- ✅ Phase 2: Auth flow  
+- ✅ Phase 3: Hospital & Treatment details
 
 ## 롤백 방법
 

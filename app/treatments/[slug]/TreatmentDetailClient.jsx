@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TreatmentDetailPage } from "../../../src/legacy-pages/TreatmentDetailPage";
+import { TreatmentDetailPage } from "./TreatmentDetailLegacyClient";
 
 export default function TreatmentDetailClient({ id }) {
   const router = useRouter();

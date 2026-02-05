@@ -2,6 +2,7 @@
 
 // src/components.jsx
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 // ✅ 성능 최적화: optimizePackageImports로 tree-shaking 최적화 (next.config.js에서 설정됨)
 import {
   Search, MapPin, Globe, Menu, Star, Zap, ChevronDown, CheckCircle,
@@ -294,15 +295,16 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
     <section className="relative mb-6 md:mb-12">
       <div className="relative pt-12 pb-16 md:pt-24 md:pb-20 text-center overflow-hidden bg-teal-900">
         <div className="absolute inset-0 z-0">
-          {/* ✅ 명시적으로 설정된 이미지가 있을 때만 표시 */}
+          {/* ✅ next/image로 최적화 (priority + sizes) */}
           {siteConfig?.hero && (
-            <img 
-              src={siteConfig.hero} 
-              alt="Hero Background" 
-              className="w-full h-full object-cover opacity-60" 
-              loading="eager"
-              fetchPriority="high"
-              decoding="sync"
+            <Image
+              src={siteConfig.hero}
+              alt="Hero Background"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover opacity-60"
+              quality={85}
             />
           )}
           {/* 그라데이션 오버레이 (이미지 있든 없든 적용) */}
@@ -358,13 +360,14 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
             className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer group flex flex-row min-h-[140px] md:h-56"
           >
           <div className="w-40 md:w-auto md:h-full md:aspect-square relative bg-gray-200 overflow-hidden shrink-0">
-            <img
-              src={type === 'hospital' ? item.images?.[0] : item.images?.[0]} 
-              onError={(e) => e.target.src = `https://placehold.co/600x600?text=${type}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-              alt="img"
-              loading="lazy"
-              decoding="async"
+            {/* ✅ next/image로 최적화 (lazy + sizes) */}
+            <Image
+              src={item.images?.[0] || `https://placehold.co/600x600?text=${type}`}
+              alt={type === 'hospital' ? item.name : item.title}
+              fill
+              sizes="(max-width: 768px) 160px, 224px"
+              className="object-cover group-hover:scale-105 transition duration-500"
+              quality={80}
             />
           </div>
           <div className="flex-1 p-3 md:p-5 flex flex-col justify-between min-w-0">

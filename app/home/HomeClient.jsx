@@ -40,14 +40,14 @@ export default function HomeClient() {
           supabaseClient.from("site_settings").select("*").single(),
           supabaseClient
             .from("treatments")
-            .select(`id, slug, name, description, price_range, images, tags, rating, display_order, created_at, hospitals!inner(slug, name, location:${locCol})`)
+            .select(`*, hospitals(slug, name, location:${locCol})`)
             .eq("is_published", true)
             .order("display_order", { ascending: true, nullsFirst: false })
             .order("created_at", { ascending: false })
             .limit(4),
           supabaseClient
             .from("hospitals")
-            .select(`id, slug, name, description, images, rating, display_order, created_at, location:${locCol}, address_detail`)
+            .select(`*, location:${locCol}`)
             .eq("is_published", true)
             .order("display_order", { ascending: true, nullsFirst: false })
             .order("created_at", { ascending: false })

@@ -52,27 +52,66 @@ export const GoogleMapComponent = ({ location, hospitalName, latitude, longitude
     return parseLocation(location);
   }, [location, latitude, longitude]);
 
-  // ✅ 개발 환경에서 Google Maps 비활성화 (결제 에러 방지)
+  // ✅ 개발 환경에서는 Google Maps를 아예 로드하지 않음 (콘솔 에러 방지)
   const isDev = process.env.NODE_ENV !== "production";
+  const shouldLoadMaps = !isDev && apiKey; // 프로덕션 + API 키 있을 때만 로드
   
-  // ✅ useLoadScript 훅 사용 (중복 로드 방지)
+  // ✅ useLoadScript 훅 사용 (프로덕션에서만)
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: apiKey || '',
-    // 중복 로드 방지를 위한 옵션
+    googleMapsApiKey: shouldLoadMaps ? apiKey : '',
     preventGoogleFontsLoading: true,
-    // 개발 환경에서는 로드 안 함
     id: 'google-map-script',
+    // 개발 환경에서는 스크립트 로드 스킵
+    loadScriptExternally: false,
   });
 
-  // API 키가 없으면 placeholder 표시
+  // ✅ 개발 환경에서는 바로 Fallback UI 표시 (콘솔 에러 없음)
+  if (isDev) {
+    return (
+      <div className="bg-gradient-to-br from-gray-100 to-gray-200 w-full h-full min-h-[200px] flex items-center justify-center relative overflow-hidden">
+        {/* Fallback Map Illustration */}
+        <div className="absolute inset-0 opacity-10">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <circle cx="50" cy="50" r="3" fill="currentColor" className="text-teal-600" />
+            <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-gray-400" />
+            <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-gray-300" />
+          </svg>
+        </div>
+        
+        <div className="relative z-10 flex flex-col items-center gap-3 px-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-white shadow-md flex items-center justify-center">
+            <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          
+          <div>
+            <p className="text-sm font-bold text-gray-700">
+              {hospitalName || 'Hospital Location'}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {location || 'Seoul, Korea'}
+            </p>
+          </div>
+          
+          <div className="mt-2 text-[10px] text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+            <p>📍 Dev Mode: Map preview disabled</p>
+            <p className="mt-1 text-gray-400">Maps will load in production</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // API 키가 없으면 placeholder 표시 (프로덕션)
   if (!apiKey) {
     return (
       <div className="bg-gray-100 w-full h-full min-h-[200px] flex items-center justify-center text-gray-400 font-bold">
         <div className="flex flex-col items-center gap-2">
           <span className="text-xs">Google Maps API key required</span>
           <span className="text-[10px] text-gray-300">
-            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY (or VITE_GOOGLE_MAPS_API_KEY) to
-            .env
+            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env
           </span>
         </div>
       </div>

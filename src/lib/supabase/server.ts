@@ -20,6 +20,7 @@
  */
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -64,6 +65,32 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
           // Route Handler에서 set/remove는 실패할 수 있음
         }
       },
+    },
+  })
+}
+
+/**
+ * ✅ Service Role 클라이언트 생성 (관리자 전용)
+ * 
+ * ⚠️ 주의: Service Role Key는 모든 RLS를 무시합니다.
+ * 관리자 API에서만 사용하고, 반드시 권한 체크를 선행하세요.
+ * 
+ * @returns Supabase client with service role key
+ */
+export function createServiceRoleClient(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error(
+      '[supabase/server] NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required'
+    )
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
   })
 }

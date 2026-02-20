@@ -157,24 +157,39 @@ async function recordSent(
 async function listPendingResponses() {
   console.log("\n⏳ 응답 대기 중인 리드\n");
 
-  const { data, error } = await supabaseAdmin.rpc(
-    "get_pending_responses_with_wait_time"
-  ).catch(async () => {
-    // 함수가 없으면 직접 쿼리
-    return await supabaseAdmin
-      .from("hospital_responses")
-      .select(`
-        id,
-        inquiry_id,
-        hospital_name,
-        sent_at,
-        sent_method,
-        inquiries!inner(lead_quality, priority_score, nationality, treatment_type)
-      `)
-      .eq("response_status", "pending")
-      .order("sent_at", { ascending: true })
-      .limit(20);
-  });
+  let data: any = null;
+  let error: any = null;
+
+  try {
+    // 먼저 RPC 함수 시도
+    const rpcResult = await supabaseAdmin.rpc("get_pending_responses_with_wait_time");
+    data = rpcResult.data;
+    error = rpcResult.error;
+  } catch (rpcError: any) {
+    // RPC 함수가 없으면 직접 쿼리
+    console.log("ℹ️  RPC 함수 없음, 직접 쿼리 사용");
+    try {
+      const fallbackResult = await supabaseAdmin
+        .from("hospital_responses")
+        .select(`
+          id,
+          inquiry_id,
+          hospital_name,
+          sent_at,
+          sent_method,
+          inquiries!inner(lead_quality, priority_score, nationality, treatment_type)
+        `)
+        .eq("response_status", "pending")
+        .order("sent_at", { ascending: true })
+        .limit(20);
+      
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    } catch (fallbackError: any) {
+      console.error("❌ Fallback query error:", fallbackError.message);
+      return;
+    }
+  }
 
   if (error) {
     console.error("❌ Error:", error.message);

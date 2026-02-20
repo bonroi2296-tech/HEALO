@@ -60,18 +60,4 @@ export default [
       ],
     },
   },
-  // ✅ Allowlist: 기존 legacy wrapper들은 예외 허용
-  {
-    files: [
-      '**/src/AdminPage.jsx',
-      '**/app/login/page.jsx',
-      '**/app/signup/page.jsx',
-      '**/app/success/page.jsx',
-      '**/app/hospitals/*/HospitalDetailClient.jsx',
-      '**/app/treatments/*/TreatmentDetailClient.jsx',
-    ],
-    rules: {
-      'no-restricted-imports': 'off',
-    },
-  },
 ]

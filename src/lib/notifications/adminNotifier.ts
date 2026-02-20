@@ -16,6 +16,7 @@
 import { supabaseAdmin } from "../rag/supabaseAdmin";
 import { logOperational } from "../operationalLog";
 import { getActiveRecipients, maskPhone, updateRecipientStats } from "./recipients";
+import { sendEmail } from "./emailSender";
 
 /**
  * 알림 제공자 타입
@@ -48,7 +49,7 @@ export interface NotificationResult {
 // maskPhone은 recipients.ts에서 import하여 사용
 
 /**
- * 알림 메시지 생성
+ * 알림 메시지 생성 (기본 템플릿)
  */
 function generateNotificationMessage(payload: AdminNotificationPayload): string {
   const urgency = payload.leadQuality === "hot" ? "🔥 긴급" : "📬";
@@ -83,87 +84,33 @@ function generateNotificationMessage(payload: AdminNotificationPayload): string 
 }
 
 /**
- * ✅ SMS 발송 (추상화 - 실제 벤더 API 연결 필요)
+ * ✅ SMS 발송 (Mock - 실제 발송하지 않음)
  * 
- * 지원 가능한 벤더:
- * - Twilio
- * - AWS SNS
- * - NHN Cloud (구 Toast)
- * - Aligo
- * - CoolSMS
+ * 목적:
+ * - Console log만 출력
+ * - admin_notification_logs에 status='sent'로 기록
+ * - 나중에 실제 Provider 연동 시 이 함수만 교체
+ * 
+ * Provider 연동 예정:
+ * - Twilio / AWS SNS / 기타 SMS API
  */
 async function sendSMS(to: string, message: string): Promise<NotificationResult> {
-  const provider = process.env.SMS_PROVIDER || "console";
-  
   try {
-    // Console 모드 (개발/테스트)
-    if (provider === "console") {
-      console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📱 SMS 발송 (Console Mode)");
-      console.log(`수신: ${maskPhoneNumber(to)}`);
-      console.log(`내용:\n${message}`);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-      
-      return {
-        success: true,
-        provider: "console",
-        messageId: `console-${Date.now()}`,
-      };
-    }
+    // ⚠️ 실제 발송하지 않음 (Console log만)
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("📱 SMS 발송 (Mock Mode - 실제 발송 안됨)");
+    console.log(`수신: ${maskPhone(to)}`);
+    console.log(`내용:\n${message}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     
-    // Twilio 예시
-    if (provider === "twilio") {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      const fromNumber = process.env.TWILIO_FROM_NUMBER;
-      
-      if (!accountSid || !authToken || !fromNumber) {
-        throw new Error("Twilio credentials not configured");
-      }
-      
-      // Twilio SDK 사용 (실제 구현 시)
-      // const client = require('twilio')(accountSid, authToken);
-      // const result = await client.messages.create({
-      //   body: message,
-      //   from: fromNumber,
-      //   to: to,
-      // });
-      
-      console.log(`[SMS] Twilio 발송 시도: ${maskPhoneNumber(to)}`);
-      
-      return {
-        success: true,
-        provider: "sms",
-        messageId: `twilio-mock-${Date.now()}`,
-      };
-    }
-    
-    // AWS SNS 예시
-    if (provider === "aws-sns") {
-      const region = process.env.AWS_SNS_REGION || "ap-northeast-2";
-      
-      // AWS SDK 사용 (실제 구현 시)
-      // const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
-      // const client = new SNSClient({ region });
-      // const result = await client.send(new PublishCommand({
-      //   PhoneNumber: to,
-      //   Message: message,
-      // }));
-      
-      console.log(`[SMS] AWS SNS 발송 시도: ${maskPhoneNumber(to)}`);
-      
-      return {
-        success: true,
-        provider: "sms",
-        messageId: `sns-mock-${Date.now()}`,
-      };
-    }
-    
-    // 기타 벤더 추가 가능
-    throw new Error(`Unsupported SMS provider: ${provider}`);
-    
+    // DB 기록을 위해 success=true 반환
+    return {
+      success: true,
+      provider: "sms",
+      messageId: `mock-sms-${Date.now()}`,
+    };
   } catch (error: any) {
-    console.error("[SMS] 발송 실패:", error.message);
+    console.error(`[SMS] Mock 실패: ${maskPhone(to)}`, error.message);
     
     return {
       success: false,
@@ -196,7 +143,7 @@ async function sendAlimtalk(to: string, payload: AdminNotificationPayload): Prom
       created_at: new Date(payload.createdAt).toLocaleString("ko-KR"),
     };
     
-    console.log(`[Alimtalk] 발송 시도: ${maskPhoneNumber(to)}, 템플릿: ${templateCode}`);
+    console.log(`[Alimtalk] 발송 시도: ${maskPhone(to)}, 템플릿: ${templateCode}`);
     
     // 실제 API 호출 (벤더별로 다름)
     // const response = await fetch("https://api.alimtalk-vendor.com/send", {
@@ -271,10 +218,54 @@ async function logNotificationEvent(
     await supabaseAdmin.from("inquiry_events").insert({
       inquiry_id: inquiryId,
       event_type: eventType,
-      event_data: meta,
+      meta: meta,
     });
   } catch (error: any) {
-    console.error("[Notify] Event 로깅 실패 (무시):", error.message);
+    // 에러 상세 정보 출력 (테이블/컬럼 미스매치 디버깅용)
+    const errorDetail = error.code 
+      ? `code=${error.code}, message=${error.message}` 
+      : error.message;
+    console.error(
+      `[Notify] inquiry_events 로깅 실패 (무시) - 테이블/컬럼 확인 필요:`,
+      errorDetail,
+      `| 시도한 컬럼: inquiry_id, event_type, meta`
+    );
+    // 로깅 실패는 무시 (메인 로직 영향 없게)
+  }
+}
+
+/**
+ * ✅ admin_notification_logs에 발송 기록
+ */
+async function logNotificationToDb(data: {
+  inquiryId?: number;
+  normalizedInquiryId?: string;
+  recipientId?: string;
+  recipientLabel: string;
+  channel: NotificationProvider;
+  destination: string; // 마스킹된 전화번호
+  status: "sent" | "failed" | "pending";
+  error?: string;
+  providerResponse?: Record<string, any>;
+  messagePreview?: string;
+  deliveryTimeMs?: number;
+}): Promise<void> {
+  try {
+    await supabaseAdmin.from("admin_notification_logs").insert({
+      inquiry_id: data.inquiryId || null,
+      normalized_inquiry_id: data.normalizedInquiryId || null,
+      recipient_id: data.recipientId || null,
+      recipient_label: data.recipientLabel,
+      channel: data.channel,
+      destination: data.destination,
+      status: data.status,
+      error: data.error || null,
+      provider_response: data.providerResponse || null,
+      message_preview: data.messagePreview ? data.messagePreview.substring(0, 100) : null,
+      delivery_time_ms: data.deliveryTimeMs || null,
+    });
+  } catch (error: any) {
+    console.error("[Notify] DB 로깅 실패 (무시):", error.message);
     // 로깅 실패는 무시 (메인 로직 영향 없게)
   }
 }
@@ -334,62 +325,151 @@ async function _sendAdminNotificationInternal(
   // 3. 제공자 확인
   const provider = (process.env.NOTIFY_PROVIDER || "console") as NotificationProvider;
   
-  // 4. 메시지 생성
-  const message = generateNotificationMessage(payload);
-  
-  // 5. 발송
+  // 4. 발송
   const results: NotificationResult[] = [];
   
   for (const recipient of recipients) {
-    let result: NotificationResult;
+    const message = generateNotificationMessage(payload);
+    let hasSuccess = false;
     
-    if (provider === "alimtalk" && recipient.channel === "alimtalk") {
-      result = await sendAlimtalk(recipient.phone, payload);
-    } else {
-      // SMS 또는 console
-      result = await sendSMS(recipient.phone, message);
-    }
-    
-    results.push(result);
-    
-    // 6. 수신자 통계 업데이트 (DB만)
-    await updateRecipientStats(recipient.id, result.success);
-    
-    // 7. 이벤트 로깅
-    if (result.success) {
-      await logNotificationEvent(inquiryId, "admin_notified", {
-        provider: result.provider,
-        message_id: result.messageId,
-        recipient_id: recipient.id || null,
-        recipient_source: recipient.source,
-        masked_to: maskPhone(recipient.phone),
+    // 1. SMS/Alimtalk 발송 (phone이 있으면)
+    if (recipient.phone) {
+      const startTime = Date.now();
+      let result: NotificationResult;
+      
+      if (provider === "alimtalk" && recipient.channel === "alimtalk") {
+        result = await sendAlimtalk(recipient.phone, payload);
+      } else {
+        result = await sendSMS(recipient.phone, message);
+      }
+      
+      const deliveryTimeMs = Date.now() - startTime;
+      results.push(result);
+      if (result.success) hasSuccess = true;
+      
+      // DB 로깅
+      await logNotificationToDb({
+        inquiryId,
+        recipientId: recipient.id,
+        recipientLabel: recipient.label,
+        channel: result.provider,
+        destination: maskPhone(recipient.phone),
+        status: result.success ? "sent" : "failed",
+        error: result.error,
+        providerResponse: result.messageId ? { message_id: result.messageId } : undefined,
+        messagePreview: message,
+        deliveryTimeMs,
       });
       
-      logOperational("info", {
-        event: "admin_notified",
-        inquiry_id: inquiryId,
-        provider: result.provider,
-        recipient_source: recipient.source,
-        masked_to: maskPhone(recipient.phone),
-      });
-    } else {
-      await logNotificationEvent(inquiryId, "admin_notify_failed", {
-        provider: result.provider,
-        error: result.error,
-        recipient_id: recipient.id || null,
-        recipient_source: recipient.source,
-        masked_to: maskPhone(recipient.phone),
+      // 이벤트 로깅
+      if (result.success) {
+        await logNotificationEvent(inquiryId, "admin_notified", {
+          provider: result.provider,
+          message_id: result.messageId,
+          recipient_id: recipient.id || null,
+          recipient_source: recipient.source,
+          masked_to: maskPhone(recipient.phone),
+        });
+        
+        logOperational("info", {
+          event: "admin_notified",
+          inquiry_id: inquiryId,
+          provider: result.provider,
+          recipient_source: recipient.source,
+          masked_to: maskPhone(recipient.phone),
+        });
+      } else {
+        await logNotificationEvent(inquiryId, "admin_notify_failed", {
+          provider: result.provider,
+          error: result.error,
+          recipient_id: recipient.id || null,
+          recipient_source: recipient.source,
+          masked_to: maskPhone(recipient.phone),
+        });
+        
+        logOperational("warn", {
+          event: "admin_notify_failed",
+          inquiry_id: inquiryId,
+          provider: result.provider,
+          error: result.error,
+          recipient_source: recipient.source,
+          masked_to: maskPhone(recipient.phone),
+        });
+      }
+    }
+    
+    // 2. Email 발송 (email이 있으면)
+    if (recipient.email) {
+      const startTime = Date.now();
+      
+      // AWS SES로 실제 발송
+      const emailResult = await sendEmail(recipient.email, payload);
+      const deliveryTimeMs = Date.now() - startTime;
+      
+      if (emailResult.success) hasSuccess = true;
+      
+      const result: NotificationResult = {
+        success: emailResult.success,
+        provider: "sms", // provider 타입이 "sms" | "alimtalk" | "console"만 있어서 임시로 "sms" 사용
+        messageId: emailResult.messageId,
+        error: emailResult.error,
+      };
+      
+      results.push(result);
+      
+      // DB 로깅
+      await logNotificationToDb({
+        inquiryId,
+        recipientId: recipient.id,
+        recipientLabel: recipient.label,
+        channel: "sms", // Email 타입 추가 필요
+        destination: recipient.email,
+        status: emailResult.success ? "sent" : "failed",
+        error: emailResult.error,
+        providerResponse: emailResult.messageId ? { message_id: emailResult.messageId } : undefined,
+        messagePreview: `[Email] ${payload.nationality || ""} - ${payload.treatmentType || ""}`,
+        deliveryTimeMs,
       });
       
-      logOperational("warn", {
-        event: "admin_notify_failed",
-        inquiry_id: inquiryId,
-        provider: result.provider,
-        error: result.error,
-        recipient_source: recipient.source,
-        masked_to: maskPhone(recipient.phone),
-      });
+      // 이벤트 로깅
+      if (emailResult.success) {
+        await logNotificationEvent(inquiryId, "admin_notified", {
+          provider: "sms", // Email 타입 추가 필요
+          message_id: emailResult.messageId,
+          recipient_id: recipient.id || null,
+          recipient_source: recipient.source,
+          masked_to: recipient.email,
+        });
+        
+        logOperational("info", {
+          event: "admin_notified",
+          inquiry_id: inquiryId,
+          provider: "email",
+          recipient_source: recipient.source,
+          masked_to: recipient.email,
+        });
+      } else {
+        await logNotificationEvent(inquiryId, "admin_notify_failed", {
+          provider: "sms", // Email 타입 추가 필요
+          error: emailResult.error,
+          recipient_id: recipient.id || null,
+          recipient_source: recipient.source,
+          masked_to: recipient.email,
+        });
+        
+        logOperational("warn", {
+          event: "admin_notify_failed",
+          inquiry_id: inquiryId,
+          provider: "email",
+          error: emailResult.error,
+          recipient_source: recipient.source,
+          masked_to: recipient.email,
+        });
+      }
     }
+    
+    // 수신자 통계 업데이트 (하나라도 성공하면 success)
+    await updateRecipientStats(recipient.id, hasSuccess);
   }
   
   // 8. 통계

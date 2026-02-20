@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Check } from 'lucide-react';
 import { createSupabaseBrowserClient } from '../../src/lib/supabase/browser';
 import { useToast } from '../../src/components/Toast';

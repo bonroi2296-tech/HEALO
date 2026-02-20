@@ -1,11 +1,11 @@
 "use client";
 
 // src/pages/HospitalDetailPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft, MapPin, Star, Shield, Info, FileText, Globe, Stethoscope, Sparkles,
   GraduationCap, Award, ShieldCheck, Check, Building2, Image as ImageIcon, ArrowRight,
-  MessageCircle, HelpCircle, CheckCircle2
+  MessageCircle, HelpCircle, CheckCircle2, Activity, Calendar, Users, ClipboardCheck
 } from "lucide-react";
 import { supabase } from "../../../src/supabase";
 import { mapHospitalRow, mapTreatmentRow } from "../../../src/lib/mapper";
@@ -69,7 +69,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
         const locCol = getLocationColumn();
         let hQuery = supabase
           .from("hospitals")
-          .select(`id,slug,name,location:${locCol},address_detail,description,images,tags,rating,reviews_count,doctor_profile,latitude,longitude,operating_hours`);
+          .select(`id,slug,name,location:${locCol},address_detail,description,images,thumbnail_image,gallery_images,tags,rating,reviews_count,doctor_profile,latitude,longitude,operating_hours,certifications,medical_equipment,insurance_accepted,insurance_details,annual_surgery_count,establishment_date,doctor_count,external_ratings,specialties`);
 
         hQuery = isUuid(selectedId)
           ? hQuery.eq("id", selectedId)
@@ -140,15 +140,27 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
   // ✅ slideshow images (always 5)
   const placeholder = "https://placehold.co/800x600?text=No+Image";
   const galleryImages = useMemo(() => {
-    const imgs = normalizeImages(hospital?.images);
+    // 새로운 thumbnail_image, gallery_images 우선 사용
+    const thumb = hospital?.thumbnail_image;
+    const gallery = normalizeImages(hospital?.gallery_images);
+    
+    // fallback: 기존 images 필드
+    const legacyImages = normalizeImages(hospital?.images);
+    
+    const allImages = [
+      thumb,
+      ...gallery,
+      ...legacyImages
+    ].filter(Boolean);
+    
     return [
-      imgs[0] || placeholder,
-      imgs[1] || placeholder,
-      imgs[2] || placeholder,
-      imgs[3] || placeholder,
-      imgs[4] || placeholder,
+      allImages[0] || placeholder,
+      allImages[1] || placeholder,
+      allImages[2] || placeholder,
+      allImages[3] || placeholder,
+      allImages[4] || placeholder,
     ];
-  }, [hospital?.images]);
+  }, [hospital?.thumbnail_image, hospital?.gallery_images, hospital?.images]);
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -391,6 +403,174 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
                 <p className="text-gray-600 leading-relaxed text-lg">{hospital?.description}</p>
               </div>
             </section>
+
+            {/* Certifications & Accreditations */}
+            {hospital?.certifications && hospital.certifications.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Award size={24} className="text-teal-600" /> Certifications & Accreditations
+                </h2>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {hospital.certifications.map((cert, idx) => (
+                      <div key={idx} className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-blue-600 text-white p-2 rounded-lg shrink-0">
+                            <ShieldCheck size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-gray-900 text-sm">{cert.type?.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-gray-600 mt-1">{cert.issuer}</p>
+                            {cert.date && (
+                              <p className="text-xs text-gray-500 mt-1">Issued: {cert.date}</p>
+                            )}
+                            {cert.valid_until && (
+                              <p className="text-xs text-gray-500">Valid Until: {cert.valid_until}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Medical Equipment */}
+            {hospital?.medical_equipment && hospital.medical_equipment.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Activity size={24} className="text-teal-600" /> Medical Equipment
+                </h2>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="flex flex-wrap gap-2">
+                    {hospital.medical_equipment.map((equipment, idx) => (
+                      <span key={idx} className="px-3 py-2 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg">
+                        {equipment}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Hospital Statistics */}
+            {(hospital?.annual_surgery_count || hospital?.establishment_date || hospital?.doctor_count) && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <ClipboardCheck size={24} className="text-teal-600" /> Hospital Statistics
+                </h2>
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                    {hospital?.annual_surgery_count && (
+                      <div className="p-6 text-center">
+                        <div className="text-3xl font-bold text-teal-600 mb-2">
+                          {hospital.annual_surgery_count.toLocaleString()}
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Annual Procedures</p>
+                      </div>
+                    )}
+                    {hospital?.establishment_date && (
+                      <div className="p-6 text-center">
+                        <div className="text-3xl font-bold text-teal-600 mb-2 flex items-center justify-center gap-2">
+                          <Calendar size={28} />
+                          {new Date(hospital.establishment_date).getFullYear()}
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Established</p>
+                      </div>
+                    )}
+                    {hospital?.doctor_count && (
+                      <div className="p-6 text-center">
+                        <div className="text-3xl font-bold text-teal-600 mb-2 flex items-center justify-center gap-2">
+                          <Users size={28} />
+                          {hospital.doctor_count}
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Medical Professionals</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Insurance Information */}
+            {hospital?.insurance_accepted && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <ShieldCheck size={24} className="text-teal-600" /> Insurance Information
+                </h2>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="bg-green-50 text-green-600 p-2 rounded-lg">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">Insurance Accepted</p>
+                      <p className="text-sm text-gray-600 mt-1">This hospital accepts health insurance coverage.</p>
+                    </div>
+                  </div>
+                  {hospital?.insurance_details && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Accepted Types:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {hospital.insurance_details.types?.map((type, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-lg">
+                            {type}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* External Ratings */}
+            {hospital?.external_ratings && (hospital.external_ratings.naver || hospital.external_ratings.kakao) && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Star size={24} className="text-teal-600" /> External Reviews
+                </h2>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {hospital.external_ratings.naver && (
+                      <div className="p-4 bg-green-50 border border-green-100 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-gray-900">Naver</span>
+                          <span className="text-xs text-gray-500">
+                            {hospital.external_ratings.naver.count} reviews
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Star size={20} className="text-yellow-400 fill-yellow-400" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {hospital.external_ratings.naver.rating}
+                          </span>
+                          <span className="text-gray-500">/ 5.0</span>
+                        </div>
+                      </div>
+                    )}
+                    {hospital.external_ratings.kakao && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-gray-900">Kakao</span>
+                          <span className="text-xs text-gray-500">
+                            {hospital.external_ratings.kakao.count} reviews
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Star size={20} className="text-yellow-400 fill-yellow-400" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {hospital.external_ratings.kakao.rating}
+                          </span>
+                          <span className="text-gray-500">/ 5.0</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Signature Programs */}
             <section>

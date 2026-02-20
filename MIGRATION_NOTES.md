@@ -239,6 +239,7 @@ npm run build
 - ✅ Phase 1: Inquiry flow
 - ✅ Phase 2: Auth flow  
 - ✅ Phase 3: Hospital & Treatment details
+- ✅ Phase 4: Admin unification (partial)
 
 ## 롤백 방법
 

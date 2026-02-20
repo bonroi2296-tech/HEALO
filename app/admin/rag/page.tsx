@@ -72,66 +72,16 @@ export default function RagAdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-64 bg-white border-r border-gray-200 fixed h-full p-6 flex flex-col z-20">
-        <div className="text-2xl font-black text-teal-600 mb-10 flex items-center gap-2">
-          관리자 모드
-        </div>
-        <nav className="space-y-2 flex-1">
-          <a
-            href="/admin"
-            className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50"
-          >
-            시장 분석 (통계)
-          </a>
-          <a
-            href="/admin"
-            className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50"
-          >
-            고객 문의
-          </a>
-          <a
-            href="/admin"
-            className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50"
-          >
-            병원 관리
-          </a>
-          <a
-            href="/admin"
-            className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50"
-          >
-            시술 관리
-          </a>
-          <div className="pt-4 mt-4 border-t border-gray-100 space-y-2">
-            <a
-              href="/admin"
-              className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition text-gray-500 hover:bg-gray-50"
-            >
-              사이트 설정
-            </a>
-            <div className="w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 bg-teal-50 text-teal-700">
-              RAG 테스트
-            </div>
-          </div>
-        </nav>
-        <a
-          href="/"
-          className="flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold px-2 py-2"
-        >
-          관리자 나가기
-        </a>
-      </aside>
+    <div className="space-y-10">
+      <section>
+        <h1 className="text-2xl font-bold text-gray-900">RAG 테스트</h1>
+        <p className="text-gray-500 mt-2">정규화/수집/검색용 최소 도구</p>
+      </section>
 
-      <div className="ml-64 flex-1 p-8 md:p-12 max-w-5xl space-y-10 text-sm text-gray-800">
-        <section>
-          <h1 className="text-xl font-bold">RAG 테스트</h1>
-          <p className="text-gray-500">정규화/수집/검색용 최소 도구</p>
-        </section>
-
-        <section className="space-y-3">
-        <h2 className="text-lg font-semibold">A) 문의 정규화 테스트</h2>
+      <section className="bg-white p-6 rounded-xl border border-gray-200 space-y-4">
+        <h2 className="text-lg font-bold text-gray-900">A) 문의 정규화 테스트</h2>
         <textarea
-          className="w-full border rounded p-2"
+          className="w-full border rounded-lg p-3"
           rows={4}
           placeholder="문의 내용을 붙여넣기..."
           value={normalizeText}
@@ -139,7 +89,7 @@ export default function RagAdminPage() {
         />
         <div className="flex items-center gap-3">
           <select
-            className="border rounded p-2"
+            className="border rounded-lg p-2"
             value={selectedInquiryId}
             onChange={(e) => setSelectedInquiryId(e.target.value)}
           >
@@ -150,20 +100,20 @@ export default function RagAdminPage() {
               </option>
             ))}
           </select>
-          <button className="border px-3 py-2" onClick={handleNormalize}>
+          <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700" onClick={handleNormalize}>
             정규화 실행
           </button>
         </div>
-        <pre className="bg-gray-50 border rounded p-3 overflow-auto">
+        <pre className="bg-gray-50 border rounded-lg p-4 overflow-auto text-xs">
           {normalizeResult ? JSON.stringify(normalizeResult, null, 2) : "—"}
         </pre>
       </section>
 
-        <section className="space-y-3">
-        <h2 className="text-lg font-semibold">B) 수집(ingest) 테스트</h2>
+      <section className="bg-white p-6 rounded-xl border border-gray-200 space-y-4">
+        <h2 className="text-lg font-bold text-gray-900">B) 수집(ingest) 테스트</h2>
         <div className="flex items-center gap-3">
           <select
-            className="border rounded p-2"
+            className="border rounded-lg p-2"
             value={ingestSourceType}
             onChange={(e) => setIngestSourceType(e.target.value)}
           >
@@ -173,31 +123,31 @@ export default function RagAdminPage() {
             <option value="normalized_inquiry">정규화 문의 (normalized_inquiry)</option>
           </select>
           <input
-            className="border rounded p-2 flex-1"
+            className="border rounded-lg p-2 flex-1"
             placeholder="source_id (선택)"
             value={ingestSourceId}
             onChange={(e) => setIngestSourceId(e.target.value)}
           />
-          <button className="border px-3 py-2" onClick={handleIngest}>
+          <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700" onClick={handleIngest}>
             수집 실행
           </button>
         </div>
-        <pre className="bg-gray-50 border rounded p-3 overflow-auto">
+        <pre className="bg-gray-50 border rounded-lg p-4 overflow-auto text-xs">
           {ingestResult ? JSON.stringify(ingestResult, null, 2) : "—"}
         </pre>
       </section>
 
-        <section className="space-y-3">
-        <h2 className="text-lg font-semibold">C) 검색 테스트</h2>
+      <section className="bg-white p-6 rounded-xl border border-gray-200 space-y-4">
+        <h2 className="text-lg font-bold text-gray-900">C) 검색 테스트</h2>
         <div className="flex items-center gap-3">
           <input
-            className="border rounded p-2 flex-1"
+            className="border rounded-lg p-2 flex-1"
             placeholder="검색어..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <select
-            className="border rounded p-2"
+            className="border rounded-lg p-2"
             value={searchLang}
             onChange={(e) => setSearchLang(e.target.value)}
           >
@@ -205,15 +155,14 @@ export default function RagAdminPage() {
             <option value="ko">ko</option>
             <option value="ja">ja</option>
           </select>
-          <button className="border px-3 py-2" onClick={handleSearch}>
+          <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700" onClick={handleSearch}>
             검색
           </button>
         </div>
-        <pre className="bg-gray-50 border rounded p-3 overflow-auto">
+        <pre className="bg-gray-50 border rounded-lg p-4 overflow-auto text-xs">
           {searchResult ? JSON.stringify(searchResult, null, 2) : "—"}
         </pre>
       </section>
-      </div>
     </div>
   );
 }

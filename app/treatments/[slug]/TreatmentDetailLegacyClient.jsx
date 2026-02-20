@@ -1,7 +1,7 @@
 "use client";
 
 // src/pages/TreatmentDetailPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   MapPin,
@@ -20,6 +20,10 @@ import {
   Clock,
   FileText,
   Globe,
+  Activity,
+  AlertTriangle,
+  Syringe,
+  BarChart3
 } from "lucide-react";
 import { supabase } from "../../../src/supabase";
 import { ReviewModal } from "../../../src/components/Modals";
@@ -117,7 +121,7 @@ export const TreatmentDetailPage = ({
         let tQuery = supabase
           .from("treatments")
           .select(
-            "id,name,slug,description,full_description,benefits,tags,images,thumbnail,price_min,price_max,hospital_id"
+            "id,name,slug,description,full_description,benefits,tags,images,thumbnail,thumbnail_image,gallery_images,price_min,price_max,hospital_id,recovery_time_min,recovery_time_max,recovery_process,side_effects,side_effects_detail,precautions,anesthesia_type,surgery_duration_min,surgery_duration_max,required_equipment,insurance_coverage,insurance_coverage_detail,annual_procedure_count,success_rate"
           );
 
         tQuery = isUuid(id) ? tQuery.eq("id", id) : tQuery.eq("slug", id);
@@ -134,9 +138,18 @@ export const TreatmentDetailPage = ({
         }
         if (!tRow) throw new Error("Treatment not found");
 
-        // images fallback: images -> thumbnail
-        const imgs = normalizeImages(tRow.images);
-        const imgsWithThumbFallback = imgs.length > 0 ? imgs : normalizeImages(tRow.thumbnail);
+        // images: 새로운 thumbnail_image, gallery_images 우선 사용
+        const thumb = tRow.thumbnail_image;
+        const gallery = normalizeImages(tRow.gallery_images);
+        const legacyImgs = normalizeImages(tRow.images);
+        const legacyThumb = normalizeImages(tRow.thumbnail);
+        
+        const imgsWithThumbFallback = [
+          thumb,
+          ...gallery,
+          ...legacyImgs,
+          ...legacyThumb
+        ].filter(Boolean);
 
         const t = {
           id: tRow.id,
@@ -153,6 +166,20 @@ export const TreatmentDetailPage = ({
           price: formatPriceRange(tRow.price_min, tRow.price_max, "en"),
           price_min: tRow.price_min,
           price_max: tRow.price_max,
+          recovery_time_min: tRow.recovery_time_min,
+          recovery_time_max: tRow.recovery_time_max,
+          recovery_process: tRow.recovery_process,
+          side_effects: Array.isArray(tRow.side_effects) ? tRow.side_effects : [],
+          side_effects_detail: tRow.side_effects_detail,
+          precautions: Array.isArray(tRow.precautions) ? tRow.precautions : [],
+          anesthesia_type: tRow.anesthesia_type,
+          surgery_duration_min: tRow.surgery_duration_min,
+          surgery_duration_max: tRow.surgery_duration_max,
+          required_equipment: Array.isArray(tRow.required_equipment) ? tRow.required_equipment : [],
+          insurance_coverage: tRow.insurance_coverage,
+          insurance_coverage_detail: tRow.insurance_coverage_detail,
+          annual_procedure_count: tRow.annual_procedure_count,
+          success_rate: tRow.success_rate,
         };
 
         if (!alive) return;
@@ -170,7 +197,7 @@ export const TreatmentDetailPage = ({
           const locCol = getLocationColumn();
           const { data: hRow, error: hErr } = await supabase
             .from("hospitals")
-            .select(`id,slug,name,location:${locCol},address_detail,description,images,thumbnail,tags,rating,reviews_count,latitude,longitude,operating_hours`)
+            .select(`id,slug,name,location:${locCol},address_detail,description,images,thumbnail,thumbnail_image,gallery_images,tags,rating,reviews_count,latitude,longitude,operating_hours`)
             .eq("id", t.hospitalId)
             .single();
 
@@ -180,8 +207,17 @@ export const TreatmentDetailPage = ({
             throw hErr;
           }
 
-          const hImgs = normalizeImages(hRow.images);
-          const hImgsFinal = hImgs.length > 0 ? hImgs : normalizeImages(hRow.thumbnail);
+          const hThumb = hRow.thumbnail_image;
+          const hGallery = normalizeImages(hRow.gallery_images);
+          const hLegacyImgs = normalizeImages(hRow.images);
+          const hLegacyThumb = normalizeImages(hRow.thumbnail);
+          
+          const hImgsFinal = [
+            hThumb,
+            ...hGallery,
+            ...hLegacyImgs,
+            ...hLegacyThumb
+          ].filter(Boolean);
 
           const h = {
             id: hRow.id,
@@ -266,7 +302,7 @@ export const TreatmentDetailPage = ({
         // ✅ 여기서 price_display 같은 컬럼 절대 쓰면 안됨 (너 DB에 없음)
         const { data: rows, error } = await supabase
           .from("treatments")
-          .select("id,slug,name,price_min,price_max,thumbnail,images,hospital_id")
+          .select("id,slug,name,price_min,price_max,thumbnail,images,thumbnail_image,gallery_images,hospital_id")
           .eq("hospital_id", treatment.hospitalId)
           .neq("id", treatment.id)
           .limit(4);
@@ -304,8 +340,18 @@ export const TreatmentDetailPage = ({
 
   // 5) Gallery 5장 강제 유지 (디자인 유지)
   const galleryImages = useMemo(() => {
-    const imgs = normalizeImages(treatment?.images);
-    const base = imgs.length > 0 ? imgs : normalizeImages(treatment?.thumbnail);
+    // 새로운 이미지 필드 우선 사용
+    const thumb = treatment?.thumbnail_image;
+    const gallery = normalizeImages(treatment?.gallery_images);
+    const legacyImgs = normalizeImages(treatment?.images);
+    const legacyThumb = normalizeImages(treatment?.thumbnail);
+    
+    const base = [
+      thumb,
+      ...gallery,
+      ...legacyImgs,
+      ...legacyThumb
+    ].filter(Boolean);
 
     const placeholders = [
       "https://placehold.co/1200x900?text=Procedure+1",
@@ -318,7 +364,7 @@ export const TreatmentDetailPage = ({
     const out = [...base];
     while (out.length < 5) out.push(placeholders[out.length] || placeholders[0]);
     return out.slice(0, 5);
-  }, [treatment?.images, treatment?.thumbnail]);
+  }, [treatment?.thumbnail_image, treatment?.gallery_images, treatment?.images, treatment?.thumbnail]);
 
   // 슬라이드 index가 이미지 개수보다 커지는 거 방지
   useEffect(() => {
@@ -533,6 +579,197 @@ export const TreatmentDetailPage = ({
               )}
             </section>
 
+            {/* Recovery Process */}
+            {(treatment.recovery_time_min || treatment.recovery_time_max || treatment.recovery_process) && (
+              <section>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Clock size={20} className="text-teal-600" /> Recovery Timeline
+                </h3>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  {(treatment.recovery_time_min || treatment.recovery_time_max) && (
+                    <div className="mb-6 p-4 bg-teal-50 rounded-xl">
+                      <p className="text-sm font-bold text-teal-900">Expected Recovery Period</p>
+                      <p className="text-2xl font-bold text-teal-600 mt-2">
+                        {treatment.recovery_time_min && treatment.recovery_time_max
+                          ? `${treatment.recovery_time_min}-${treatment.recovery_time_max} days`
+                          : treatment.recovery_time_min
+                          ? `${treatment.recovery_time_min}+ days`
+                          : `${treatment.recovery_time_max} days`}
+                      </p>
+                    </div>
+                  )}
+                  {treatment.recovery_process && typeof treatment.recovery_process === 'object' && (
+                    <div className="space-y-4">
+                      {Object.entries(treatment.recovery_process).map(([key, value], idx) => (
+                        <div key={idx} className="flex gap-4">
+                          <div className="shrink-0 w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-teal-700 font-bold">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 text-sm capitalize">
+                              {key.replace(/_/g, ' ')}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">{value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Side Effects & Precautions */}
+            {(treatment.side_effects?.length > 0 || treatment.precautions?.length > 0) && (
+              <section>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <AlertTriangle size={20} className="text-amber-600" /> Side Effects & Precautions
+                </h3>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  {treatment.side_effects?.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <Activity size={16} className="text-amber-600" /> Possible Side Effects
+                      </h4>
+                      <ul className="space-y-2">
+                        {treatment.side_effects.map((effect, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="text-amber-600 mt-1">•</span>
+                            {effect}
+                          </li>
+                        ))}
+                      </ul>
+                      {treatment.side_effects_detail && (
+                        <p className="text-xs text-gray-500 mt-3 p-3 bg-amber-50 rounded-lg">
+                          {treatment.side_effects_detail}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {treatment.precautions?.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <ShieldCheck size={16} className="text-teal-600" /> Precautions
+                      </h4>
+                      <ul className="space-y-2">
+                        {treatment.precautions.map((precaution, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                            <CheckCircle2 size={14} className="text-teal-600 mt-1 shrink-0" />
+                            {precaution}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Procedure Details */}
+            {(treatment.surgery_duration_min || treatment.anesthesia_type || treatment.required_equipment?.length > 0) && (
+              <section>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Syringe size={20} className="text-teal-600" /> Procedure Details
+                </h3>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {(treatment.surgery_duration_min || treatment.surgery_duration_max) && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <p className="text-xs text-gray-500 font-medium mb-1">Duration</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {treatment.surgery_duration_min && treatment.surgery_duration_max
+                            ? `${treatment.surgery_duration_min}-${treatment.surgery_duration_max} min`
+                            : treatment.surgery_duration_min
+                            ? `${treatment.surgery_duration_min}+ min`
+                            : `${treatment.surgery_duration_max} min`}
+                        </p>
+                      </div>
+                    )}
+                    {treatment.anesthesia_type && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <p className="text-xs text-gray-500 font-medium mb-1">Anesthesia</p>
+                        <p className="text-lg font-bold text-gray-900">{treatment.anesthesia_type}</p>
+                      </div>
+                    )}
+                  </div>
+                  {treatment.required_equipment?.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                      <h4 className="font-bold text-gray-900 mb-3 text-sm">Required Equipment</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {treatment.required_equipment.map((equipment, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-teal-50 text-teal-700 text-xs font-medium rounded-lg">
+                            {equipment}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Insurance Coverage */}
+            {treatment.insurance_coverage && (
+              <section>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-teal-600" /> Insurance Coverage
+                </h3>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="bg-green-50 text-green-600 p-2 rounded-lg">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">Insurance May Apply</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        This procedure may be covered by health insurance under certain conditions.
+                      </p>
+                    </div>
+                  </div>
+                  {treatment.insurance_coverage_detail && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-xs text-gray-700">{treatment.insurance_coverage_detail}</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Statistics & Success Rate */}
+            {(treatment.annual_procedure_count || treatment.success_rate) && (
+              <section>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <BarChart3 size={20} className="text-teal-600" /> Statistics
+                </h3>
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                    {treatment.annual_procedure_count && (
+                      <div className="p-6 text-center">
+                        <div className="text-3xl font-bold text-teal-600 mb-2">
+                          {treatment.annual_procedure_count.toLocaleString()}
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Annual Procedures</p>
+                      </div>
+                    )}
+                    {treatment.success_rate && (
+                      <div className="p-6 text-center">
+                        <div className="text-3xl font-bold text-teal-600 mb-2">
+                          {treatment.success_rate}%
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Success Rate</p>
+                        <div className="mt-3 mx-auto w-full bg-gray-200 rounded-full h-2 max-w-xs">
+                          <div
+                            className="bg-teal-600 h-2 rounded-full transition-all"
+                            style={{ width: `${treatment.success_rate}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Reviews */}
             <section className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-6">
@@ -698,6 +935,8 @@ export const TreatmentDetailPage = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {relatedTreatments.map((item) => {
                     const thumb =
+                      item.thumbnail_image ||
+                      normalizeImages(item.gallery_images)?.[0] ||
                       normalizeImages(item.images)?.[0] ||
                       item.thumbnail ||
                       "https://placehold.co/600x600?text=treatment";

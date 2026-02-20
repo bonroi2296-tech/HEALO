@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, UploadCloud, File, X } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';

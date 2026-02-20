@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';

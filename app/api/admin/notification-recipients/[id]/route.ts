@@ -18,16 +18,21 @@ import { requireAdminAuth } from "../../../../../src/lib/auth/requireAdminAuth";
 /**
  * PATCH: 수신자 수정
  * 
+ * label, channel, phone_e164, email, is_active, notes 모두 수정 가능
+ * 
  * Body:
  * {
  *   "label": "새 이름",
+ *   "channel": "sms" | "alimtalk" | "email",
+ *   "phone_e164": "+821012345678",
+ *   "email": "admin@healo.com",
  *   "is_active": false,
  *   "notes": "메모"
  * }
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // ✅ 관리자 인증 확인 (자동 audit log 포함)
   const auth = await requireAdminAuth(request);
@@ -36,14 +41,29 @@ export async function PATCH(
   }
 
   try {
-    const id = params.id;
+    const { id } = await params;
     const body = await request.json();
 
-    const result = await updateRecipient(id, {
-      label: body.label,
-      is_active: body.is_active,
-      notes: body.notes,
-    });
+    // channel 화이트리스트 검증
+    if (body.channel !== undefined) {
+      if (!["sms", "alimtalk", "email"].includes(body.channel)) {
+        return Response.json(
+          { ok: false, error: "channel must be 'sms', 'alimtalk', or 'email'" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 화이트리스트 필드만 전달
+    const updateData: any = {};
+    if (body.label !== undefined) updateData.label = body.label;
+    if (body.channel !== undefined) updateData.channel = body.channel;
+    if (body.phone_e164 !== undefined) updateData.phone_e164 = body.phone_e164;
+    if (body.email !== undefined) updateData.email = body.email;
+    if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+
+    const result = await updateRecipient(id, updateData);
 
     if (!result.success) {
       return Response.json(
@@ -62,11 +82,11 @@ export async function PATCH(
 }
 
 /**
- * DELETE: 수신자 삭제 (Soft delete)
+ * DELETE: 수신자 삭제 (Hard delete)
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // ✅ 관리자 인증 확인 (자동 audit log 포함)
   const auth = await requireAdminAuth(request);
@@ -75,9 +95,9 @@ export async function DELETE(
   }
 
   try {
-    const id = params.id;
+    const { id } = await params;
 
-    const result = await deleteRecipient(id, true); // Soft delete
+    const result = await deleteRecipient(id, false); // Hard delete (실제 삭제)
 
     if (!result.success) {
       return Response.json(

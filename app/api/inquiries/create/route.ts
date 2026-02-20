@@ -24,6 +24,7 @@ import { encryptString, encryptStringNullable } from "../../../../src/lib/securi
 import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
 import { logInquiryReceived } from "../../../../src/lib/operationalLog";
 import { trackFunnelEvent } from "../../../../src/lib/events/funnelTracking";
+import { sendAdminNotification } from "../../../../src/lib/notifications/adminNotifier";
 
 export async function POST(request: NextRequest) {
   // ✅ 환경변수 검증
@@ -161,7 +162,21 @@ export async function POST(request: NextRequest) {
       console.log(`[${apiPath}] ✅ Inquiry created: ${inquiryId}`);
       
       // ========================================
-      // 5. 응답 반환
+      // 5. 관리자 알림 발송 (Fail-safe)
+      // ========================================
+      // 알림 실패해도 inquiry 생성은 성공으로 처리
+      sendAdminNotification({
+        inquiryId,
+        nationality: body.nationality,
+        treatmentType: body.treatmentType,
+        contactMethod: body.contactMethod || (hasEmail ? 'email' : 'messenger'),
+        createdAt: new Date().toISOString(),
+      }).catch((error) => {
+        console.error(`[${apiPath}] 알림 발송 실패 (무시):`, error.message);
+      });
+      
+      // ========================================
+      // 6. 응답 반환
       // ========================================
       return Response.json({
         ok: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Bot, MessageCircle, ClipboardList, ArrowRight, AlertCircle, Headset, UploadCloud, File, X, Check } from 'lucide-react';
 import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
 import { supabase } from '../../src/supabase'; 

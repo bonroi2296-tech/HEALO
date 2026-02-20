@@ -45,7 +45,7 @@ export const SignUpPage = ({ setView }) => {
 
         setLoading(true);
 
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
@@ -216,7 +216,7 @@ export const SignUpPage = ({ setView }) => {
                             setLoading(true);
                             try {
                                 const redirectUrl = `${window.location.origin}/auth/callback`;
-                                const { data, error } = await supabase.auth.signInWithOAuth({
+                                const { error } = await supabase.auth.signInWithOAuth({
                                     provider: 'google',
                                     options: {
                                         redirectTo: redirectUrl,

@@ -5,7 +5,7 @@ import { createSupabaseBrowserClient } from "../../../../src/lib/supabase/browse
 
 const supabase = createSupabaseBrowserClient();
 
-export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, handleFileClick }) => {
+export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) => {
   // 🔐 상세 조회 모달 상태
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);

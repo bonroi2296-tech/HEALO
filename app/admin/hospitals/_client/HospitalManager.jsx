@@ -14,9 +14,6 @@ export const HospitalManager = ({
   handleDelete,
   fetchHospitals,
   uploadToSupabase,
-  DynamicListInput,
-  ImageUploader,
-  AddressInput,
   toast,
 }) => (
   <div className="grid grid-cols-12 gap-8 animate-in fade-in">

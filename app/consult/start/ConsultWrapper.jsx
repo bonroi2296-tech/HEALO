@@ -71,8 +71,6 @@ export default function ConsultWrapper() {
         throw new Error(createResult.error || 'Failed to submit consultation request.');
       }
 
-      const inquiryId = createResult.inquiryId;
-
       // Analytics 이벤트
       const submitLang = getLangCodeFromCookie();
       if (submitLang) {

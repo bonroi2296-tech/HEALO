@@ -6,6 +6,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 export default [
   {
     ignores: [
+      'HEALO_full_snapshot/**',
+      'HEALO_REVIEW/**',
       '.next/**',
       '**/.next/**',
       'node_modules/**',

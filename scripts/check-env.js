@@ -58,8 +58,6 @@ for (const [key, description] of Object.entries(REQUIRED_VARS)) {
     console.error(`   설명: ${description}\n`);
     hasErrors = true;
   } else {
-    // 값의 길이만 표시 (보안)
-    const maskedValue = value.length > 20 ? `${value.substring(0, 10)}...${value.substring(value.length - 5)}` : '***';
     console.log(`✅ ${key} - 설정됨 (${value.length}자)`);
   }
 }

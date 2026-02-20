@@ -6,12 +6,10 @@ import { CheckCircle2, Clock, FileText, Sparkles, Check, MessageCircle } from 'l
 
 export const SuccessPage = ({ setView }) => {
     const router = useRouter();
-    const [ticketId, setTicketId] = useState(null);
+    const [ticketId] = useState(() => "REQ-" + Math.floor(100000 + Math.random() * 900000));
     const [inquirySuccess, setInquirySuccess] = useState(null);
 
     useEffect(() => {
-        setTicketId("REQ-" + Math.floor(100000 + Math.random() * 900000));
-        
         try {
             const raw = typeof window !== 'undefined' ? sessionStorage.getItem('inquiry_success') : null;
             const data = raw ? JSON.parse(raw) : null;

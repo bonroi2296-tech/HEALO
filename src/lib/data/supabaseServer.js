@@ -69,7 +69,7 @@ export const supabaseServer = new Proxy({}, {
         return value.bind(client);
       }
       return value;
-    } catch (error) {
+    } catch (_error) {
       // 빌드 시점에 환경 변수가 없으면 더미 클라이언트 반환
       const dummy = createDummyClient();
       const value = dummy[prop];

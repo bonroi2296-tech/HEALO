@@ -241,7 +241,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
         if (typeof window !== 'undefined' && inquiryId != null && publicToken != null) {
           try {
             sessionStorage.setItem('inquiry_success', JSON.stringify({ inquiryId, publicToken: String(publicToken) }));
-          } catch (_) {}
+          } catch (err) {
+            console.warn("Failed to parse session data:", err);
+        }
         }
 
         // ✅ Funnel 이벤트: Step1 제출 성공

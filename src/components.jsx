@@ -42,10 +42,7 @@ const getLangFromCookie = () => {
 };
 
 const useLangCode = () => {
-  const [langCode, setLangCode] = useState("en");
-  useEffect(() => {
-    setLangCode(getLangCodeFromCookie());
-  }, []);
+  const [langCode] = useState(() => getLangCodeFromCookie());
   return langCode;
 };
 
@@ -130,7 +127,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
   // 초기 마운트 시에만 쿠키에서 언어 읽기
   useEffect(() => {
     setCurrentLang(getLangFromCookie());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const handleLanguageChange = (langLabel) => {

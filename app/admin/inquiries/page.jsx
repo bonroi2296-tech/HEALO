@@ -48,10 +48,6 @@ export default function InquiriesPage() {
     }
   };
 
-  // Status 변경 (현재 비활성화)
-  const handleStatusChange = async (id, newStatus) => {
-    alert('⚠️ Status 변경은 현재 비활성화되어 있습니다.\n관리자 API를 통해 구현 예정입니다.');
-  };
 
   // 첨부파일 미리보기
   const handleFileClick = async (storagePath) => {
@@ -64,9 +60,7 @@ export default function InquiriesPage() {
       }
 
       let cleanPath = storagePath;
-      if (cleanPath.startsWith('attachments/')) {
-        cleanPath = cleanPath;
-      } else if (cleanPath.startsWith('/')) {
+      if (cleanPath.startsWith('/')) {
         cleanPath = cleanPath.substring(1);
       }
 
@@ -115,7 +109,6 @@ export default function InquiriesPage() {
       <InquiryManager
         inquiries={inquiries}
         fetchInquiries={fetchInquiries}
-        handleStatusChange={handleStatusChange}
         handleFileClick={handleFileClick}
       />
 

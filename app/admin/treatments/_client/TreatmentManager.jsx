@@ -17,8 +17,6 @@ export const TreatmentManager = ({
   loading,
   uploadToSupabase,
   uploading,
-  DynamicListInput,
-  ImageUploader,
 }) => (
   <div className="grid grid-cols-12 gap-8 animate-in fade-in">
     <div className="col-span-4 bg-white rounded-2xl border border-gray-200 p-4 h-[calc(100vh-100px)] overflow-y-auto">

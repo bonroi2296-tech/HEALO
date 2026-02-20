@@ -33,9 +33,10 @@ const tests = [
   // server check
   try {
     await request('/');
-  } catch (e) {
+  } catch (err) {
     console.error(`❌ Cannot connect: ${BASE_URL}`);
     console.error('   Start server first: npm run dev');
+    console.error('   Error:', err.message);
     process.exit(1);
   }
 

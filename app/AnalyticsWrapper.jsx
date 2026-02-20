@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
  * HEALO: Analytics 래퍼
@@ -14,36 +14,24 @@ import { useEffect, useState } from "react";
  */
 export default function AnalyticsWrapper() {
   const pathname = usePathname();
-  const [shouldLoadGTM, setShouldLoadGTM] = useState(false);
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const isProduction = process.env.NODE_ENV === "production";
+  const isAdminPath = pathname?.startsWith("/admin");
 
+  // GTM 로드 조건 (useMemo로 계산, setState 없이)
+  const shouldLoadGTM = Boolean(gaId) && isProduction && !isAdminPath;
+
+  // 디버그 로그 (개발 환경에서만, useEffect 없이)
   useEffect(() => {
-    // 조건 확인
-    const gaId = process.env.NEXT_PUBLIC_GA_ID;
-    const isProduction = process.env.NODE_ENV === "production";
-    const isAdminPath = pathname?.startsWith("/admin");
-
-    // GTM 로드 조건:
-    // 1. GA ID가 설정되어 있음
-    // 2. 프로덕션 환경
-    // 3. /admin 경로가 아님
-    const shouldLoad = Boolean(gaId) && isProduction && !isAdminPath;
-
-    if (shouldLoad !== shouldLoadGTM) {
-      setShouldLoadGTM(shouldLoad);
-    }
-
-    // 디버그 로그 (개발 환경에서만)
     if (!isProduction) {
       console.log("[Analytics] GTM 로딩 조건:", {
         gaId: gaId ? "설정됨" : "미설정",
         isProduction,
         isAdminPath,
-        shouldLoad,
+        shouldLoad: shouldLoadGTM,
       });
     }
-  }, [pathname, shouldLoadGTM]);
-
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  }, [gaId, isProduction, isAdminPath, shouldLoadGTM]);
 
   if (!shouldLoadGTM || !gaId) {
     return null;

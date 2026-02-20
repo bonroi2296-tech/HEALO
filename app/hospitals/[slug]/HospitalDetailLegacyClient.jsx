@@ -40,20 +40,15 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
         try {
           const parsed = JSON.parse(t);
           if (Array.isArray(parsed)) return parsed.filter(Boolean);
-        } catch {}
+        } catch (e) {
+          console.warn("Failed to parse image array:", e);
+        }
       }
       if (t.startsWith("http")) return [t];
     }
     return [];
   };
 
-  const getAddressText = (h) => {
-    const locationText = (h?.location || "").trim();
-    const detailText = (h?.address_detail || "").trim();
-    if (locationText) return locationText;
-    if (detailText) return detailText;
-    return isDev ? "— (address missing)" : "";
-  };
 
   // ✅ fetch hospital + treatments from DB
   useEffect(() => {

@@ -87,7 +87,11 @@ export function InquiryIntakePage({ setView }) {
         setSubmitting(false);
         return;
       }
-      try { sessionStorage.removeItem('inquiry_success'); } catch (_) {}
+      try { 
+        sessionStorage.removeItem('inquiry_success'); 
+      } catch (err) {
+        console.warn("Failed to clear session storage:", err);
+      }
       
       // ✅ Funnel 이벤트: Step2 저장 성공
       if (inquiryId != null) {

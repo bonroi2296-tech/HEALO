@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseClient } from "../src/lib/data/supabaseClient";
 import { SITE_INFO } from "../src/lib/siteSettings";
@@ -24,11 +24,9 @@ export default function ClientShell({ children }) {
   const [session, setSession] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState({ logo: "", hero: "" });
-  const [langCode, setLangCode] = useState("en");
+  const langCode = useMemo(() => getLangCodeFromCookie(), []);
 
   useEffect(() => {
-    setLangCode(getLangCodeFromCookie());
-    
     console.log("[ClientShell] 🔍 Mounting, checking session...");
     
     let mounted = true;

@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.next/
+out/
+build/
 
 # Environment variables
 .env
@@ -30,9 +33,38 @@ dist-ssr
 *.sln
 *.sw?
 
-# Next.js
-.next/
+# Backup files (보안)
+*.backup
+*.bak
+*.tmp
+*~
+
+# Database dumps (보안)
+*.sql.gz
+*.sql.backup
+dump.sql
+
+# Keys and certificates (보안)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Snapshots
 HEALO_full_snapshot/
 *.zip
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Temporary files
+temp/
+tmp/
+*.temp

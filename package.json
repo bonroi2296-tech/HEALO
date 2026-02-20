@@ -13,6 +13,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check:env": "node scripts/check-env.js",
     "eval": "tsx scripts/evaluation.ts",
     "test:smoke:inquiry": "node scripts/smoke-test-inquiry.js",
     "test:smoke:auth": "node scripts/smoke-test-auth.js",

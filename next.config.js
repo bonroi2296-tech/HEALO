@@ -138,5 +138,24 @@ const nextConfig = {
   },
 };
 
-// ✅ ES 모듈 형식 (package.json의 "type": "module"과 일치)
-export default nextConfig;
+// Sentry 설정 (DSN이 있을 때만 활성화)
+import { withSentryConfig } from "@sentry/nextjs";
+
+const sentryConfig = {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+};
+
+const sentryOptions = {
+  widenClientFileUpload: true,
+  tunnelRoute: "/monitoring",
+  hideSourceMaps: true,
+  disableLogger: true,
+};
+
+const finalConfig = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, sentryConfig, sentryOptions)
+  : nextConfig;
+
+export default finalConfig;

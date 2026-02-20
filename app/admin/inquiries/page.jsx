@@ -114,10 +114,10 @@ export default function InquiriesPage() {
 
       {/* 파일 미리보기 모달 */}
       {selectedFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-end lg:items-center justify-center z-50 p-0 lg:p-4">
+          <div className="bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full lg:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-bold text-lg">첨부파일 미리보기</h3>
+              <h3 className="font-bold text-base lg:text-lg">첨부파일 미리보기</h3>
               <button
                 onClick={() => setSelectedFile(null)}
                 className="text-gray-400 hover:text-gray-600 transition"

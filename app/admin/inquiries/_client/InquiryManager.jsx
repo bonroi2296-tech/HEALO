@@ -6,15 +6,11 @@ import { createSupabaseBrowserClient } from "../../../../src/lib/supabase/browse
 const supabase = createSupabaseBrowserClient();
 
 export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) => {
-  // 🔐 상세 조회 모달 상태
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  
-  // 🔬 실험용 번역 상태
   const [translationResult, setTranslationResult] = useState(null);
   const [loadingTranslation, setLoadingTranslation] = useState(false);
   
-  // 🔐 단건 상세 조회 (서버에서 복호화)
   const handleViewDetail = async (inquiryId) => {
     setLoadingDetail(true);
     try {
@@ -27,9 +23,7 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
       }
       
       const response = await fetch(`/api/admin/inquiries/${inquiryId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { 'Authorization': `Bearer ${accessToken}` },
         credentials: 'include'
       });
       
@@ -49,11 +43,10 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
   };
   
   const closeDetailModal = () => {
-    setSelectedInquiry(null); // 평문 즉시 제거
-    setTranslationResult(null); // 번역 결과도 제거
+    setSelectedInquiry(null);
+    setTranslationResult(null);
   };
   
-  // 🔬 실험용 번역 실행
   const handleExperimentalTranslation = async () => {
     if (!selectedInquiry?.message) {
       alert('번역할 메시지가 없습니다.');
@@ -100,36 +93,41 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
       setLoadingTranslation(false);
     }
   };
+
+  const StatusBadge = ({ status }) => (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+      status === 'received' ? 'bg-blue-100 text-blue-700' :
+      status === 'normalized' ? 'bg-green-100 text-green-700' :
+      status === 'error' ? 'bg-red-100 text-red-700' :
+      'bg-gray-100 text-gray-700'
+    }`}>
+      {status || 'received'}
+    </span>
+  );
+
   const InquiryRow = ({ item }) => (
     <tr className="border-b hover:bg-gray-50">
-      <td className="px-6 py-4 text-gray-500 text-sm">
+      <td className="px-4 lg:px-6 py-3 lg:py-4 text-gray-500 text-sm">
         {formatDate(item.created_at, "en")}
       </td>
-      <td className="px-6 py-4">
+      <td className="px-4 lg:px-6 py-3 lg:py-4">
         <div className="font-bold text-gray-400">
           {item.first_name} {item.last_name}
           <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">마스킹</span>
         </div>
         <div className="text-xs text-gray-400">{item.email}</div>
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600">
+      <td className="px-4 lg:px-6 py-3 lg:py-4 text-sm text-gray-600">
         <div>{item.treatment_type}</div>
         <div className="text-xs text-gray-400">{item.contact_method}</div>
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600">
+      <td className="px-4 lg:px-6 py-3 lg:py-4 text-sm text-gray-600">
         <div>{item.nationality || '-'}</div>
-        <div className="text-xs">
-          <span className={`inline-block px-2 py-0.5 rounded text-xs ${
-            item.status === 'received' ? 'bg-blue-100 text-blue-700' :
-            item.status === 'normalized' ? 'bg-green-100 text-green-700' :
-            item.status === 'error' ? 'bg-red-100 text-red-700' :
-            'bg-gray-100 text-gray-700'
-          }`}>
-            {item.status || 'received'}
-          </span>
+        <div className="text-xs mt-1">
+          <StatusBadge status={item.status} />
         </div>
       </td>
-      <td className="px-6 py-4">
+      <td className="px-4 lg:px-6 py-3 lg:py-4">
         <button
           onClick={() => handleViewDetail(item.id)}
           className="flex items-center gap-1 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs rounded-lg transition"
@@ -142,18 +140,55 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
     </tr>
   );
 
+  const InquiryCard = ({ item }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="font-bold text-gray-600 text-sm">
+            {item.first_name} {item.last_name}
+            <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">마스킹</span>
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5">{item.email}</div>
+        </div>
+        <StatusBadge status={item.status} />
+      </div>
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>{formatDate(item.created_at, "en")}</span>
+        <span>{item.nationality || '-'}</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="text-sm">
+          <span className="text-gray-700 font-medium">{item.treatment_type || '-'}</span>
+          {item.contact_method && (
+            <span className="text-gray-400 ml-2 text-xs">({item.contact_method})</span>
+          )}
+        </div>
+        <button
+          onClick={() => handleViewDetail(item.id)}
+          className="flex items-center gap-1 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs rounded-lg transition"
+          disabled={loadingDetail}
+        >
+          <Eye size={14} />
+          상세
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="animate-in fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">고객 문의 현황</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-gray-500">
-            🔒 목록은 마스킹됩니다. "상세보기"로 평문 확인
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 lg:mb-6">
+        <h1 className="text-xl lg:text-2xl font-bold">고객 문의 현황</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] lg:text-xs text-gray-500">
+            🔒 목록은 마스킹됩니다
           </span>
-          <button onClick={fetchInquiries}><RefreshCw/></button>
+          <button onClick={fetchInquiries} className="p-1.5 hover:bg-gray-100 rounded-lg"><RefreshCw size={18}/></button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+
+      {/* Desktop: Table */}
+      <div className="hidden lg:block bg-white rounded-xl border shadow-sm overflow-hidden">
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
@@ -167,34 +202,37 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
           <tbody>{inquiries.map(i => <InquiryRow key={i.id} item={i}/>)}</tbody>
         </table>
       </div>
+
+      {/* Mobile: Cards */}
+      <div className="lg:hidden space-y-3">
+        {inquiries.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm">문의가 없습니다.</div>
+        ) : (
+          inquiries.map(i => <InquiryCard key={i.id} item={i}/>)
+        )}
+      </div>
       
-      {/* 🔐 상세 조회 모달 */}
+      {/* Detail Modal */}
       {selectedInquiry && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-teal-50 to-blue-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end lg:items-center justify-center z-50 p-0 lg:p-4">
+          <div className="bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 lg:p-6 border-b bg-gradient-to-r from-teal-50 to-blue-50 rounded-t-2xl lg:rounded-t-xl">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Inquiry Detail</h2>
-                <p className="text-xs text-red-600 mt-1">
-                  ⚠️ 이 조회는 감사 로그에 기록됩니다 (복호화된 개인정보 열람)
+                <h2 className="text-lg lg:text-xl font-bold text-gray-800">Inquiry Detail</h2>
+                <p className="text-[10px] lg:text-xs text-red-600 mt-1">
+                  ⚠️ 이 조회는 감사 로그에 기록됩니다
                 </p>
               </div>
-              <button 
-                onClick={closeDetailModal}
-                className="text-gray-400 hover:text-gray-600 transition"
-              >
-                <X size={24} />
+              <button onClick={closeDetailModal} className="text-gray-400 hover:text-gray-600 transition p-1">
+                <X size={22} />
               </button>
             </div>
             
-            {/* 내용 */}
-            <div className="p-6 space-y-4">
-              {/* 기본 정보 */}
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 lg:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-500 uppercase font-bold">ID</label>
-                  <div className="text-sm text-gray-800">{selectedInquiry.id}</div>
+                  <div className="text-sm text-gray-800 break-all">{selectedInquiry.id}</div>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 uppercase font-bold">Created At</label>
@@ -202,13 +240,12 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
                 </div>
               </div>
               
-              {/* 🔓 복호화된 개인정보 */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-bold text-teal-600 mb-3 flex items-center gap-2">
                   <span className="bg-teal-100 text-teal-700 px-2 py-0.5 rounded text-xs">복호화됨</span>
                   개인정보
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-gray-500 uppercase font-bold">First Name</label>
                     <div className="text-sm text-gray-800">{selectedInquiry.first_name || '-'}</div>
@@ -217,82 +254,64 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
                     <label className="text-xs text-gray-500 uppercase font-bold">Last Name</label>
                     <div className="text-sm text-gray-800">{selectedInquiry.last_name || '-'}</div>
                   </div>
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2">
                     <label className="text-xs text-gray-500 uppercase font-bold">Email</label>
-                    <div className="text-sm text-gray-800">{selectedInquiry.email || '-'}</div>
+                    <div className="text-sm text-gray-800 break-all">{selectedInquiry.email || '-'}</div>
                   </div>
                 </div>
               </div>
               
-              {/* 문의 내용 */}
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs text-gray-500 uppercase font-bold">Message</label>
                   <button
                     onClick={handleExperimentalTranslation}
                     disabled={loadingTranslation || !selectedInquiry.message}
-                    className="flex items-center gap-1 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-lg transition disabled:opacity-50"
                   >
                     {loadingTranslation ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" />
-                        번역 중...
-                      </>
+                      <><Loader2 size={12} className="animate-spin" /> 번역 중...</>
                     ) : (
-                      <>
-                        🔬 번역 실험
-                      </>
+                      '🔬 번역 실험'
                     )}
                   </button>
                 </div>
-                <div className="mt-2 p-4 bg-gray-50 rounded-lg text-sm text-gray-800 max-h-40 overflow-y-auto">
+                <div className="mt-2 p-3 lg:p-4 bg-gray-50 rounded-lg text-sm text-gray-800 max-h-40 overflow-y-auto">
                   {selectedInquiry.message || '-'}
                 </div>
               </div>
               
-              {/* 🔬 실험용 번역 결과 */}
               {translationResult && (
                 <div className="border-t pt-4">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 lg:p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-bold text-purple-700 flex items-center gap-2">
-                        🔬 번역 비교 (실험용)
-                      </h3>
-                      <span className="text-xs text-purple-600 italic">자동 번역 · 참고용</span>
+                      <h3 className="text-sm font-bold text-purple-700">🔬 번역 비교</h3>
+                      <span className="text-[10px] lg:text-xs text-purple-600 italic">자동 번역</span>
                     </div>
-                    
                     <div className="space-y-3">
-                      {/* Model A */}
                       <div>
-                        <label className="text-xs text-purple-600 font-bold uppercase">Model A (오픈소스)</label>
+                        <label className="text-xs text-purple-600 font-bold uppercase">Model A</label>
                         <div className="mt-1 p-3 bg-white rounded border border-purple-200 text-sm text-gray-800">
                           {translationResult.translationA}
                         </div>
                       </div>
-                      
-                      {/* Model B */}
                       <div>
-                        <label className="text-xs text-purple-600 font-bold uppercase">Model B (외부 API)</label>
+                        <label className="text-xs text-purple-600 font-bold uppercase">Model B</label>
                         <div className="mt-1 p-3 bg-white rounded border border-purple-200 text-sm text-gray-800">
                           {translationResult.translationB}
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-purple-200">
-                      <p className="text-xs text-purple-600">
-                        ⚠️ 이 번역 결과는 품질 비교를 위한 실험용입니다. 
-                        DB에 저장되지 않으며, RAG 시스템에도 사용되지 않습니다.
-                      </p>
-                    </div>
+                    <p className="mt-3 pt-3 border-t border-purple-200 text-[10px] lg:text-xs text-purple-600">
+                      ⚠️ 실험용 번역 결과입니다. DB에 저장되지 않습니다.
+                    </p>
                   </div>
                 </div>
               )}
               
-              {/* 메타데이터 */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-bold text-gray-600 mb-3">추가 정보</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-2 gap-3 lg:gap-4 text-xs">
                   <div>
                     <label className="text-gray-500 uppercase font-bold">Treatment Type</label>
                     <div className="text-gray-800">{selectedInquiry.treatment_type || '-'}</div>
@@ -312,7 +331,6 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
                 </div>
               </div>
               
-              {/* 첨부파일 */}
               {selectedInquiry.attachment && (
                 <div className="border-t pt-4">
                   <label className="text-xs text-gray-500 uppercase font-bold">Attachment</label>
@@ -327,8 +345,7 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
               )}
             </div>
             
-            {/* 푸터 */}
-            <div className="p-6 border-t bg-gray-50 flex justify-end">
+            <div className="p-4 lg:p-6 border-t bg-gray-50 flex justify-end rounded-b-xl">
               <button
                 onClick={closeDetailModal}
                 className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition"
@@ -340,7 +357,6 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
         </div>
       )}
       
-      {/* 로딩 오버레이 */}
       {loadingDetail && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-xl flex items-center gap-3">

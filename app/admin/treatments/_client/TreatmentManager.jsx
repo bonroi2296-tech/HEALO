@@ -1,4 +1,5 @@
-import { Plus, Trash2, Loader2, Save, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Trash2, Loader2, Save, Info, ChevronLeft } from 'lucide-react';
 
 export const TreatmentManager = ({
   hospitalsList,
@@ -17,11 +18,24 @@ export const TreatmentManager = ({
   loading,
   uploadToSupabase,
   uploading,
-}) => (
-  <div className="grid grid-cols-12 gap-8 animate-in fade-in">
-    <div className="col-span-4 bg-white rounded-2xl border border-gray-200 p-4 h-[calc(100vh-100px)] overflow-y-auto">
+}) => {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleSelectTreatment = (t) => {
+    handleEditTreatment(t);
+    setShowForm(true);
+  };
+
+  const handleNew = () => {
+    setEditingTreatmentId(null);
+    setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [], displayOrder: null, isPublished: true });
+    setShowForm(true);
+  };
+
+  const ListPanel = () => (
+    <>
       <select
-        className="w-full border p-2 rounded mb-4"
+        className="w-full border p-2 rounded mb-4 text-sm"
         value={selectedHospitalId}
         onChange={e=>{setSelectedHospitalId(e.target.value); fetchTreatments(e.target.value);}}
       >
@@ -34,69 +48,68 @@ export const TreatmentManager = ({
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold">시술 목록</h2>
         {selectedHospitalId && (
-          <button onClick={()=>{setEditingTreatmentId(null); setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [], displayOrder: null, isPublished: true });}} className="bg-teal-600 text-white p-1 rounded">
-            <Plus size={16}/>
+          <button onClick={handleNew} className="bg-teal-600 text-white p-1 lg:p-1 rounded flex items-center gap-1 text-sm">
+            <Plus size={14}/>
+            <span className="lg:hidden">추가</span>
           </button>
         )}
       </div>
       {treatmentsList.map(t=>(
-        <div key={t.id} onClick={()=>handleEditTreatment(t)} className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${editingTreatmentId===t.id?'bg-teal-50 border-l-4 border-l-teal-500':''}`}>
-          <div className="font-bold">{t.name}</div>
+        <div key={t.id} onClick={()=>handleSelectTreatment(t)} className={`p-3 border-b lg:border-b cursor-pointer hover:bg-gray-50 rounded-lg lg:rounded-none mb-1 lg:mb-0 border lg:border-0 ${editingTreatmentId===t.id?'bg-teal-50 border-teal-300 lg:border-l-4 lg:border-l-teal-500':'border-gray-200 lg:border-gray-100'}`}>
+          <div className="font-bold text-sm">{t.name}</div>
           <div className="text-xs text-teal-600">${t.price_min}</div>
         </div>
       ))}
-    </div>
+    </>
+  );
 
-    <div className="col-span-8 relative">
+  const FormPanel = () => (
+    <>
       {!selectedHospitalId ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[calc(100vh-100px)] flex items-center justify-center">
-          <div className="text-center text-gray-400">왼쪽에서 병원을 먼저 선택해주세요.</div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 lg:h-[calc(100vh-100px)] flex items-center justify-center">
+          <div className="text-center text-gray-400">병원을 먼저 선택해주세요.</div>
         </div>
       ) : (
         <>
-          {/* 저장 버튼 - 우측 상단 고정 */}
-          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 mb-4 rounded-t-2xl flex justify-between items-center shadow-sm">
-            <h2 className="text-xl font-bold">{editingTreatmentId?'시술 정보 수정':'신규 시술 등록'}</h2>
-            <div className="flex items-center gap-3">
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex justify-between items-center shadow-sm">
+            <h2 className="text-base lg:text-xl font-bold">{editingTreatmentId?'시술 정보 수정':'신규 시술 등록'}</h2>
+            <div className="flex items-center gap-2 lg:gap-3">
               {editingTreatmentId && (
                 <button 
                   onClick={()=>handleDelete('treatments', editingTreatmentId, ()=>fetchTreatments(selectedHospitalId))}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                  title="삭제"
                 >
-                  <Trash2 size={20}/>
+                  <Trash2 size={18}/>
                 </button>
               )}
               <button 
                 onClick={handleSaveTreatment} 
                 disabled={loading}
-                className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-teal-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-teal-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-lg font-bold shadow-md hover:bg-teal-700 transition flex items-center gap-2 disabled:opacity-50 text-sm lg:text-base"
               >
-                {loading ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>}
+                {loading ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
                 {loading ? '저장 중...' : '저장'}
               </button>
             </div>
           </div>
           
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[calc(100vh-180px)] overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-8 lg:h-[calc(100vh-180px)] overflow-y-auto">
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-2">
-                  <input placeholder="시술명 (영어/한글)" value={treatmentForm.title} onChange={e=>setTreatmentForm({...treatmentForm, title: e.target.value})} className="w-full p-2 border rounded"/>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="sm:col-span-2">
+                  <input placeholder="시술명 (영어/한글)" value={treatmentForm.title} onChange={e=>setTreatmentForm({...treatmentForm, title: e.target.value})} className="w-full p-2 border rounded text-sm"/>
                 </div>
                 <div>
-                  <input type="number" placeholder="최소 가격 ($)" value={treatmentForm.priceMin} onChange={e=>setTreatmentForm({...treatmentForm, priceMin: e.target.value})} className="w-full p-2 border rounded"/>
+                  <input type="number" placeholder="최소 가격 ($)" value={treatmentForm.priceMin} onChange={e=>setTreatmentForm({...treatmentForm, priceMin: e.target.value})} className="w-full p-2 border rounded text-sm"/>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input 
-                  type="number" 
-                  placeholder="메인 페이지 표시 순서 (숫자가 작을수록 앞에 표시, 비워두면 최신순)" 
-                  value={treatmentForm.displayOrder || ''} 
-                  onChange={e=>setTreatmentForm({...treatmentForm, displayOrder: e.target.value ? e.target.value : null})} 
-                  className="w-full p-2 border rounded text-sm"
-                />
-              </div>
+              <input 
+                type="number" 
+                placeholder="표시 순서 (숫자 작을수록 앞)" 
+                value={treatmentForm.displayOrder || ''} 
+                onChange={e=>setTreatmentForm({...treatmentForm, displayOrder: e.target.value ? e.target.value : null})} 
+                className="w-full p-2 border rounded text-sm"
+              />
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-sm font-bold text-gray-700 flex-1">프론트 노출 여부</label>
                 <button
@@ -116,18 +129,18 @@ export const TreatmentManager = ({
                   {treatmentForm.isPublished ? '노출' : '숨김'}
                 </span>
               </div>
-              <input placeholder="간략 설명 (카드용)" value={treatmentForm.desc} onChange={e=>setTreatmentForm({...treatmentForm, desc: e.target.value})} className="w-full p-2 border rounded"/>
-              <textarea placeholder="상세 설명 (페이지용)" rows="4" value={treatmentForm.fullDescription} onChange={e=>setTreatmentForm({...treatmentForm, fullDescription: e.target.value})} className="w-full p-2 border rounded"/>
-              <div className="grid grid-cols-2 gap-2">
-                <input placeholder="소요 시간 (예: 1시간)" value={treatmentForm.recoveryTime} onChange={e=>setTreatmentForm({...treatmentForm, recoveryTime: e.target.value})} className="w-full p-2 border rounded"/>
-                <input placeholder="마취 방법" value={treatmentForm.anesthesia} onChange={e=>setTreatmentForm({...treatmentForm, anesthesia: e.target.value})} className="w-full p-2 border rounded"/>
+              <input placeholder="간략 설명 (카드용)" value={treatmentForm.desc} onChange={e=>setTreatmentForm({...treatmentForm, desc: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+              <textarea placeholder="상세 설명 (페이지용)" rows="4" value={treatmentForm.fullDescription} onChange={e=>setTreatmentForm({...treatmentForm, fullDescription: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input placeholder="소요 시간 (예: 1시간)" value={treatmentForm.recoveryTime} onChange={e=>setTreatmentForm({...treatmentForm, recoveryTime: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                <input placeholder="마취 방법" value={treatmentForm.anesthesia} onChange={e=>setTreatmentForm({...treatmentForm, anesthesia: e.target.value})} className="w-full p-2 border rounded text-sm"/>
               </div>
               <DynamicListInput items={treatmentForm.benefits} onAdd={t=>setTreatmentForm({...treatmentForm, benefits:[...treatmentForm.benefits, t]})} onRemove={i=>setTreatmentForm({...treatmentForm, benefits:treatmentForm.benefits.filter((_,x)=>x!==i)})} placeholder="주요 효과 (Benefit)"/>
               <DynamicListInput items={treatmentForm.tags} onAdd={t=>setTreatmentForm({...treatmentForm, tags:[...treatmentForm.tags, t]})} onRemove={i=>setTreatmentForm({...treatmentForm, tags:treatmentForm.tags.filter((_,x)=>x!==i)})} placeholder="검색 태그"/>
               
               <label className="block text-sm font-bold text-gray-500 mt-2">시술 관련 이미지</label>
               <p className="text-xs text-teal-600 bg-teal-50 p-2 rounded-lg mb-2 flex items-center gap-2">
-                <Info size={14}/> 💡 권장: 800x600px (4:3 비율)
+                <Info size={14}/> 권장: 800x600px (4:3 비율)
               </p>
               <ImageUploader 
                 images={treatmentForm.images} 
@@ -142,6 +155,36 @@ export const TreatmentManager = ({
           </div>
         </>
       )}
+    </>
+  );
+
+  return (
+    <div className="animate-in fade-in">
+      {/* Desktop */}
+      <div className="hidden lg:grid grid-cols-12 gap-8">
+        <div className="col-span-4 bg-white rounded-2xl border border-gray-200 p-4 h-[calc(100vh-100px)] overflow-y-auto">
+          <ListPanel />
+        </div>
+        <div className="col-span-8 relative">
+          <FormPanel />
+        </div>
+      </div>
+
+      {/* Mobile */}
+      <div className="lg:hidden">
+        {!showForm ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+            <ListPanel />
+          </div>
+        ) : (
+          <div>
+            <button onClick={() => setShowForm(false)} className="flex items-center gap-1 text-sm text-gray-600 mb-3 hover:text-teal-600">
+              <ChevronLeft size={16}/> 목록으로
+            </button>
+            <FormPanel />
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};

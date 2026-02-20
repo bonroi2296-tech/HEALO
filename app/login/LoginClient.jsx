@@ -35,8 +35,24 @@ export const LoginPage = ({ setView }) => {
             toast.success(`Welcome, ${data.user.email}!`);
             
             try {
+                // ✅ 세션에서 access token 가져오기
+                const { data: sessionData } = await supabase.auth.getSession();
+                const accessToken = sessionData?.session?.access_token;
+                
+                console.log('[LoginPage] Access token:', accessToken ? '✅ exists' : '❌ missing');
+                
+                // ✅ Bearer token으로 권한 확인
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                
+                if (accessToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                }
+                
                 const whoamiResponse = await fetch('/api/admin/whoami', {
                     credentials: 'include',
+                    headers,
                 });
                 
                 if (whoamiResponse.ok) {
@@ -47,18 +63,26 @@ export const LoginPage = ({ setView }) => {
                         email: whoamiResult.email,
                         reason: whoamiResult.reason,
                         error: whoamiResult.error,
+                        authMethod: whoamiResult.authMethod,
                         debug: whoamiResult.debug
                     });
                     
                     if (whoamiResult.isAdmin) {
                         console.log('[LoginPage] ✅ Admin detected, redirecting to /admin');
+                        // 약간의 딜레이를 주어 세션이 완전히 저장되도록 함
+                        await new Promise(resolve => setTimeout(resolve, 500));
                         router.push('/admin');
                     } else {
-                        console.log('[LoginPage] Non-admin user, redirecting to home');
+                        console.log('[LoginPage] ⚠️ Not admin user:', {
+                            email: whoamiResult.email,
+                            error: whoamiResult.error,
+                            reason: whoamiResult.reason
+                        });
+                        toast.error('관리자 권한이 없습니다. ADMIN_EMAIL_ALLOWLIST에 이메일을 추가하세요.');
                         router.push('/');
                     }
                 } else {
-                    console.warn('[LoginPage] whoami check failed, redirecting to home');
+                    console.warn('[LoginPage] whoami check failed, status:', whoamiResponse.status);
                     router.push('/');
                 }
             } catch (checkError) {

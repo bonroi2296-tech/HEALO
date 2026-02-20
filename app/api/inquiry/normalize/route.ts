@@ -95,7 +95,6 @@ function buildIntakeFromForm(row: {
   message?: string | null;
   treatment_type?: string | null;
   preferred_date?: string | null;
-  attachment?: string | null;
   attachments?: unknown;
 }): Intake {
   const { intake } = createEmptyIntake("inquiry_form");
@@ -103,9 +102,8 @@ function buildIntakeFromForm(row: {
     const msg = row?.message ?? null;
     const tt = row?.treatment_type ?? null;
     const pref = row?.preferred_date ?? null;
-    const att = row?.attachment ?? null;
     const arr = Array.isArray(row?.attachments) ? row.attachments : [];
-    const hasAtt = !!att || arr.length > 0;
+    const hasAtt = arr.length > 0;
 
     intake.chief_complaint = msg ? String(msg).trim().slice(0, 2000) : null;
     intake.goal = tt ? String(tt) : (msg ? String(msg).trim().split(/\n/)[0]?.slice(0, 300) || null : null);

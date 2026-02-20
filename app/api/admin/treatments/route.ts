@@ -367,9 +367,9 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.description !== undefined) payload.description = validatedData.description;
     if (validatedData.full_description !== undefined) payload.full_description = validatedData.full_description;
     if (validatedData.price_min !== undefined) payload.price_min = validatedData.price_min;
-    if (validatedData.benefits !== undefined) payload.benefits = validatedData.benefits;
-    if (validatedData.tags !== undefined) payload.tags = validatedData.tags;
-    if (validatedData.images !== undefined) payload.images = validatedData.images;
+    if (validatedData.benefits !== undefined) payload.benefits = validatedData.benefits ?? [];
+    if (validatedData.tags !== undefined) payload.tags = validatedData.tags ?? [];
+    if (validatedData.images !== undefined) payload.images = validatedData.images ?? [];
     if (validatedData.display_order !== undefined) payload.display_order = validatedData.display_order;
     if (validatedData.is_published !== undefined) payload.is_published = validatedData.is_published;
 

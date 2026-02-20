@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     const { data: inquiryData, error: inquiryError } = await supabaseAdmin
       .from("inquiries")
-      .select("id, public_token, attachment, attachments")
+      .select("id, public_token, attachments")
       .eq("id", inquiryIdVal)
       .maybeSingle();
 
@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ok = pathAuthorized(path, inquiryData.attachment ?? null, inquiryData.attachments ?? []);
+    const ok = pathAuthorized(path, inquiryData.attachments ?? []);
     if (!ok) {
-      console.error("[api/attachments/sign] path not authorized:", { attachment: inquiryData.attachment, attachments: inquiryData.attachments, requestedPath: path });
+      console.error("[api/attachments/sign] path not authorized:", { attachments: inquiryData.attachments, requestedPath: path });
       return Response.json(
         { ok: false, error: "path_not_authorized" },
         { status: 403 }

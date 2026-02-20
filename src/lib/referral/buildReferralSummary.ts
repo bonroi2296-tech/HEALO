@@ -52,18 +52,15 @@ async function getSignedUrl(path: string): Promise<{ signedUrl: string; expiresA
 }
 
 /**
- * inquiries.attachment + attachments → signed URL 배열
+ * inquiries.attachments → signed URL 배열
  * 보안: pathAuthorized 검증 후에만 signed URL 발급
  */
 async function buildAttachmentsList(
-  attachment: string | null,
   attachments: unknown,
   inquiryId: number
 ): Promise<ReferralSummaryJson["attachments"]> {
   const paths: Array<{ path: string; name: string | null }> = [];
-  if (attachment && typeof attachment === "string" && attachment.startsWith("inquiry/")) {
-    paths.push({ path: attachment, name: null });
-  }
+  
   if (Array.isArray(attachments)) {
     for (const item of attachments) {
       if (item && typeof item === "object" && item.path && typeof item.path === "string") {
@@ -75,7 +72,7 @@ async function buildAttachmentsList(
   // ✅ Security: inquiries 레코드 조회하여 pathAuthorized 검증
   const { data: inquiryData, error: inquiryErr } = await supabaseAdmin
     .from("inquiries")
-    .select("attachment, attachments")
+    .select("attachments")
     .eq("id", inquiryId)
     .maybeSingle();
 
@@ -87,7 +84,7 @@ async function buildAttachmentsList(
   const result: ReferralSummaryJson["attachments"] = [];
   for (const { path, name } of paths) {
     // ✅ Security: pathAuthorized 검증 후에만 signed URL 발급
-    const authorized = pathAuthorized(path, inquiryData.attachment ?? null, inquiryData.attachments ?? []);
+    const authorized = pathAuthorized(path, inquiryData.attachments ?? []);
     if (!authorized) {
       console.warn("[buildReferralSummary] path not authorized, skipping:", path);
       continue;
@@ -127,14 +124,13 @@ export async function buildReferralSummaryJson(
   // ✅ Security: pathAuthorized 검증 포함하여 attachments 생성
   const { data: inquiry, error: inquiryErr } = await supabaseAdmin
     .from("inquiries")
-    .select("attachment, attachments")
+    .select("attachments")
     .eq("id", inquiryId)
     .maybeSingle();
 
   if (inquiryErr) return null;
 
   const attachments = await buildAttachmentsList(
-    inquiry?.attachment ?? null,
     inquiry?.attachments ?? [],
     inquiryId
   );

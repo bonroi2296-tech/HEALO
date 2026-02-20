@@ -363,10 +363,10 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.description !== undefined) payload.description = validatedData.description;
     if (validatedData.latitude !== undefined) payload.latitude = validatedData.latitude;
     if (validatedData.longitude !== undefined) payload.longitude = validatedData.longitude;
-    if (validatedData.tags !== undefined) payload.tags = validatedData.tags;
-    if (validatedData.images !== undefined) payload.images = validatedData.images;
-    if (validatedData.supported_languages !== undefined) payload.supported_languages = validatedData.supported_languages;
-    if (validatedData.amenities !== undefined) payload.amenities = validatedData.amenities;
+    if (validatedData.tags !== undefined) payload.tags = validatedData.tags ?? [];
+    if (validatedData.images !== undefined) payload.images = validatedData.images ?? [];
+    if (validatedData.supported_languages !== undefined) payload.supported_languages = validatedData.supported_languages ?? [];
+    if (validatedData.amenities !== undefined) payload.amenities = validatedData.amenities ?? [];
     if (validatedData.operating_hours !== undefined) payload.operating_hours = validatedData.operating_hours;
     if (validatedData.doctor_profile !== undefined) payload.doctor_profile = validatedData.doctor_profile;
     if (validatedData.display_order !== undefined) payload.display_order = validatedData.display_order;

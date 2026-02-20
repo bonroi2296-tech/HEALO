@@ -122,8 +122,7 @@ export async function POST(request: NextRequest) {
           preferred_date: body.preferredDate || null,
           preferred_date_flex: body.preferredDateFlex || false,
           message: encryptedMessage,
-          attachment: body.attachment || null,
-          attachments: body.attachments || null,
+          attachments: body.attachments || [],
           intake: {},
           status: "received",
         })

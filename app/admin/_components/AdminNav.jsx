@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
@@ -89,9 +90,9 @@ export function AdminNav() {
                 const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
                 
                 return (
-                  <button
+                  <Link
                     key={item.id}
-                    onClick={() => router.push(item.href)}
+                    href={item.href}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? "bg-teal-50 text-teal-700 shadow-sm"
@@ -100,7 +101,7 @@ export function AdminNav() {
                   >
                     <Icon size={20} className={isActive ? "text-teal-600" : "text-gray-400"} />
                     <span>{item.label}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>

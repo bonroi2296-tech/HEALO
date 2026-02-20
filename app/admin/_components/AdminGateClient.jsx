@@ -17,21 +17,52 @@ export function AdminGateClient({ children }) {
   useEffect(() => {
     const verifyAdmin = async () => {
       try {
+        // ✅ Supabase 세션에서 access token 가져오기
+        const { createSupabaseBrowserClient } = await import('../../../src/lib/supabase/browser');
+        const supabase = createSupabaseBrowserClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        
+        console.log('[AdminGate] Checking admin access, token:', accessToken ? '✅' : '❌');
+        
+        // ✅ Bearer token으로 권한 확인
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+        
         const response = await fetch('/api/admin/whoami', {
           credentials: 'include',
+          headers,
         });
         
         if (response.ok) {
           const result = await response.json();
           
+          console.log('[AdminGate] whoami result:', {
+            isAdmin: result.isAdmin,
+            email: result.email,
+            reason: result.reason,
+            authMethod: result.authMethod,
+            error: result.error
+          });
+          
           if (result.isAdmin) {
             setIsAuthorized(true);
           } else {
-            console.warn('[AdminGate] Not an admin, redirecting to login');
+            console.warn('[AdminGate] ❌ Not an admin:', {
+              email: result.email,
+              error: result.error,
+              reason: result.reason
+            });
+            console.warn('[AdminGate] 💡 Tip: Add your email to ADMIN_EMAIL_ALLOWLIST environment variable');
             router.push('/login');
           }
         } else {
-          console.warn('[AdminGate] Auth check failed, redirecting to login');
+          console.warn('[AdminGate] Auth check failed, status:', response.status);
           router.push('/login');
         }
       } catch (error) {

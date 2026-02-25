@@ -83,14 +83,11 @@ export async function requireAdminAuth(
   const authResult = await checkAdminAuth(request);
 
   if (!authResult.isAdmin) {
-    // ❌ 권한 없음: audit log 기록
     const pathname = new URL(request.url).pathname;
-    
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        `[requireAdminAuth] Unauthorized: ${pathname} | ${authResult.email || "none"}`
-      );
-    }
+    // 프로덕션에서도 403 원인 한 줄 로그 (Vercel 로그에서 확인 가능)
+    console.warn(
+      `[requireAdminAuth] 403 path=${pathname} reason=${authResult.error || "not_admin"} email=${authResult.email || "none"}`
+    );
 
     // 백그라운드로 audit log 기록 (메인 로직 블로킹 방지)
     logAdminAction({

@@ -17,57 +17,48 @@ export function AdminGateClient({ children }) {
   useEffect(() => {
     const verifyAdmin = async () => {
       try {
-        // ✅ Supabase 세션에서 access token 가져오기
         const { createSupabaseBrowserClient } = await import('../../../src/lib/supabase/browser');
         const supabase = createSupabaseBrowserClient();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        
-        console.log('[AdminGate] Checking admin access, token:', accessToken ? '✅' : '❌');
-        
-        // ✅ Bearer token으로 권한 확인
-        const headers = {
-          'Content-Type': 'application/json',
-        };
-        
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
+
+        // 로그인 직후 리다이렉트 시 세션이 아직 준비 안 됐을 수 있음 → 잠시 대기 후 재시도
+        let sessionData = await supabase.auth.getSession();
+        let accessToken = sessionData?.data?.session?.access_token;
+        if (!accessToken) {
+          await new Promise((r) => setTimeout(r, 800));
+          sessionData = await supabase.auth.getSession();
+          accessToken = sessionData?.data?.session?.access_token;
         }
-        
-        const response = await fetch('/api/admin/whoami', {
-          credentials: 'include',
-          headers,
-        });
-        
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+        let response = await fetch('/api/admin/whoami', { credentials: 'include', headers });
+
+        // 403이고 토큰 없이 호출했을 때만 한 번 재시도 (세션 지연 대비)
+        if (!response.ok && response.status === 403 && !accessToken) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const retrySession = await supabase.auth.getSession();
+          const retryToken = retrySession?.data?.session?.access_token;
+          const retryHeaders = { 'Content-Type': 'application/json' };
+          if (retryToken) retryHeaders['Authorization'] = `Bearer ${retryToken}`;
+          response = await fetch('/api/admin/whoami', { credentials: 'include', headers: retryHeaders });
+        }
+
         if (response.ok) {
           const result = await response.json();
-          
-          console.log('[AdminGate] whoami result:', {
-            isAdmin: result.isAdmin,
-            email: result.email,
-            reason: result.reason,
-            authMethod: result.authMethod,
-            error: result.error
-          });
-          
           if (result.isAdmin) {
             setIsAuthorized(true);
           } else {
-            console.warn('[AdminGate] ❌ Not an admin:', {
-              email: result.email,
-              error: result.error,
-              reason: result.reason
-            });
-            console.warn('[AdminGate] 💡 Tip: Add your email to ADMIN_EMAIL_ALLOWLIST environment variable');
+            console.warn('[AdminGate] ❌ Not an admin:', result.email, result.error);
             router.push('/login');
           }
         } else {
           const errBody = await response.json().catch(() => ({}));
-          console.warn('[AdminGate] Auth check failed, status:', response.status, errBody?.hint ? `— ${errBody.hint}` : '');
+          console.warn('[AdminGate] Auth failed', response.status, errBody?.hint || '');
           router.push('/login');
         }
       } catch (error) {
-        console.error('[AdminGate] Verification error:', error);
+        console.error('[AdminGate] Error:', error);
         router.push('/login');
       } finally {
         setIsChecking(false);

@@ -73,7 +73,8 @@ export default function ClientShell({ children }) {
         if (mounted && data) {
           setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url });
         }
-      });
+      })
+      .catch(() => { /* RLS/테이블 없음 시 무시, 기본 UI 유지 */ });
       
     return () => {
       mounted = false;

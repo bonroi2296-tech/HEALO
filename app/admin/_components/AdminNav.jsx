@@ -17,7 +17,9 @@ import {
   Palette,
   Upload,
   Menu,
-  X
+  X,
+  Database,
+  SearchCode
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../../src/lib/supabase/browser";
 
@@ -36,6 +38,9 @@ const navGroups = [
       { id: "hospitals", label: "병원관리", icon: Building2, href: "/admin/hospitals" },
       { id: "treatments", label: "시술관리", icon: Stethoscope, href: "/admin/treatments" },
       { id: "import", label: "대량 Import", icon: Upload, href: "/admin/import" },
+      { id: "enrichment", label: "데이터 보강", icon: Database, href: "/admin/enrichment" },
+      { id: "crawl", label: "데이터 크롤링", icon: SearchCode, href: "/admin/crawl" },
+      { id: "pipeline", label: "크롤링 파이프라인", icon: BarChart3, href: "/admin/crawl/pipeline" },
     ]
   },
   {
@@ -43,6 +48,11 @@ const navGroups = [
     items: [
       { id: "analytics", label: "문의 현황", icon: BarChart3, href: "/admin/analytics" },
       { id: "rag", label: "RAG 관리", icon: Brain, href: "/admin/rag" },
+      { id: "rag-docs", label: "RAG 문서/Tier", icon: FileText, href: "/admin/rag/documents" },
+      { id: "playbook", label: "플레이북", icon: FileText, href: "/admin/playbook" },
+      { id: "playbook-patterns", label: "응대 패턴", icon: Brain, href: "/admin/playbook-patterns" },
+      { id: "playbook-analytics", label: "패턴 분석", icon: BarChart3, href: "/admin/playbook-analytics" },
+      { id: "automation-playbook", label: "자동화", icon: BarChart3, href: "/admin/automation/playbook" },
     ]
   },
   {
@@ -146,8 +156,8 @@ export function AdminNav() {
 
   return (
     <>
-      {/* Mobile: top bar with hamburger */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      {/* Mobile: top bar with hamburger (below PortalTopBar h-12) */}
+      <div className="lg:hidden fixed top-12 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
             <LayoutDashboard size={16} className="text-white" />
@@ -175,8 +185,8 @@ export function AdminNav() {
         </div>
       )}
 
-      {/* Desktop: fixed sidebar */}
-      <aside className="hidden lg:flex w-72 bg-white border-r border-gray-200 min-h-screen flex-col sticky top-0 h-screen">
+      {/* Desktop: fixed sidebar (below PortalTopBar h-12) */}
+      <aside className="hidden lg:flex w-72 bg-white border-r border-gray-200 min-h-screen flex-col sticky top-12 h-[calc(100vh-3rem)]">
         <NavContent />
       </aside>
     </>

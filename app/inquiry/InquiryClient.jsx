@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Bot, MessageCircle, ClipboardList, ArrowRight, AlertCircle, Headset, UploadCloud, File, X, Check } from 'lucide-react';
 import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
-import { supabase } from '../../src/supabase'; 
+
 import { PolicyModal } from '../../src/components/Modals';
 import { useToast } from '../../src/components/Toast';
 import { getLangCodeFromCookie } from '../../src/lib/i18n';
 import { event } from '../../src/lib/ga';
 import { useChat } from 'ai/react';
+import { InquiryFormB } from './InquiryFormB';
+import { ThreadChat } from './ThreadChat';
 
 // ✅ [수정 1] props에 treatments 추가 (App.jsx에서 받아옴)
 export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => {
@@ -63,8 +65,11 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       message: '', file: null, privacyAgreed: false
   });
   
-  // ✅ 실시간 검증 에러 상태
+  // ✅ 실시간 검증 에러 상태 (인라인 통일)
   const [emailError, setEmailError] = useState('');
+  const [formErrors, setFormErrors] = useState({ treatmentType: '', nationality: '', spokenLanguage: '', contact: '', preferred: '', privacy: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const clearFieldError = (field) => setFormErrors((prev) => ({ ...prev, [field]: '' }));
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -119,40 +124,48 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
   };
 
   const handleFormSubmit = async () => {
+    if (isSubmitting) return;
     // Step1 필수 5개: treatment_type, nationality, spoken_language, contact(이메일 OR method+id), preferred(날짜 OR flex)
     const hasContact = (formData.email?.trim()) || (formData.contactMethod && formData.contactId?.trim());
     const hasPreferred = !!(formData.preferredDate?.trim()) || !!formData.preferredDateFlex;
-    if (!formData.treatmentType?.trim()) { toast.error("Please select Main Concern."); return; }
-    if (!formData.nationality?.trim()) { toast.error("Please enter Nationality."); return; }
-    if (!formData.spokenLanguage?.trim()) { toast.error("Please enter Spoken Language."); return; }
-    if (!hasContact) { toast.error("Please provide Email or Messenger (method + ID)."); return; }
-    if (!hasPreferred) { toast.error("Please set Preferred Date or check Flexible."); return; }
-    
-    // ✅ 이메일 형식 검증 (이메일이 입력된 경우) - 정규식 사용
+    const err = { treatmentType: '', nationality: '', spokenLanguage: '', contact: '', preferred: '', privacy: '' };
+    if (!formData.treatmentType?.trim()) { err.treatmentType = "Please select Main Concern."; }
+    if (!formData.nationality?.trim()) { err.nationality = "Please enter Nationality."; }
+    if (!formData.spokenLanguage?.trim()) { err.spokenLanguage = "Please enter Spoken Language."; }
+    if (!hasContact) { err.contact = "Please provide Email or Messenger (method + ID)."; }
+    if (!hasPreferred) { err.preferred = "Please set Preferred Date or check Flexible."; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      toast.error("Please enter a valid email address (e.g., example@email.com)");
-      setEmailError('Please enter a valid email address (e.g., example@email.com)');
+      setEmailError("Please enter a valid email address (e.g., example@email.com)");
+      err.contact = "Please enter a valid email or provide Messenger.";
+      setFormErrors(err);
       return;
     }
-    
-    if (!formData.privacyAgreed) {
-      toast.error("Please agree to the Privacy Policy.");
+    if (!formData.privacyAgreed) { err.privacy = "Please agree to the Privacy Policy."; }
+    const hasErr = Object.values(err).some(Boolean);
+    if (hasErr) {
+      setFormErrors(err);
+      toast.error("Please fix the fields below.");
       return;
     }
+    setFormErrors({ treatmentType: '', nationality: '', spokenLanguage: '', contact: '', preferred: '', privacy: '' });
 
+    setIsSubmitting(true);
     try {
         let attachmentPath = null;
         let attachmentsList = [];
         if (formData.file) {
-            const filePath = `inquiry/${Date.now()}_${formData.file.name}`;
-            const { error: uploadError } = await supabase.storage
-                .from('attachments')
-                .upload(filePath, formData.file);
-            if (uploadError) throw uploadError;
-            attachmentPath = filePath;
+            const uploadForm = new FormData();
+            uploadForm.append('file', formData.file);
+            const uploadRes = await fetch('/api/attachments/upload', {
+              method: 'POST',
+              body: uploadForm,
+            });
+            const uploadResult = await uploadRes.json();
+            if (!uploadResult.ok) throw new Error(uploadResult.error || 'Upload failed');
+            attachmentPath = uploadResult.path;
             attachmentsList = [
-              { path: filePath, name: formData.file.name, type: formData.file.type || null },
+              { path: uploadResult.path, name: uploadResult.name, type: uploadResult.type || null },
             ];
         }
 
@@ -268,6 +281,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
         console.error('Error:', error);
         // ✅ API에서 받은 구체적인 에러 메시지 표시
         toast.error(error.message || "Failed to submit inquiry. Please try again.");
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -280,7 +295,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {mode === 'select' && (
         <>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-12">How would you like to proceed?</h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
             <div
                 onClick={() => {
                   const startLang = getLangCodeFromCookie();
@@ -328,6 +343,27 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Get a specific quote via email.</p>
                 </div>
             </div>
+
+            {/* A/B Test: Form B (Guided Wizard) */}
+            <div
+                onClick={() => {
+                  const startLang = getLangCodeFromCookie();
+                  if (startLang) {
+                    event("start_inquiry", {
+                      source_type: "inquiry_form_B",
+                      lang: startLang,
+                    });
+                  }
+                  setMode('formB');
+                }}
+                className="bg-white border border-purple-100 rounded-3xl p-6 md:p-8 hover:border-purple-500 hover:shadow-xl transition-all cursor-pointer group flex flex-row md:flex-col items-center text-left md:text-center gap-4 md:gap-0"
+            >
+                <div className="w-14 h-14 md:w-20 md:h-20 bg-purple-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-purple-100 transition-colors"><ClipboardList size={28} className="text-purple-600 md:w-10 md:h-10" /></div>
+                <div>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Guided Form <span className="text-xs font-normal text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">B</span></h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Step-by-step guided inquiry.</p>
+                </div>
+            </div>
           </div>
 
           {/* 실험용 CTA 섹션 - 기존 3개 카드와 완전히 별도 */}
@@ -361,47 +397,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       )}
 
       {mode === 'ai' && (
-        <div className="bg-white border border-gray-200 rounded-3xl shadow-xl h-[600px] flex flex-col p-4 animate-in fade-in slide-in-from-right-4">
-           <div className="flex-1 overflow-y-auto mb-4 bg-gray-50 rounded-2xl p-4 text-left space-y-4" ref={chatContainerRef}>
-             {messages.map((msg) => {
-                 const partText = Array.isArray(msg.parts)
-                   ? msg.parts
-                       .filter((p) => p.type === 'text')
-                       .map((p) => p.text)
-                       .join('')
-                   : '';
-                 const displayText = msg.content || partText || '';
-                 return (
-                 <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${msg.role === 'assistant' ? 'bg-teal-600' : 'bg-gray-400'}`}> {msg.role === 'assistant' ? 'AI' : 'U'} </div>
-                     <div className={`p-3 rounded-2xl shadow-sm text-sm border max-w-[80%] ${msg.role === 'assistant' ? 'bg-white border-gray-100 rounded-tl-none' : 'bg-teal-600 text-white border-teal-600 rounded-tr-none'}`}> 
-                        <p className="whitespace-pre-wrap">{displayText}</p>
-                     </div>
-                 </div>
-             );
-             })}
-           </div>
-
-           <div className="relative">
-             <input 
-               type="text" 
-               value={input} 
-               onChange={handleInputChange} 
-               onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
-               placeholder="Ask about 'Lifting' or 'Cancer'..." 
-               className="w-full border border-gray-300 rounded-full py-3 px-5 pr-12 focus:outline-none focus:ring-2 focus:ring-teal-500" 
-             />
-             <button onClick={handleSend} className="absolute right-2 top-1.5 bg-teal-600 text-white p-1.5 rounded-full hover:bg-teal-700 transition"><ArrowRight size={18}/></button>
-           </div>
-
-           <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start gap-2.5 text-left">
-                <AlertCircle size={16} className="text-gray-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-bold text-gray-800">Disclaimer:</span> AI may produce inaccurate information. 
-                    This is not medical advice. Please consult with our coordinators for confirmation.
-                </p>
-           </div>
-        </div>
+        <ThreadChat />
       )}
 
       {mode === 'human' && (
@@ -489,8 +485,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                       onChange={(e) => {
                         const value = e.target.value;
                         setFormData({...formData, email: value});
-                        
-                        // ✅ 실시간 이메일 검증 (정규식)
+                        clearFieldError('contact');
                         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                         if (value && !emailRegex.test(value)) {
                           setEmailError('Please enter a valid email address (e.g., example@email.com)');
@@ -522,19 +517,22 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                         <option value="KakaoTalk">KakaoTalk</option>
                     </select>
                     {formData.contactMethod && (
-                        <input type="text" value={formData.contactId} onChange={(e)=>setFormData({...formData, contactId: e.target.value})} className="mt-2 w-full md:w-[65%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-white" placeholder="ID / Phone"/>
+                        <input type="text" value={formData.contactId} onChange={(e)=>{ setFormData({...formData, contactId: e.target.value}); clearFieldError('contact'); }} className="mt-2 w-full md:w-[65%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-white" placeholder="ID / Phone"/>
                     )}
+                    {formErrors.contact && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.contact}</p>}
                 </div>
 
                 {/* 국적 & 언어 */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nationality <span className="text-red-500">*</span></label>
-                        <input type="text" value={formData.nationality} onChange={(e)=>setFormData({...formData, nationality: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="USA"/>
+<div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nationality <span className="text-red-500">*</span></label>
+                    <input type="text" value={formData.nationality} onChange={(e)=>{ setFormData({...formData, nationality: e.target.value}); clearFieldError('nationality'); }} className={`w-full p-3 rounded-xl border ${formErrors.nationality ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-sm bg-gray-50/50`} placeholder="USA"/>
+                    {formErrors.nationality && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.nationality}</p>}
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Spoken Language <span className="text-red-500">*</span></label>
-                        <input type="text" value={formData.spokenLanguage} onChange={(e)=>setFormData({...formData, spokenLanguage: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="English"/>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Spoken Language <span className="text-red-500">*</span></label>
+                    <input type="text" value={formData.spokenLanguage} onChange={(e)=>{ setFormData({...formData, spokenLanguage: e.target.value}); clearFieldError('spokenLanguage'); }} className={`w-full p-3 rounded-xl border ${formErrors.spokenLanguage ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-sm bg-gray-50/50`} placeholder="English"/>
+                    {formErrors.spokenLanguage && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.spokenLanguage}</p>}
                     </div>
                 </div>
 
@@ -542,15 +540,16 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Preferred Date <span className="text-red-500">*</span></label>
-                        <input type="date" value={formData.preferredDate || ''} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} disabled={!!formData.preferredDateFlex} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"/>
-                        <label className="mt-2 flex items-center gap-2 cursor-pointer">
+                        <input type="date" value={formData.preferredDate || ''} onChange={(e) => { setFormData({ ...formData, preferredDate: e.target.value }); clearFieldError('preferred'); }} disabled={!!formData.preferredDateFlex} className={`w-full p-3 rounded-xl border ${formErrors.preferred ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}/>
+                        <label className="mt-2 flex items-center gap-2 cursor-pointer" onClick={() => clearFieldError('preferred')}>
                             <input type="checkbox" checked={!!formData.preferredDateFlex} onChange={(e) => setFormData({ ...formData, preferredDateFlex: e.target.checked, preferredDate: e.target.checked ? '' : formData.preferredDate })} className="rounded accent-teal-600"/>
                             <span className="text-[11px] text-gray-500">Flexible (no specific date)</span>
                         </label>
+                        {formErrors.preferred && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.preferred}</p>}
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Main Concern <span className="text-red-500">*</span></label>
-                        <select value={formData.treatmentType} onChange={(e)=>setFormData({...formData, treatmentType: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700">
+                        <select value={formData.treatmentType} onChange={(e)=>{ setFormData({...formData, treatmentType: e.target.value}); clearFieldError('treatmentType'); }} className={`w-full p-3 rounded-xl border ${formErrors.treatmentType ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700`}>
                             <option value="">Select...</option>
                             <option value="chronic-fatigue-low-immunity">Chronic fatigue / low immunity</option>
                             <option value="digestive-problems">Digestive problems</option>
@@ -569,6 +568,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                             <option value="abnormal-test-suspected-cancer">Abnormal test result / suspected cancer</option>
                             <option value="other-medical-concern">Other medical concern</option>
                         </select>
+                        {formErrors.treatmentType && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.treatmentType}</p>}
                     </div>
                 </div>
 
@@ -637,18 +637,33 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 </div>
 
                 {/* 약관 동의 */}
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <input type="checkbox" id="privacyForm" checked={formData.privacyAgreed} onChange={(e) => setFormData({...formData, privacyAgreed: e.target.checked})} className="mt-0.5 h-4 w-4 cursor-pointer accent-teal-600"/>
-                    <label htmlFor="privacyForm" className="text-[11px] text-gray-500 cursor-pointer select-none leading-snug">
+<div className={`p-3 rounded-xl border ${formErrors.privacy ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className="flex items-start gap-3">
+                      <input type="checkbox" id="privacyForm" checked={formData.privacyAgreed} onChange={(e) => { setFormData({...formData, privacyAgreed: e.target.checked}); clearFieldError('privacy'); }} className="mt-0.5 h-4 w-4 cursor-pointer accent-teal-600"/>
+                      <label htmlFor="privacyForm" className="text-[11px] text-gray-500 cursor-pointer select-none leading-snug">
                         I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">Privacy Policy</span>. <span className="text-red-500">*</span>
-                    </label>
+                      </label>
+                    </div>
+                    {formErrors.privacy && <p className="text-xs text-red-500 mt-1 ml-7 flex items-center gap-1"><AlertCircle size={12} />{formErrors.privacy}</p>}
                 </div>
 
-                <button onClick={handleFormSubmit} className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 transition transform active:scale-95 shadow-lg shadow-teal-100 mt-2">
-                    Send Inquiry
+                <button
+                    type="button"
+                    onClick={handleFormSubmit}
+                    disabled={isSubmitting}
+                    className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 transition transform active:scale-95 shadow-lg shadow-teal-100 mt-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
+                >
+                    {isSubmitting ? "Sending..." : "Send Inquiry"}
                 </button>
             </div>
         </div>
+      )}
+
+      {mode === 'formB' && (
+        <InquiryFormB
+          setView={(v) => v === 'select' ? setMode('select') : setView(v)}
+          treatments={allTreatments}
+        />
       )}
 
       {/* 약관 팝업 */}

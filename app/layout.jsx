@@ -6,22 +6,37 @@ import AnalyticsWrapper from "./AnalyticsWrapper";
 
 export const metadata = {
   title: {
-    default: "HEALO | Korea's #1 Medical Concierge",
+    default: "HEALO | Korea Medical Concierge",
     template: "%s | HEALO",
   },
   description:
-    "Find the best clinics in Korea. Free comparison quotes and concierge service.",
+    "Find the best clinics in Korea. Compare treatments, doctors, and prices. Free quotes and full concierge service for international patients.",
+  keywords: [
+    "Korea medical tourism",
+    "Korean hospitals",
+    "Korean Medicine",
+    "plastic surgery Korea",
+    "medical concierge Korea",
+    "한국 의료관광",
+    "韩国医疗旅游",
+    "韓国医療観光",
+  ],
   openGraph: {
-    title: "HEALO | Korea's #1 Medical Concierge",
+    title: "HEALO | Korea Medical Concierge",
     description:
-      "Find the best clinics in Korea. Free comparison quotes and concierge service.",
+      "Find the best clinics in Korea. Compare treatments, doctors, and prices. Free quotes and full concierge service.",
     type: "website",
+    locale: "en_US",
+    alternateLocale: ["ko_KR", "zh_CN", "ja_JP"],
+  },
+  alternates: {
+    canonical: "https://healo.kr",
   },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />

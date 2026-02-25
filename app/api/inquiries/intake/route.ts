@@ -14,7 +14,7 @@
  */
 export const runtime = "nodejs";
 
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import { encryptPiiInObject } from "../../../../src/lib/security/piiJson";
 import { NextRequest } from "next/server";
 import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
@@ -24,6 +24,7 @@ import { checkBlockRate } from "../../../../src/lib/alerts/operationalAlerts";
 import { sendAdminNotification } from "../../../../src/lib/notifications/adminNotifier";
 
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   const clientIp = getClientIp(request);
   const apiPath = '/api/inquiries/intake';
 

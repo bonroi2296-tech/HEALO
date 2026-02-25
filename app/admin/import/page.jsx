@@ -10,6 +10,8 @@ import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
+const CHUNK_SIZE = 500;
+
 export default function ImportPage() {
   const [dataType, setDataType] = useState('hospitals'); // 'hospitals' or 'treatments'
   const [file, setFile] = useState(null);
@@ -17,6 +19,7 @@ export default function ImportPage() {
   const [validationResult, setValidationResult] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [step, setStep] = useState(1); // 1: 업로드, 2: 미리보기, 3: 검증, 4: 완료
 
   // 파일 드롭 핸들러
@@ -90,24 +93,53 @@ export default function ImportPage() {
     }
   };
 
-  // 검증 실행
-  const handleValidate = async () => {
-    setLoading(true);
-    try {
-      const endpoint = `/api/admin/import/${dataType}`;
+  async function sendChunked(data, mode) {
+    const endpoint = `/api/admin/import/${dataType}`;
+    const totalChunks = Math.ceil(data.length / CHUNK_SIZE);
+    const merged = { total: 0, valid: 0, invalid: 0, success: 0, failed: 0, errors: [] };
+
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      setProgress(`${mode === 'validate' ? '검증' : '등록'} 중... ${i + 1}/${totalChunks} 청크 (${Math.min((i + 1) * CHUNK_SIZE, data.length)}/${data.length}건)`);
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: parsedData, mode: 'validate' }),
+        body: JSON.stringify({ data: chunk, mode }),
       });
 
-      const result = await response.json();
-      if (result.ok) {
-        setValidationResult(result);
-        setStep(3);
-      } else {
-        alert('검증 실패: ' + (result.message || result.error));
+      if (!response.ok) {
+        throw new Error(`서버 오류 (${response.status}): 청크 ${i + 1}`);
       }
+
+      const result = await response.json();
+      if (!result.ok) {
+        throw new Error(result.message || result.error || '알 수 없는 오류');
+      }
+
+      if (mode === 'validate') {
+        merged.total += result.total || 0;
+        merged.valid += result.valid || 0;
+        merged.invalid += result.invalid || 0;
+        merged.errors.push(...(result.errors || []));
+      } else {
+        const r = result.result || result;
+        merged.success += r.success || 0;
+        merged.failed += r.failed || 0;
+        merged.errors.push(...(r.errors || []));
+      }
+    }
+
+    setProgress('');
+    return merged;
+  }
+
+  const handleValidate = async () => {
+    setLoading(true);
+    try {
+      const merged = await sendChunked(parsedData, 'validate');
+      setValidationResult(merged);
+      setStep(3);
     } catch (error) {
       alert('검증 오류: ' + error.message);
     } finally {
@@ -115,7 +147,6 @@ export default function ImportPage() {
     }
   };
 
-  // 실제 등록
   const handleImport = async () => {
     if (!confirm(`${validationResult.valid}개의 데이터를 등록하시겠습니까?`)) {
       return;
@@ -123,20 +154,9 @@ export default function ImportPage() {
 
     setLoading(true);
     try {
-      const endpoint = `/api/admin/import/${dataType}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: parsedData, mode: 'import' }),
-      });
-
-      const result = await response.json();
-      if (result.ok) {
-        setImportResult(result.result);
-        setStep(4);
-      } else {
-        alert('등록 실패: ' + (result.message || result.error));
-      }
+      const merged = await sendChunked(parsedData, 'import');
+      setImportResult(merged);
+      setStep(4);
     } catch (error) {
       alert('등록 오류: ' + error.message);
     } finally {
@@ -283,12 +303,18 @@ export default function ImportPage() {
             </p>
           )}
 
+          {parsedData.length > CHUNK_SIZE && (
+            <p className="text-sm text-blue-600 mb-2">
+              {parsedData.length.toLocaleString()}건 → {Math.ceil(parsedData.length / CHUNK_SIZE)}개 청크로 분할 전송됩니다.
+            </p>
+          )}
+
           <button
             onClick={handleValidate}
             disabled={loading}
             className="w-full px-6 py-3 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {loading ? '검증 중...' : '데이터 검증하기'}
+            {loading ? (progress || '검증 중...') : '데이터 검증하기'}
           </button>
         </div>
       )}
@@ -342,7 +368,7 @@ export default function ImportPage() {
               disabled={loading || validationResult.valid === 0}
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:bg-gray-400"
             >
-              {loading ? '등록 중...' : `${validationResult.valid}개 데이터 등록하기`}
+              {loading ? (progress || '등록 중...') : `${validationResult.valid}개 데이터 등록하기`}
             </button>
           </div>
         </div>

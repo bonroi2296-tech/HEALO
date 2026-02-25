@@ -87,52 +87,19 @@ export async function POST(request: NextRequest) {
   const serviceRolePrefix = process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 6) || "N/A";
   const keyType = hasServiceRoleKey ? "service_role" : "anon_or_missing";
   
-  console.log("[admin/leads/assign] 🔍 DEBUG INFO:");
-  console.log("  - Supabase URL:", supabaseUrl);
-  console.log("  - Project Ref:", projectRef);
-  console.log("  - Key Type:", keyType);
-  console.log("  - Has Service Role Key:", hasServiceRoleKey);
-  console.log("  - Service Role Key Prefix:", serviceRolePrefix);
-  console.log("  - Querying table: public.normalized_inquiries");
-  console.log("  - Looking for ID:", normalized_inquiry_id);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[leads/assign] keyType:", keyType, "| id:", normalized_inquiry_id);
+  }
 
   // ========================================
   // 3. Inquiry 존재 확인
   // ========================================
   try {
-    // 🔍 DEBUG: 테이블 접근 가능 여부 확인
-    const { count: totalCount } = await supabaseAdmin
-      .from("normalized_inquiries")
-      .select("id", { count: "exact", head: true });
-    
-    console.log("  - Total inquiries in table:", totalCount);
-
     const { data: inquiry, error: inquiryError } = await supabaseAdmin
       .from("normalized_inquiries")
       .select("id")
       .eq("id", normalized_inquiry_id)
-      .maybeSingle(); // ✅ single() -> maybeSingle(): 0 rows = null (에러 아님)
-
-    console.log("[admin/leads/assign] Query result:", {
-      found: !!inquiry,
-      data: inquiry,
-      error: inquiryError?.message,
-      errorCode: inquiryError?.code,
-      errorDetails: inquiryError?.details,
-    });
-
-    // 🔍 DEBUG: RLS 문제 확인을 위해 raw SQL로도 조회
-    if (inquiryError || !inquiry) {
-      console.log("  - Trying raw SQL query to check RLS...");
-      try {
-        const { data: rawResult, error: rawError } = await supabaseAdmin
-          .rpc('check_inquiry_exists', { inquiry_id: normalized_inquiry_id });
-        
-        console.log("  - Raw SQL result:", { data: rawResult, error: rawError?.message });
-      } catch (rpcError: any) {
-        console.log("  - Raw SQL query failed (RPC function may not exist):", rpcError.message);
-      }
-    }
+      .maybeSingle();
 
     if (inquiryError || !inquiry) {
       // TODO: 프로덕션에서는 디버깅 정보 제거
@@ -194,8 +161,8 @@ export async function POST(request: NextRequest) {
     const foundHospitalIds = hospitals.map(h => h.id);
     const notFoundIds = hospital_ids.filter(id => !foundHospitalIds.includes(id));
 
-    if (notFoundIds.length > 0) {
-      console.warn("[admin/leads/assign] Some hospitals not found:", notFoundIds);
+    if (notFoundIds.length > 0 && process.env.NODE_ENV !== "production") {
+      console.warn("[leads/assign] Hospitals not found:", notFoundIds);
     }
 
     // ========================================
@@ -256,10 +223,6 @@ export async function POST(request: NextRequest) {
     // ========================================
     // 7. 응답 반환
     // ========================================
-    console.log(
-      `[admin/leads/assign] ✅ Assigned ${assignedCount} leads (skipped ${skippedCount})`
-    );
-
     return Response.json({
       ok: true,
       assigned: assignedCount,

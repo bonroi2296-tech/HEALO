@@ -54,10 +54,6 @@ export const ReviewModal = ({ isOpen, onClose, reviews }) => {
                                 </div>
                             </div>
                             <p className="text-sm text-gray-600 leading-relaxed mb-4">{review.content}</p>
-                            <div className="flex gap-2 mb-3">
-                                <div className="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center text-[10px] text-gray-500 font-bold cursor-pointer hover:bg-gray-300 transition">Review 1</div>
-                                {review.id === 1 && <div className="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center text-[10px] text-gray-500 font-bold cursor-pointer hover:bg-gray-300 transition">Review 2</div>}
-                            </div>
                             <div className="flex items-center gap-1 text-xs text-gray-400">
                                 <ThumbsUp size={12}/> Helpful ({review.helpful})
                             </div>

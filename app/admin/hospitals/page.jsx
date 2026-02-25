@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { HospitalManager } from "./_client/HospitalManager";
+import { HospitalAccountManager } from "./_client/HospitalAccountManager";
 import { createSupabaseBrowserClient } from "../../../src/lib/supabase/browser";
 import { useToast } from "../../../src/components/Toast";
 import { AddressInput } from "../../../src/components/AddressInput";
-import { X, UploadCloud, Loader2 } from "lucide-react";
+import { X, UploadCloud, Loader2, Building2, Users } from "lucide-react";
 
 // ✅ Supabase는 이미지 업로드와 세션 확인용으로만 사용
 const supabase = createSupabaseBrowserClient();
@@ -46,14 +47,24 @@ const DynamicListInput = ({ items, onAdd, onRemove, placeholder, icon: Icon }) =
   );
 };
 
-// Helper: ImageUploader
-const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
+// Helper: ImageUploader (파일 업로드 + URL 입력 + 대표 썸네일 선택)
+const ImageUploader = ({ images, onUpload, onRemove, uploading, thumbnailImage, onThumbnailSelect }) => {
   const fileInputRef = useRef(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     await onUpload(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  const handleUrlAdd = () => {
+    const url = urlInput.trim();
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      onUpload(null, url);
+      setUrlInput('');
+      setShowUrlInput(false);
+    }
   };
   return (
     <div className="space-y-3">
@@ -62,20 +73,55 @@ const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} disabled={uploading} className="hidden" id="file-upload-input" />
           <label onClick={() => fileInputRef.current.click()} className={`w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 cursor-pointer hover:bg-gray-50 hover:border-teal-500 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {uploading ? <Loader2 size={18} className="animate-spin"/> : <UploadCloud size={18}/>}
-            {uploading ? "업로드 중..." : "클릭하여 이미지 업로드 (JPG, PNG)"}
+            {uploading ? "업로드 중..." : "파일 업로드 (JPG, PNG)"}
           </label>
         </div>
+        <button type="button" onClick={() => setShowUrlInput(!showUrlInput)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 whitespace-nowrap">
+          URL 추가
+        </button>
       </div>
+      {showUrlInput && (
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleUrlAdd())}
+            placeholder="https://example.com/image.jpg"
+            className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+          />
+          <button type="button" onClick={handleUrlAdd} className="px-3 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700">추가</button>
+        </div>
+      )}
       {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
-          {images.map((url, idx) => (
-            <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-              <img src={url} alt="upload" className="w-full h-full object-cover" />
-              <button onClick={() => onRemove(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition shadow-sm">
-                <X size={12} />
-              </button>
-            </div>
-          ))}
+        <div className={`grid gap-2 ${images.length === 1 ? 'grid-cols-1 max-w-[200px]' : images.length === 2 ? 'grid-cols-2 max-w-[320px]' : images.length <= 4 ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-4 sm:grid-cols-5'}`}>
+          {images.map((url, idx) => {
+            const isThumbnail = thumbnailImage === url;
+            return (
+              <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 bg-gray-100 cursor-pointer ${isThumbnail ? 'border-teal-500 ring-2 ring-teal-200' : 'border-gray-200'}`} onClick={() => onThumbnailSelect?.(url)} title={url}>
+                <img src={url} alt="upload" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {isThumbnail && (
+                  <div className="absolute top-0.5 left-0.5 bg-teal-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">대표</div>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); onRemove(idx); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm">
+                  <X size={10} />
+                </button>
+                {!isThumbnail && (
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+                    <span className="text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition">클릭: 대표로 설정</span>
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                  {url.length > 60 ? url.slice(0, 30) + '...' + url.slice(-25) : url}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {thumbnailImage && !images.includes(thumbnailImage) && (
+        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+          현재 대표 이미지: <span className="text-teal-600 font-mono truncate inline-block max-w-[300px] align-bottom">{thumbnailImage}</span>
         </div>
       )}
     </div>
@@ -88,19 +134,31 @@ export default function HospitalsPage() {
   const [uploading, setUploading] = useState(false);
   const [hospitalsList, setHospitalsList] = useState([]);
   const [hospitalsError, setHospitalsError] = useState(null);
+  const [activeTab, setActiveTab] = useState("hospitals"); // "hospitals" | "accounts"
   const [editingHospitalId, setEditingHospitalId] = useState(null);
-  const [hospitalForm, setHospitalForm] = useState({ 
+  const emptyHospitalForm = { 
     name: '', location_kr: '', location_en: '', address_detail: '', description: '', 
     latitude: null, longitude: null,
-    tags: [], images: [], 
-    languages: [], amenities: [], 
-    hoursMonFri: '09:00 - 18:00', hoursSat: '09:00 - 13:00', 
+    tags: [], images: [], thumbnailImage: '', galleryImages: [],
+    languages: [], amenities: [], specialties: [], medicalEquipment: [],
+    hoursMonFri: '', hoursSat: '', hoursSun: '',
     doctorName: '', doctorTitle: '', doctorImage: '', 
     doctorSchool: '', doctorYears: '', doctorSpecialties: [], 
     doctorMetricValue: '99%', doctorMetricLabel: '만족도',
+    certifications: [],
+    insuranceAccepted: false, insuranceTypes: [],
+    annualSurgeryCount: '', establishmentDate: '', doctorCount: '',
+    externalNaverRating: '', externalNaverCount: '',
+    externalKakaoRating: '', externalKakaoCount: '',
+    _existingExternalRatings: {},
+    googleReviews: [],
     displayOrder: null,
-    isPublished: true
-  });
+    isPublished: true,
+    isPartner: false,
+    faq: [],
+    i18n: {}
+  };
+  const [hospitalForm, setHospitalForm] = useState(emptyHospitalForm);
 
   // ✅ Admin API를 통한 병원 목록 조회
   const fetchHospitals = async () => {
@@ -189,21 +247,33 @@ export default function HospitalsPage() {
   const handleEditHospital = (h) => {
     setEditingHospitalId(h.id);
     const doc = h.doctor_profile || {};
-    const imagesArray = Array.isArray(h.images) ? h.images : (h.images ? [h.images] : []);
+    const rawImages = Array.isArray(h.images) ? h.images : (h.images ? [h.images] : []);
+    const galleryArr = Array.isArray(h.gallery_images) ? h.gallery_images : [];
+    const allImgs = [h.thumbnail_image, ...rawImages, ...galleryArr].filter(Boolean);
+    const imagesArray = [...new Set(allImgs)];
+    console.log("[handleEditHospital]", h.name, "images:", imagesArray.length, "gallery:", galleryArr.length, "website:", h.website);
+    const ext = h.external_ratings || {};
+    const ins = h.insurance_details || {};
     setHospitalForm({
       name: h.name || '',
       location_kr: h.location_kr || '',
       location_en: h.location_en || '',
       address_detail: h.address_detail || '',
+      website: h.website || '',
       description: h.description || '',
       latitude: h.latitude,
       longitude: h.longitude,
       tags: h.tags || [],
       images: imagesArray,
+      thumbnailImage: h.thumbnail_image || '',
+      galleryImages: Array.isArray(h.gallery_images) ? h.gallery_images : [],
       languages: h.supported_languages || [],
       amenities: h.amenities || [],
+      specialties: h.specialties || [],
+      medicalEquipment: h.medical_equipment || [],
       hoursMonFri: h.operating_hours?.mon_fri || '',
       hoursSat: h.operating_hours?.sat || '',
+      hoursSun: h.operating_hours?.sun || '',
       doctorName: doc.name || '',
       doctorTitle: doc.title || '',
       doctorImage: doc.image || '',
@@ -212,8 +282,24 @@ export default function HospitalsPage() {
       doctorSpecialties: doc.specialties || [],
       doctorMetricValue: doc.heroMetric?.value || '99%',
       doctorMetricLabel: doc.heroMetric?.label || '만족도',
+      certifications: Array.isArray(h.certifications) ? h.certifications : [],
+      insuranceAccepted: h.insurance_accepted || false,
+      insuranceTypes: ins.types || [],
+      annualSurgeryCount: h.annual_surgery_count || '',
+      establishmentDate: h.establishment_date || '',
+      doctorCount: h.doctor_count || '',
+      externalNaverRating: ext.naver?.rating || '',
+      externalNaverCount: ext.naver?.count || '',
+      externalKakaoRating: ext.kakao?.rating || '',
+      externalKakaoCount: ext.kakao?.count || '',
+      _existingExternalRatings: h.external_ratings || {},
+      googleReviews: Array.isArray(ext.google_reviews) ? ext.google_reviews : [],
       displayOrder: h.display_order,
-      isPublished: h.is_published !== undefined ? h.is_published : true
+      isPublished: h.is_published !== undefined ? h.is_published : true,
+      isPartner: h.is_partner ?? false,
+      faq: Array.isArray(h.faq) ? h.faq : [],
+      i18n: h.i18n || {},
+      _enrichmentLog: h.enrichment_log || {},
     });
   };
 
@@ -222,33 +308,66 @@ export default function HospitalsPage() {
     if (!hospitalForm.name) return toast.error("병원명은 필수입니다.");
     setLoading(true);
     
-    const imagesArray = Array.isArray(hospitalForm.images) ? hospitalForm.images : (hospitalForm.images ? [hospitalForm.images] : []);
+    const imagesRaw = Array.isArray(hospitalForm.images) ? hospitalForm.images : (hospitalForm.images ? [hospitalForm.images] : []);
+    const imagesArray = [...new Set(imagesRaw.filter(Boolean))];
+    const selectedThumbnail = hospitalForm.thumbnailImage || imagesArray[0] || null;
+    const galleryForSave = imagesArray.filter(url => url !== selectedThumbnail);
     
-    // ✅ slug는 서버에서 자동 생성 (UPDATE시 기존 slug 유지)
+    const externalRatings = {};
+    if (hospitalForm.externalNaverRating || hospitalForm.externalNaverCount) {
+      externalRatings.naver = { rating: Number(hospitalForm.externalNaverRating) || 0, count: Number(hospitalForm.externalNaverCount) || 0 };
+    }
+    if (hospitalForm.externalKakaoRating || hospitalForm.externalKakaoCount) {
+      externalRatings.kakao = { rating: Number(hospitalForm.externalKakaoRating) || 0, count: Number(hospitalForm.externalKakaoCount) || 0 };
+    }
+
     const payload = {
       name: hospitalForm.name, 
       location_kr: hospitalForm.location_kr?.trim() || null,
       location_en: hospitalForm.location_en?.trim() || null,
       address_detail: hospitalForm.address_detail?.trim() || null,
+      website: hospitalForm.website?.trim() || null,
       description: hospitalForm.description, 
       latitude: hospitalForm.latitude, 
       longitude: hospitalForm.longitude,
       tags: hospitalForm.tags, 
-      images: imagesArray, 
+      images: imagesArray,
+      thumbnail_image: selectedThumbnail,
+      gallery_images: galleryForSave,
       supported_languages: hospitalForm.languages, 
       amenities: hospitalForm.amenities,
-      operating_hours: { mon_fri: hospitalForm.hoursMonFri, sat: hospitalForm.hoursSat },
-      doctor_profile: { 
-        name: hospitalForm.doctorName, 
-        title: hospitalForm.doctorTitle, 
-        image: hospitalForm.doctorImage, 
-        school: hospitalForm.doctorSchool, 
-        years: hospitalForm.doctorYears, 
-        specialties: hospitalForm.doctorSpecialties, 
-        heroMetric: { value: hospitalForm.doctorMetricValue, label: hospitalForm.doctorMetricLabel } 
+      specialties: hospitalForm.specialties,
+      medical_equipment: hospitalForm.medicalEquipment,
+      operating_hours: hospitalForm.hoursMonFri
+        ? { mon_fri: hospitalForm.hoursMonFri, sat: hospitalForm.hoursSat || null, sun: hospitalForm.hoursSun || null }
+        : null,
+      doctor_profile: hospitalForm.doctorName
+        ? { 
+            name: hospitalForm.doctorName, 
+            title: hospitalForm.doctorTitle, 
+            image: hospitalForm.doctorImage, 
+            school: hospitalForm.doctorSchool, 
+            years: hospitalForm.doctorYears, 
+            specialties: hospitalForm.doctorSpecialties, 
+            heroMetric: { value: hospitalForm.doctorMetricValue, label: hospitalForm.doctorMetricLabel } 
+          }
+        : null,
+      certifications: hospitalForm.certifications,
+      insurance_accepted: hospitalForm.insuranceAccepted,
+      insurance_details: hospitalForm.insuranceTypes.length > 0 ? { types: hospitalForm.insuranceTypes } : null,
+      annual_surgery_count: hospitalForm.annualSurgeryCount ? Number(hospitalForm.annualSurgeryCount) : null,
+      establishment_date: hospitalForm.establishmentDate || null,
+      doctor_count: hospitalForm.doctorCount ? Number(hospitalForm.doctorCount) : null,
+      external_ratings: {
+        ...(hospitalForm._existingExternalRatings || {}),
+        ...externalRatings,
+        google_reviews: hospitalForm.googleReviews || [],
       },
       display_order: hospitalForm.displayOrder ? Number(hospitalForm.displayOrder) : null,
-      is_published: hospitalForm.isPublished !== undefined ? hospitalForm.isPublished : true
+      is_published: hospitalForm.isPublished !== undefined ? hospitalForm.isPublished : true,
+      is_partner: hospitalForm.isPartner ?? false,
+      faq: (hospitalForm.faq || []).filter(item => item && (item.question?.trim() || item.answer?.trim())),
+      i18n: hospitalForm.i18n || {}
     };
 
     try {
@@ -282,9 +401,9 @@ export default function HospitalsPage() {
         toast.success("병원 정보가 저장되었습니다! 🏥");
         setEditingHospitalId(null); 
         await fetchHospitals();
-        setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도', displayOrder: null, isPublished: true });
+        setHospitalForm(emptyHospitalForm);
       } else {
-        console.error('[Hospitals] Save error:', result.error);
+        console.error('[Hospitals] Save error:', result.error, result.detail, result.errors);
         toast.error("저장 실패: " + (result.detail || result.error));
       }
     } catch (err) { 
@@ -335,24 +454,52 @@ export default function HospitalsPage() {
   }, []);
 
   return (
-    <HospitalManager
-      hospitalsList={hospitalsList}
-      hospitalsError={hospitalsError}
-      handleEditHospital={handleEditHospital}
-      editingHospitalId={editingHospitalId}
-      setEditingHospitalId={setEditingHospitalId}
-      hospitalForm={hospitalForm}
-      setHospitalForm={setHospitalForm}
-      uploading={uploading}
-      loading={loading}
-      handleSaveHospital={handleSaveHospital}
-      handleDelete={handleDelete}
-      fetchHospitals={fetchHospitals}
-      uploadToSupabase={uploadToSupabase}
-      DynamicListInput={DynamicListInput}
-      ImageUploader={ImageUploader}
-      AddressInput={AddressInput}
-      toast={toast}
-    />
+    <div className="space-y-4">
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setActiveTab("hospitals")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
+            activeTab === "hospitals" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Building2 size={16} />
+          병원 관리
+        </button>
+        <button
+          onClick={() => setActiveTab("accounts")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
+            activeTab === "accounts" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Users size={16} />
+          계정 관리
+        </button>
+      </div>
+
+      {activeTab === "hospitals" ? (
+        <HospitalManager
+          hospitalsList={hospitalsList}
+          hospitalsError={hospitalsError}
+          handleEditHospital={handleEditHospital}
+          editingHospitalId={editingHospitalId}
+          setEditingHospitalId={setEditingHospitalId}
+          hospitalForm={hospitalForm}
+          setHospitalForm={setHospitalForm}
+          uploading={uploading}
+          loading={loading}
+          handleSaveHospital={handleSaveHospital}
+          handleDelete={handleDelete}
+          fetchHospitals={fetchHospitals}
+          uploadToSupabase={uploadToSupabase}
+          DynamicListInput={DynamicListInput}
+          ImageUploader={ImageUploader}
+          AddressInput={AddressInput}
+          toast={toast}
+        />
+      ) : (
+        <HospitalAccountManager hospitals={hospitalsList} />
+      )}
+    </div>
   );
 }

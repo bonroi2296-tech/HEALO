@@ -35,58 +35,30 @@ export const LoginPage = ({ setView }) => {
             toast.success(`Welcome, ${data.user.email}!`);
             
             try {
-                // ✅ 세션에서 access token 가져오기
                 const { data: sessionData } = await supabase.auth.getSession();
                 const accessToken = sessionData?.session?.access_token;
-                
-                console.log('[LoginPage] Access token:', accessToken ? '✅ exists' : '❌ missing');
-                
-                // ✅ Bearer token으로 권한 확인
-                const headers = {
-                    'Content-Type': 'application/json',
-                };
-                
-                if (accessToken) {
-                    headers['Authorization'] = `Bearer ${accessToken}`;
-                }
-                
-                const whoamiResponse = await fetch('/api/admin/whoami', {
-                    credentials: 'include',
-                    headers,
-                });
-                
-                if (whoamiResponse.ok) {
-                    const whoamiResult = await whoamiResponse.json();
-                    
-                    console.log('[LoginPage] whoami result:', {
-                        isAdmin: whoamiResult.isAdmin,
-                        email: whoamiResult.email,
-                        reason: whoamiResult.reason,
-                        error: whoamiResult.error,
-                        authMethod: whoamiResult.authMethod,
-                        debug: whoamiResult.debug
-                    });
-                    
-                    if (whoamiResult.isAdmin) {
-                        console.log('[LoginPage] ✅ Admin detected, redirecting to /admin');
-                        // 약간의 딜레이를 주어 세션이 완전히 저장되도록 함
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        router.push('/admin');
-                    } else {
-                        console.log('[LoginPage] ⚠️ Not admin user:', {
-                            email: whoamiResult.email,
-                            error: whoamiResult.error,
-                            reason: whoamiResult.reason
-                        });
-                        toast.error('관리자 권한이 없습니다. ADMIN_EMAIL_ALLOWLIST에 이메일을 추가하세요.');
-                        router.push('/');
-                    }
+                const authHeaders = { 'Content-Type': 'application/json' };
+                if (accessToken) authHeaders['Authorization'] = `Bearer ${accessToken}`;
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                const [adminRes, partnerRes] = await Promise.all([
+                    fetch('/api/admin/whoami', { credentials: 'include', headers: authHeaders }).catch(() => null),
+                    fetch('/api/partner/whoami', { credentials: 'include', headers: authHeaders }).catch(() => null),
+                ]);
+
+                const adminData = adminRes?.ok ? await adminRes.json() : null;
+                const partnerData = partnerRes?.ok ? await partnerRes.json() : null;
+
+                if (adminData?.isAdmin) {
+                    router.push('/admin');
+                } else if (partnerData?.isHospitalUser) {
+                    router.push('/partner');
                 } else {
-                    console.warn('[LoginPage] whoami check failed, status:', whoamiResponse.status);
                     router.push('/');
                 }
             } catch (checkError) {
-                console.error('[LoginPage] Admin check error:', checkError);
+                console.error('[LoginPage] Role check error:', checkError);
                 router.push('/');
             } finally {
                 setLoading(false);

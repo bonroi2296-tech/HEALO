@@ -14,6 +14,7 @@ import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { supabaseAdmin } from "../src/lib/rag/supabaseAdmin";
+import { safeRagSearch } from "../src/lib/rag/safeSearch";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -183,46 +184,15 @@ async function getBaselineResponse(inquiry: string, lang: string): Promise<strin
 /**
  * RAG 검색
  */
+/** RAG 검색 — RPC 전용 (ingest_status/expires/playbook 필터 보장) */
 async function searchRAG(query: string, lang: string): Promise<Array<any>> {
   try {
-    const tokens = query
-      .toLowerCase()
-      .replace(/[^a-z0-9가-힣\s]/gi, " ")
-      .split(/\s+/)
-      .filter(Boolean)
-      .filter((t) => t.length >= 3)
-      .slice(0, 6);
-
-    const terms = tokens.length ? tokens : [query];
-    const orFilter = terms.map((t) => `content.ilike.%${t}%`).join(",");
-
-    let q = supabaseAdmin
-      .from("rag_chunks")
-      .select(
-        "id, document_id, chunk_index, content, metadata, rag_documents!inner(id, source_type, source_id, lang, title)"
-      )
-      .or(orFilter)
-      .limit(6);
-
-    if (lang) q = q.eq("rag_documents.lang", lang);
-
-    const { data, error } = await q;
-    if (error) {
-      console.error(`[RAG Search] Error:`, error);
-      return [];
-    }
-
-    const results = (data || []).map((row: any) => {
-      const content = String(row.content || "").toLowerCase();
-      const score = terms.reduce(
-        (sum, t) => (content.includes(t.toLowerCase()) ? sum + 1 : sum),
-        0
-      );
-      return { ...row, _score: score };
-    });
-
-    results.sort((a: any, b: any) => b._score - a._score);
-    return results.slice(0, 6);
+    const chunks = await safeRagSearch({ query, lang, matchCount: 6 });
+    return chunks.map((c) => ({
+      ...c,
+      rag_documents: c.rag_documents ?? { title: c.doc_title, source_type: c.doc_source_type },
+      _score: c.similarity_score ?? 1,
+    }));
   } catch (error: any) {
     console.error(`[RAG Search] Error:`, error);
     return [];

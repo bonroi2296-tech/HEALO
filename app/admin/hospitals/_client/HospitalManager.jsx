@@ -1,5 +1,81 @@
-import { useState } from 'react';
-import { Plus, Trash2, Loader2, Save, Globe, Coffee, Trophy, Info, User, X, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Plus, Trash2, Loader2, Save, Globe, Coffee, Trophy, Info, User, X, ChevronLeft, Shield, Activity, Building, Star, Stethoscope, Calendar, HelpCircle, Search, Eye, EyeOff, ArrowUpDown, ChevronDown, MapPin, MessageCircle, Sparkles, Database, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { TranslationPanel } from '../../_shared/TranslationPanel';
+
+const SORT_OPTIONS = [
+  { value: 'name_asc', label: '이름 (A→Z)' },
+  { value: 'name_desc', label: '이름 (Z→A)' },
+  { value: 'newest', label: '최신 등록순' },
+  { value: 'oldest', label: '오래된 순' },
+  { value: 'doctor_count', label: '의사 수 많은 순' },
+];
+
+function useFilteredHospitals(hospitalsList, search, statusFilter, sortBy) {
+  return useMemo(() => {
+    let list = [...hospitalsList];
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(h => {
+        const name = (h.name || '').toLowerCase();
+        const loc = (h.location_kr || h.location_en || '').toLowerCase();
+        const tags = (h.tags || []).join(' ').toLowerCase();
+        const specs = (h.specialties || []).join(' ').toLowerCase();
+        return name.includes(q) || loc.includes(q) || tags.includes(q) || specs.includes(q);
+      });
+    }
+
+    if (statusFilter === 'published') list = list.filter(h => h.is_published);
+    else if (statusFilter === 'unpublished') list = list.filter(h => !h.is_published);
+
+    switch (sortBy) {
+      case 'name_asc': list.sort((a, b) => (a.name || '').localeCompare(b.name || '')); break;
+      case 'name_desc': list.sort((a, b) => (b.name || '').localeCompare(a.name || '')); break;
+      case 'newest': list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); break;
+      case 'oldest': list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)); break;
+      case 'doctor_count': list.sort((a, b) => (b.doctor_count || 0) - (a.doctor_count || 0)); break;
+    }
+
+    return list;
+  }, [hospitalsList, search, statusFilter, sortBy]);
+}
+
+function HospitalListItem({ h, isActive, onClick }) {
+  const locationText = h.location_kr || h.location_en || h.location || '';
+  return (
+    <div
+      onClick={onClick}
+      className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition ${
+        isActive ? 'bg-teal-50 border-l-4 border-l-teal-500' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-sm flex-1 truncate">{h.name}</span>
+        {h.is_partner && (
+          <span className="shrink-0 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded" title="제휴">제휴</span>
+        )}
+        {h.is_published ? (
+          <span className="shrink-0 w-2 h-2 rounded-full bg-green-500" title="공개" />
+        ) : (
+          <span className="shrink-0 w-2 h-2 rounded-full bg-gray-300" title="비공개" />
+        )}
+      </div>
+      <div className="text-xs text-gray-500 truncate mt-0.5">
+        {locationText || ''}
+      </div>
+      {(h.specialties?.length > 0) && (
+        <div className="flex gap-1 mt-1 flex-wrap">
+          {h.specialties.slice(0, 3).map((s, i) => (
+            <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{s}</span>
+          ))}
+          {h.specialties.length > 3 && (
+            <span className="text-[10px] text-gray-400">+{h.specialties.length - 3}</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export const HospitalManager = ({
   hospitalsList,
@@ -15,9 +91,21 @@ export const HospitalManager = ({
   handleDelete,
   fetchHospitals,
   uploadToSupabase,
+  DynamicListInput,
+  ImageUploader,
+  AddressInput,
   toast,
 }) => {
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  const filtered = useFilteredHospitals(hospitalsList, search, statusFilter, sortBy);
+
+  const publishedCount = useMemo(() => hospitalsList.filter(h => h.is_published).length, [hospitalsList]);
+  const unpublishedCount = hospitalsList.length - publishedCount;
 
   const handleSelectHospital = (h) => {
     handleEditHospital(h);
@@ -26,36 +114,135 @@ export const HospitalManager = ({
 
   const handleNew = () => {
     setEditingHospitalId(null);
-    setHospitalForm({ name: '', location_kr: '', location_en: '', address_detail: '', description: '', latitude: null, longitude: null, tags: [], images: [], languages: [], amenities: [], hoursMonFri: '', hoursSat: '', doctorName: '', doctorTitle: '', doctorImage: '', doctorSchool: '', doctorYears: '', doctorSpecialties: [], doctorMetricValue: '99%', doctorMetricLabel: '만족도', displayOrder: null, isPublished: true });
+    setHospitalForm({ 
+      name: '', location_kr: '', location_en: '', address_detail: '', website: '', description: '', 
+      latitude: null, longitude: null, tags: [], images: [], thumbnailImage: '', galleryImages: [],
+      languages: [], amenities: [], specialties: [], medicalEquipment: [],
+      hoursMonFri: '', hoursSat: '', hoursSun: '', doctorName: '', doctorTitle: '', doctorImage: '', 
+      doctorSchool: '', doctorYears: '', doctorSpecialties: [], 
+      doctorMetricValue: '99%', doctorMetricLabel: '만족도',
+      certifications: [], insuranceAccepted: false, insuranceTypes: [],
+      annualSurgeryCount: '', establishmentDate: '', doctorCount: '',
+      externalNaverRating: '', externalNaverCount: '', externalKakaoRating: '', externalKakaoCount: '',
+      displayOrder: null, isPublished: true, isPartner: false,
+      faq: [],
+      i18n: {}
+    });
     setShowForm(true);
   };
+
+  const listToolbar = (
+    <>
+      {/* Search */}
+      <div className="relative">
+        <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="병원명, 주소, 진료과..."
+          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Filters row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Status filter pills */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-md transition font-medium ${statusFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+          >
+            전체 <span className="text-gray-400">{hospitalsList.length}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('published')}
+            className={`px-2.5 py-1 rounded-md transition font-medium flex items-center gap-1 ${statusFilter === 'published' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'}`}
+          >
+            <Eye size={11} /> 공개 <span className="text-gray-400">{publishedCount}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('unpublished')}
+            className={`px-2.5 py-1 rounded-md transition font-medium flex items-center gap-1 ${statusFilter === 'unpublished' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}
+          >
+            <EyeOff size={11} /> 숨김 <span className="text-gray-400">{unpublishedCount}</span>
+          </button>
+        </div>
+
+        {/* Sort dropdown */}
+        <div className="relative ml-auto">
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 bg-white"
+          >
+            <ArrowUpDown size={11} />
+            {SORT_OPTIONS.find(o => o.value === sortBy)?.label}
+            <ChevronDown size={11} />
+          </button>
+          {showSortMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+              {SORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setSortBy(opt.value); setShowSortMenu(false); }}
+                  className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 ${sortBy === opt.value ? 'text-teal-600 font-bold' : 'text-gray-700'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Result count */}
+      {search && (
+        <p className="text-xs text-gray-400">
+          {filtered.length}건 검색됨 {filtered.length !== hospitalsList.length && `(전체 ${hospitalsList.length}건)`}
+        </p>
+      )}
+    </>
+  );
 
   return (
     <div className="animate-in fade-in">
       {/* Desktop: 2-column layout */}
       <div className="hidden lg:grid grid-cols-12 gap-8">
         {/* Left: Hospital List */}
-        <div className="col-span-4 bg-white rounded-2xl border border-gray-200 p-4 h-[calc(100vh-100px)] overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold">등록된 병원</h2>
-            <button onClick={handleNew} className="bg-teal-600 text-white p-1 rounded">
-              <Plus size={16}/>
-            </button>
+        <div className="col-span-4 bg-white rounded-2xl border border-gray-200 h-[calc(100vh-100px)] flex flex-col">
+          <div className="p-4 space-y-3 border-b border-gray-100 shrink-0">
+            <div className="flex justify-between items-center">
+              <h2 className="font-bold">등록된 병원</h2>
+              <button onClick={handleNew} className="bg-teal-600 text-white p-1 rounded">
+                <Plus size={16}/>
+              </button>
+            </div>
+            {listToolbar}
           </div>
           {process.env.NODE_ENV !== "production" && hospitalsError && (
-            <p className="text-xs text-red-500 mb-2">Hospitals error: {hospitalsError.message}</p>
+            <p className="text-xs text-red-500 px-4 pt-2">Hospitals error: {hospitalsError.message}</p>
           )}
-          {hospitalsList.map(h => {
-            const locationText = h.location_kr || h.location_en || h.location || '';
-            return (
-              <div key={h.id} onClick={()=>handleEditHospital(h)} className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${editingHospitalId===h.id?'bg-teal-50 border-l-4 border-l-teal-500':''}`}>
-                <div className="font-bold">{h.name}</div>
-                <div className="text-xs text-gray-500">
-                  {locationText || (process.env.NODE_ENV !== "production" ? "— (주소 없음)" : "")}
-                </div>
+          <div className="overflow-y-auto flex-1">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-400">
+                {search ? '검색 결과가 없습니다' : '등록된 병원이 없습니다'}
               </div>
-            );
-          })}
+            ) : (
+              filtered.map(h => (
+                <HospitalListItem
+                  key={h.id}
+                  h={h}
+                  isActive={editingHospitalId === h.id}
+                  onClick={() => handleEditHospital(h)}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {/* Right: Edit Form */}
@@ -70,6 +257,9 @@ export const HospitalManager = ({
             handleDelete={handleDelete}
             fetchHospitals={fetchHospitals}
             uploadToSupabase={uploadToSupabase}
+            DynamicListInput={DynamicListInput}
+            ImageUploader={ImageUploader}
+            AddressInput={AddressInput}
             toast={toast}
           />
         </div>
@@ -79,27 +269,43 @@ export const HospitalManager = ({
       <div className="lg:hidden">
         {!showForm ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-4">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-3">
               <h2 className="font-bold text-lg">등록된 병원</h2>
               <button onClick={handleNew} className="bg-teal-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm">
                 <Plus size={14}/> 추가
               </button>
             </div>
+            <div className="space-y-3 mb-3">
+              {listToolbar}
+            </div>
             {process.env.NODE_ENV !== "production" && hospitalsError && (
               <p className="text-xs text-red-500 mb-2">Hospitals error: {hospitalsError.message}</p>
             )}
             <div className="space-y-2">
-              {hospitalsList.map(h => {
-                const locationText = h.location_kr || h.location_en || h.location || '';
-                return (
+              {filtered.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400">
+                  {search ? '검색 결과가 없습니다' : '등록된 병원이 없습니다'}
+                </div>
+              ) : (
+                filtered.map(h => (
                   <div key={h.id} onClick={()=>handleSelectHospital(h)} className={`p-3 rounded-lg border cursor-pointer active:bg-gray-100 ${editingHospitalId===h.id?'bg-teal-50 border-teal-300':'border-gray-200'}`}>
-                    <div className="font-bold text-sm">{h.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {locationText || (process.env.NODE_ENV !== "production" ? "— (주소 없음)" : "")}
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm flex-1 truncate">{h.name}</span>
+                      {h.is_partner && (
+                        <span className="shrink-0 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">제휴</span>
+                      )}
+                      {h.is_published ? (
+                        <span className="shrink-0 w-2 h-2 rounded-full bg-green-500" />
+                      ) : (
+                        <span className="shrink-0 w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                      {h.location_kr || h.location_en || ''}
                     </div>
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
           </div>
         ) : (
@@ -116,7 +322,12 @@ export const HospitalManager = ({
               handleSaveHospital={handleSaveHospital}
               handleDelete={handleDelete}
               fetchHospitals={fetchHospitals}
+              handleEditHospital={handleEditHospital}
+              hospitalsList={hospitalsList}
               uploadToSupabase={uploadToSupabase}
+              DynamicListInput={DynamicListInput}
+              ImageUploader={ImageUploader}
+              AddressInput={AddressInput}
               toast={toast}
             />
           </div>
@@ -126,12 +337,172 @@ export const HospitalManager = ({
   );
 };
 
-function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, uploadToSupabase, toast }) {
+const SOURCE_ICONS = { google: MapPin, kakao: MessageCircle, ai: Sparkles };
+
+function EnrichmentPanel({ editingHospitalId, enrichmentLog, onComplete, toast }) {
+  const [sources, setSources] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [running, setRunning] = useState(new Set());
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (!editingHospitalId) return;
+    (async () => {
+      try {
+        const { createSupabaseBrowserClient } = await import('../../../../src/lib/supabase/browser');
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const res = await fetch('/api/admin/hospitals/enrich', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        });
+        const json = await res.json();
+        if (json.ok && json.sources) {
+          setSources(json.sources);
+          setSelected(new Set(json.sources.filter(s => s.available).map(s => s.id)));
+        }
+      } catch {}
+    })();
+  }, [editingHospitalId]);
+
+  const toggleSource = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleRun = async () => {
+    if (selected.size === 0) return toast.error('수집할 소스를 선택해주세요.');
+    const ids = [...selected];
+    setRunning(new Set(ids));
+    try {
+      const { createSupabaseBrowserClient } = await import('../../../../src/lib/supabase/browser');
+      const supabase = createSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { toast.error('세션 만료'); return; }
+      const res = await fetch(`/api/admin/hospitals/enrich?id=${editingHospitalId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: ids }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        const successes = (result.results || []).filter(r => r.success);
+        const failures = (result.results || []).filter(r => !r.success);
+        const parts = successes.flatMap(r => r.items || []);
+        if (parts.length > 0) toast.success(`수집 완료: ${parts.join(', ')}`);
+        if (failures.length > 0) {
+          const failMsg = failures.map(f => `[${f.source}] ${f.error || '알 수 없는 오류'}`).join('\n');
+          toast.error(`수집 실패:\n${failMsg}`);
+        }
+        onComplete?.(result.hospital);
+      } else {
+        toast.error(`수집 실패: ${result.detail || result.error || '서버 오류'}`);
+      }
+    } catch (err) {
+      toast.error('수집 요청 실패: ' + err.message);
+    } finally {
+      setRunning(new Set());
+      setPanelOpen(false);
+    }
+  };
+
+  const isRunning = running.size > 0;
+
+  if (!editingHospitalId) return null;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setPanelOpen(!panelOpen)}
+        disabled={isRunning}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition disabled:opacity-50"
+      >
+        {isRunning ? <Loader2 size={14} className="animate-spin"/> : <Database size={14}/>}
+        {isRunning ? '수집 중...' : '데이터 수집'}
+        <ChevronDown size={12} className={`transition ${panelOpen ? 'rotate-180' : ''}`}/>
+      </button>
+      {panelOpen && !isRunning && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
+          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">수집 소스 선택</div>
+          <div className="space-y-2 mb-4">
+            {sources.map(s => {
+              const Icon = SOURCE_ICONS[s.id] || Database;
+              const log = enrichmentLog?.[s.id];
+              return (
+                <label key={s.id} className={`flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer transition ${
+                  !s.available ? 'opacity-40 pointer-events-none border-gray-100 bg-gray-50' :
+                  selected.has(s.id) ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(s.id)}
+                    onChange={() => toggleSource(s.id)}
+                    disabled={!s.available}
+                    className="mt-0.5 rounded border-gray-300 text-indigo-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Icon size={13} className="text-gray-600"/>
+                      <span className="text-sm font-bold text-gray-800">{s.name}</span>
+                      {!s.available && <span className="text-[10px] text-red-500 font-medium">키 필요</span>}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{s.description}</p>
+                    {log && (
+                      <div className="flex items-center gap-1 mt-1 text-[10px]">
+                        {log.status === 'success' ? (
+                          <CheckCircle2 size={10} className="text-green-500"/>
+                        ) : log.status === 'failed' ? (
+                          <XCircle size={10} className="text-red-500"/>
+                        ) : (
+                          <Clock size={10} className="text-gray-400"/>
+                        )}
+                        <span className="text-gray-400">
+                          {log.last_run ? new Date(log.last_run).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '미수집'}
+                        </span>
+                        {log.items?.length > 0 && (
+                          <span className="text-gray-400">· {log.items.slice(0,3).join(', ')}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => { setPanelOpen(false); handleRun(); }}
+            disabled={selected.size === 0}
+            className="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+          >
+            선택 소스 수집 시작 ({selected.size}개)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, handleEditHospital, hospitalsList, uploadToSupabase, DynamicListInput, ImageUploader, AddressInput, toast }) {
+
   return (
     <div className="relative">
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex justify-between items-center shadow-sm">
         <h2 className="text-base lg:text-xl font-bold">{editingHospitalId?'병원 정보 수정':'신규 병원 등록'}</h2>
         <div className="flex items-center gap-2 lg:gap-3">
+          <EnrichmentPanel
+            editingHospitalId={editingHospitalId}
+            enrichmentLog={hospitalForm._enrichmentLog}
+            onComplete={async (hospital) => {
+              if (hospital && handleEditHospital) {
+                handleEditHospital(hospital);
+              }
+              fetchHospitals();
+            }}
+            toast={toast}
+          />
           {editingHospitalId && (
             <button 
               onClick={()=>handleDelete('hospitals', editingHospitalId, fetchHospitals)}
@@ -185,7 +556,26 @@ function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploadi
                 {hospitalForm.isPublished ? '노출' : '숨김'}
               </span>
             </div>
-            
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="text-sm font-bold text-gray-700 flex-1">HEALO 제휴 병원</label>
+              <button
+                type="button"
+                onClick={() => setHospitalForm({...hospitalForm, isPartner: !hospitalForm.isPartner})}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  hospitalForm.isPartner ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    hospitalForm.isPartner ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-600 w-16">
+                {hospitalForm.isPartner ? '제휴' : '비제휴'}
+              </span>
+            </div>
+
             <AddressInput
               value={hospitalForm.location_kr || ''}
               onChange={(address) => setHospitalForm({ ...hospitalForm, location_kr: address })}
@@ -218,17 +608,24 @@ function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploadi
               onChange={(e) => setHospitalForm({ ...hospitalForm, address_detail: e.target.value })}
               className="w-full p-2 border rounded text-sm"
             />
+            <input
+              type="url"
+              placeholder="웹사이트 (https://...)"
+              value={hospitalForm.website || ''}
+              onChange={(e) => setHospitalForm({ ...hospitalForm, website: e.target.value })}
+              className="w-full p-2 border rounded text-sm"
+            />
 
             <textarea placeholder="병원 소개 (상세 페이지용 설명)" value={hospitalForm.description} onChange={e=>setHospitalForm({...hospitalForm, description: e.target.value})} className="w-full p-2 border rounded text-sm" rows="3"/>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
             <div>
-              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Globe size={14}/> 통역 가능 언어</h3>
+              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Globe size={14}/> 지원 언어</h3>
               <DynamicListInput items={hospitalForm.languages} onAdd={t=>setHospitalForm({...hospitalForm, languages:[...hospitalForm.languages, t]})} onRemove={i=>setHospitalForm({...hospitalForm, languages:hospitalForm.languages.filter((_,x)=>x!==i)})} placeholder="예: 영어, 중국어"/>
             </div>
             <div>
-              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Coffee size={14}/> 편의 시설</h3>
+              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Coffee size={14}/> 편의시설</h3>
               <DynamicListInput items={hospitalForm.amenities} onAdd={t=>setHospitalForm({...hospitalForm, amenities:[...hospitalForm.amenities, t]})} onRemove={i=>setHospitalForm({...hospitalForm, amenities:hospitalForm.amenities.filter((_,x)=>x!==i)})} placeholder="예: 와이파이, 픽업"/>
             </div>
           </div>
@@ -239,21 +636,43 @@ function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploadi
             
             <label className="block text-sm font-bold text-gray-500 mt-2">병원 갤러리 이미지</label>
             <p className="text-xs text-teal-600 bg-teal-50 p-2 rounded-lg mb-2 flex items-center gap-2">
-              <Info size={14}/> 권장: 1200x900px (4:3 비율)
+              <Info size={14}/> 클릭하여 대표 썸네일 선택 | 파일 업로드 또는 URL 직접 입력 가능
             </p>
             <ImageUploader 
               images={hospitalForm.images} 
-              onUpload={async (file) => {
-                const url = await uploadToSupabase(file);
-                if (url) setHospitalForm(prev => ({...prev, images: [...prev.images, url]}));
+              onUpload={async (file, url) => {
+                if (url) {
+                  setHospitalForm(prev => ({
+                    ...prev,
+                    images: [...prev.images, url],
+                    thumbnailImage: prev.thumbnailImage || url,
+                  }));
+                  return;
+                }
+                const uploadedUrl = await uploadToSupabase(file);
+                if (uploadedUrl) setHospitalForm(prev => ({
+                  ...prev,
+                  images: [...prev.images, uploadedUrl],
+                  thumbnailImage: prev.thumbnailImage || uploadedUrl,
+                }));
               }}
-              onRemove={(idx) => setHospitalForm(prev => ({...prev, images: prev.images.filter((_, i) => i !== idx)}))}
+              onRemove={(idx) => setHospitalForm(prev => {
+                const removed = prev.images[idx];
+                const newImages = prev.images.filter((_, i) => i !== idx);
+                return {
+                  ...prev,
+                  images: newImages,
+                  thumbnailImage: prev.thumbnailImage === removed ? (newImages[0] || '') : prev.thumbnailImage,
+                };
+              })}
               uploading={uploading}
+              thumbnailImage={hospitalForm.thumbnailImage}
+              onThumbnailSelect={(url) => setHospitalForm(prev => ({...prev, thumbnailImage: url}))}
             />
           </div>
 
           <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><User size={16}/> 대표 원장 정보</h3>
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><User size={16}/> 대표 원장 프로필</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input placeholder="이름 (영문/한글)" value={hospitalForm.doctorName} onChange={e=>setHospitalForm({...hospitalForm, doctorName: e.target.value})} className="border p-2 rounded text-sm"/>
               <input placeholder="직함 (예: 대표원장)" value={hospitalForm.doctorTitle} onChange={e=>setHospitalForm({...hospitalForm, doctorTitle: e.target.value})} className="border p-2 rounded text-sm"/>
@@ -283,10 +702,196 @@ function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploadi
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input placeholder="평일 운영시간 (09:00 - 18:00)" value={hospitalForm.hoursMonFri} onChange={e=>setHospitalForm({...hospitalForm, hoursMonFri: e.target.value})} className="border p-2 rounded text-sm"/>
-            <input placeholder="주말 운영시간 (09:00 - 13:00)" value={hospitalForm.hoursSat} onChange={e=>setHospitalForm({...hospitalForm, hoursSat: e.target.value})} className="border p-2 rounded text-sm"/>
+          <div className="space-y-2">
+            <h3 className="text-sm font-bold text-teal-600 flex items-center gap-1"><Calendar size={14}/> 운영 시간</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">평일</label>
+                <input placeholder="AM 9:00 - PM 6:00" value={hospitalForm.hoursMonFri} onChange={e=>setHospitalForm({...hospitalForm, hoursMonFri: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">토요일</label>
+                <input placeholder="AM 9:00 - PM 1:00" value={hospitalForm.hoursSat} onChange={e=>setHospitalForm({...hospitalForm, hoursSat: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">일요일</label>
+                <input placeholder="휴무" value={hospitalForm.hoursSun} onChange={e=>setHospitalForm({...hospitalForm, hoursSun: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+            </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+            <div>
+              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Stethoscope size={14}/> 진료과목</h3>
+              <DynamicListInput items={hospitalForm.specialties || []} onAdd={t=>setHospitalForm({...hospitalForm, specialties:[...(hospitalForm.specialties||[]), t]})} onRemove={i=>setHospitalForm({...hospitalForm, specialties:(hospitalForm.specialties||[]).filter((_,x)=>x!==i)})} placeholder="예: 피부과, 성형외과"/>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-teal-600 mb-2 flex items-center gap-1"><Activity size={14}/> 의료 장비</h3>
+              <DynamicListInput items={hospitalForm.medicalEquipment || []} onAdd={t=>setHospitalForm({...hospitalForm, medicalEquipment:[...(hospitalForm.medicalEquipment||[]), t]})} onRemove={i=>setHospitalForm({...hospitalForm, medicalEquipment:(hospitalForm.medicalEquipment||[]).filter((_,x)=>x!==i)})} placeholder="예: 3D CT, 레이저"/>
+            </div>
+          </div>
+
+          <div className="space-y-3 bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2"><Building size={16}/> 병원 통계</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">연간 시술 건수</label>
+                <input type="number" placeholder="예: 5000" value={hospitalForm.annualSurgeryCount || ''} onChange={e=>setHospitalForm({...hospitalForm, annualSurgeryCount: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">의료진 수</label>
+                <input type="number" placeholder="예: 12" value={hospitalForm.doctorCount || ''} onChange={e=>setHospitalForm({...hospitalForm, doctorCount: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">설립일</label>
+                <input type="date" value={hospitalForm.establishmentDate || ''} onChange={e=>setHospitalForm({...hospitalForm, establishmentDate: e.target.value})} className="w-full border p-2 rounded text-sm"/>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 bg-green-50 p-4 rounded-xl border border-green-100">
+            <h3 className="text-sm font-bold text-green-900 flex items-center gap-2"><Shield size={16}/> 보험 정보</h3>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-gray-700 flex-1">보험 적용 가능</label>
+              <button type="button" onClick={()=>setHospitalForm({...hospitalForm, insuranceAccepted: !hospitalForm.insuranceAccepted})} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hospitalForm.insuranceAccepted?'bg-green-600':'bg-gray-300'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hospitalForm.insuranceAccepted?'translate-x-6':'translate-x-1'}`}/>
+              </button>
+            </div>
+            {hospitalForm.insuranceAccepted && (
+              <DynamicListInput items={hospitalForm.insuranceTypes || []} onAdd={t=>setHospitalForm({...hospitalForm, insuranceTypes:[...(hospitalForm.insuranceTypes||[]), t]})} onRemove={i=>setHospitalForm({...hospitalForm, insuranceTypes:(hospitalForm.insuranceTypes||[]).filter((_,x)=>x!==i)})} placeholder="보험 유형 (예: 국민건강보험, 여행자보험)"/>
+            )}
+          </div>
+
+          <div className="space-y-3 bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+            <h3 className="text-sm font-bold text-yellow-900 flex items-center gap-2"><Star size={16}/> 외부 평점</h3>
+            {hospitalForm._existingExternalRatings?.google && (
+              <div className="bg-white p-3 rounded-lg border border-yellow-200 mb-2">
+                <label className="text-xs font-bold text-gray-500 block mb-1">Google (자동 수집)</label>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-1">
+                    <Star size={14} className="text-yellow-400 fill-yellow-400"/>
+                    <span className="font-bold">{hospitalForm._existingExternalRatings.google.rating}</span>
+                  </span>
+                  <span className="text-gray-500">리뷰 {hospitalForm._existingExternalRatings.google.count}개</span>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500">네이버</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" step="0.1" min="0" max="5" placeholder="평점 (0-5)" value={hospitalForm.externalNaverRating || ''} onChange={e=>setHospitalForm({...hospitalForm, externalNaverRating: e.target.value})} className="border p-2 rounded text-sm"/>
+                  <input type="number" placeholder="리뷰 수" value={hospitalForm.externalNaverCount || ''} onChange={e=>setHospitalForm({...hospitalForm, externalNaverCount: e.target.value})} className="border p-2 rounded text-sm"/>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500">카카오</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" step="0.1" min="0" max="5" placeholder="평점 (0-5)" value={hospitalForm.externalKakaoRating || ''} onChange={e=>setHospitalForm({...hospitalForm, externalKakaoRating: e.target.value})} className="border p-2 rounded text-sm"/>
+                  <input type="number" placeholder="리뷰 수" value={hospitalForm.externalKakaoCount || ''} onChange={e=>setHospitalForm({...hospitalForm, externalKakaoCount: e.target.value})} className="border p-2 rounded text-sm"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Google 리뷰 관리 */}
+          {(hospitalForm.googleReviews?.length > 0) && (
+            <div className="space-y-3 bg-orange-50 p-4 rounded-xl border border-orange-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-orange-900 flex items-center gap-2"><MessageCircle size={16}/> 리뷰 관리</h3>
+                <span className="text-xs text-orange-600">{hospitalForm.googleReviews.length}개</span>
+              </div>
+              {hospitalForm.googleReviews.map((review, idx) => (
+                <div key={idx} className={`bg-white p-3 rounded-lg border ${review._hidden ? 'border-red-200 opacity-50' : 'border-orange-200'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {review.authorPhoto ? (
+                        <img src={review.authorPhoto} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer"/>
+                      ) : (
+                        <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold">{review.author?.[0]}</div>
+                      )}
+                      <span className="text-xs font-bold text-gray-700">{review.author}</span>
+                      <span className="text-[10px] text-gray-400">{review.time}</span>
+                      <div className="flex text-yellow-400 gap-0.5">{[...Array(review.rating || 5)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => {
+                        const updated = [...hospitalForm.googleReviews];
+                        updated[idx] = { ...updated[idx], _hidden: !updated[idx]._hidden };
+                        setHospitalForm({ ...hospitalForm, googleReviews: updated });
+                      }} className={`text-xs px-2 py-0.5 rounded ${review._hidden ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {review._hidden ? '표시' : '숨김'}
+                      </button>
+                      <button type="button" onClick={() => setHospitalForm({ ...hospitalForm, googleReviews: hospitalForm.googleReviews.filter((_, i) => i !== idx) })} className="text-red-400 hover:text-red-600">
+                        <X size={14}/>
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={review.text || ''}
+                    onChange={(e) => {
+                      const updated = [...hospitalForm.googleReviews];
+                      updated[idx] = { ...updated[idx], text: e.target.value };
+                      setHospitalForm({ ...hospitalForm, googleReviews: updated });
+                    }}
+                    rows={2}
+                    className="w-full border border-gray-200 rounded text-xs p-2 resize-none"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-gray-400 flex items-center gap-2"><Calendar size={14}/> 인증 / 자격</h3>
+            {(hospitalForm.certifications || []).map((cert, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-white border rounded-lg p-2">
+                <input placeholder="유형" value={cert.type||''} onChange={e=>{const c=[...(hospitalForm.certifications||[])]; c[idx]={...c[idx],type:e.target.value}; setHospitalForm({...hospitalForm, certifications:c});}} className="flex-1 border p-1.5 rounded text-xs"/>
+                <input placeholder="발급기관" value={cert.issuer||''} onChange={e=>{const c=[...(hospitalForm.certifications||[])]; c[idx]={...c[idx],issuer:e.target.value}; setHospitalForm({...hospitalForm, certifications:c});}} className="flex-1 border p-1.5 rounded text-xs"/>
+                <input type="date" value={cert.date||''} onChange={e=>{const c=[...(hospitalForm.certifications||[])]; c[idx]={...c[idx],date:e.target.value}; setHospitalForm({...hospitalForm, certifications:c});}} className="border p-1.5 rounded text-xs"/>
+                <button onClick={()=>setHospitalForm({...hospitalForm, certifications:(hospitalForm.certifications||[]).filter((_,i)=>i!==idx)})} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+              </div>
+            ))}
+            <button type="button" onClick={()=>setHospitalForm({...hospitalForm, certifications:[...(hospitalForm.certifications||[]), {type:'',issuer:'',date:''}]})} className="text-teal-600 text-xs font-bold flex items-center gap-1 hover:underline">
+              <Plus size={12}/> 인증 추가
+            </button>
+          </div>
+
+          <div className="space-y-3 bg-purple-50 p-4 rounded-xl border border-purple-100">
+            <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2"><HelpCircle size={16}/> FAQ</h3>
+            {(hospitalForm.faq || []).map((item, idx) => (
+              <div key={idx} className="bg-white border rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-400">Q{idx + 1}</span>
+                  <button onClick={() => setHospitalForm({...hospitalForm, faq: (hospitalForm.faq||[]).filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+                </div>
+                <input
+                  placeholder="질문"
+                  value={item.question || ''}
+                  onChange={e => { const f = [...(hospitalForm.faq||[])]; f[idx] = {...f[idx], question: e.target.value}; setHospitalForm({...hospitalForm, faq: f}); }}
+                  className="w-full border p-2 rounded text-sm"
+                />
+                <textarea
+                  placeholder="답변"
+                  rows="2"
+                  value={item.answer || ''}
+                  onChange={e => { const f = [...(hospitalForm.faq||[])]; f[idx] = {...f[idx], answer: e.target.value}; setHospitalForm({...hospitalForm, faq: f}); }}
+                  className="w-full border p-2 rounded text-sm"
+                />
+              </div>
+            ))}
+            <button type="button" onClick={() => setHospitalForm({...hospitalForm, faq: [...(hospitalForm.faq||[]), {question: '', answer: ''}]})} className="text-purple-600 text-xs font-bold flex items-center gap-1 hover:underline">
+              <Plus size={12}/> FAQ 추가
+            </button>
+          </div>
+
+          <TranslationPanel
+            i18n={hospitalForm.i18n || {}}
+            onI18nChange={(newI18n) => setHospitalForm({...hospitalForm, i18n: newI18n})}
+            type="hospital"
+            entityId={editingHospitalId}
+            toast={toast}
+          />
         </div>
       </div>
     </div>

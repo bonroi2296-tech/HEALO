@@ -107,6 +107,9 @@ const nextConfig = {
   // ✅ 실험적 기능 (성능 최적화)
   experimental: {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
   },
 
   /**

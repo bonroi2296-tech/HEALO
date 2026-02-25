@@ -11,7 +11,7 @@
  */
 export const runtime = "nodejs";
 
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
 
 function randomUUID(): string {
@@ -26,6 +26,7 @@ function randomUUID(): string {
 }
 
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   try {
     const body = await request.json().catch(() => ({}));
     const inquiryId = body?.inquiryId != null

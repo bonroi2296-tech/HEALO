@@ -10,13 +10,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "../../../../src/lib/auth/requireAdminAuth";
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 
 /**
  * GET /api/admin/site-settings
  * 현재 사이트 설정 조회
  */
 export async function GET(request: NextRequest) {
+  assertSupabaseEnv();
   const apiPath = "/api/admin/site-settings [GET]";
 
   try {
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
  * Body: { logo_url?: string, hero_background_url?: string }
  */
 export async function PUT(request: NextRequest) {
+  assertSupabaseEnv();
   const apiPath = "/api/admin/site-settings [PUT]";
 
   try {

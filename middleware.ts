@@ -103,6 +103,33 @@ async function checkAdminInMiddleware(request: NextRequest): Promise<{
 }
 
 /**
+ * ✅ /partner 경로용: 로그인 세션 존재 여부만 체크
+ */
+async function checkSessionInMiddleware(request: NextRequest): Promise<boolean> {
+  try {
+    let response = NextResponse.next({ request: { headers: request.headers } });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll(); },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+            response = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          },
+        },
+      }
+    );
+    const { data: { user }, error } = await supabase.auth.getUser();
+    return !error && !!user;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * ✅ Middleware 실행
  */
 export async function middleware(request: NextRequest) {
@@ -127,28 +154,32 @@ export async function middleware(request: NextRequest) {
   // /admin 경로 보호 (서버 레벨)
   // ========================================
   if (pathname.startsWith("/admin")) {
-    // /admin/whoami는 진단용이므로 제외 (누구나 접근 가능)
     if (pathname === "/admin/whoami") {
       return NextResponse.next();
     }
 
-    // Admin 권한 체크
     const { isAdmin, email } = await checkAdminInMiddleware(request);
 
     if (!isAdmin) {
-      console.warn(
-        `[middleware] ❌ Unauthorized admin access blocked: ${pathname} | email: ${email || "none"}`
-      );
-
-      // /login으로 redirect
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[middleware] Admin access blocked: ${pathname} | ${email || "none"}`);
+      }
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname); // 원래 가려던 경로 저장
+      loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
+  }
 
-    console.log(
-      `[middleware] ✅ Admin access granted: ${pathname} | email: ${email}`
-    );
+  // ========================================
+  // /partner 경로 보호 (로그인 여부만 체크, 세부 권한은 GateClient에서)
+  // ========================================
+  if (pathname.startsWith("/partner")) {
+    const hasSession = await checkSessionInMiddleware(request);
+    if (!hasSession) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();

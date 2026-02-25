@@ -86,9 +86,11 @@ export async function requireAdminAuth(
     // ❌ 권한 없음: audit log 기록
     const pathname = new URL(request.url).pathname;
     
-    console.warn(
-      `[requireAdminAuth] ❌ Unauthorized access denied: ${pathname} | email: ${authResult.email || "none"} | error: ${authResult.error}`
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[requireAdminAuth] Unauthorized: ${pathname} | ${authResult.email || "none"}`
+      );
+    }
 
     // 백그라운드로 audit log 기록 (메인 로직 블로킹 방지)
     logAdminAction({
@@ -125,10 +127,9 @@ export async function requireAdminAuth(
     };
   }
 
-  // ✅ 권한 있음
-  console.log(
-    `[requireAdminAuth] ✅ Admin access granted: ${authResult.email} (reason: ${authResult.reason}, method: ${authResult.authMethod})`
-  );
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[requireAdminAuth] Granted: ${authResult.email}`);
+  }
 
   return { success: true, authResult };
 }

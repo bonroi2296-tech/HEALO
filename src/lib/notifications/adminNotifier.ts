@@ -96,12 +96,9 @@ function generateNotificationMessage(payload: AdminNotificationPayload): string 
  */
 async function sendSMS(to: string, message: string): Promise<NotificationResult> {
   try {
-    // ⚠️ 실제 발송하지 않음 (Console log만)
-    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📱 SMS 발송 (Mock Mode - 실제 발송 안됨)");
-    console.log(`수신: ${maskPhone(to)}`);
-    console.log(`내용:\n${message}`);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[SMS Mock] -> ${maskPhone(to)}`);
+    }
     
     // DB 기록을 위해 success=true 반환
     return {
@@ -143,7 +140,9 @@ async function sendAlimtalk(to: string, payload: AdminNotificationPayload): Prom
       created_at: new Date(payload.createdAt).toLocaleString("ko-KR"),
     };
     
-    console.log(`[Alimtalk] 발송 시도: ${maskPhone(to)}, 템플릿: ${templateCode}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[Alimtalk] -> ${maskPhone(to)}, template: ${templateCode}`);
+    }
     
     // 실제 API 호출 (벤더별로 다름)
     // const response = await fetch("https://api.alimtalk-vendor.com/send", {
@@ -190,7 +189,9 @@ function isRateLimited(inquiryId: number): boolean {
     const cooldown = 60 * 1000; // 1분
     
     if (elapsed < cooldown) {
-      console.log(`[Notify] Rate limited: inquiry ${inquiryId} (sent ${Math.floor(elapsed / 1000)}s ago)`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[Notify] Rate limited: inquiry ${inquiryId}`);
+      }
       return true;
     }
   }
@@ -243,7 +244,7 @@ async function logNotificationToDb(data: {
   recipientId?: string;
   recipientLabel: string;
   channel: NotificationProvider;
-  destination: string; // 마스킹된 전화번호
+  destination: string;
   status: "sent" | "failed" | "pending";
   error?: string;
   providerResponse?: Record<string, any>;
@@ -251,6 +252,10 @@ async function logNotificationToDb(data: {
   deliveryTimeMs?: number;
 }): Promise<void> {
   try {
+    const dedupeKey = data.inquiryId
+      ? `${data.inquiryId}:${data.channel}:${data.recipientId || data.destination}`
+      : null;
+
     await supabaseAdmin.from("admin_notification_logs").insert({
       inquiry_id: data.inquiryId || null,
       normalized_inquiry_id: data.normalizedInquiryId || null,
@@ -263,10 +268,13 @@ async function logNotificationToDb(data: {
       provider_response: data.providerResponse || null,
       message_preview: data.messagePreview ? data.messagePreview.substring(0, 100) : null,
       delivery_time_ms: data.deliveryTimeMs || null,
+      dedupe_key: dedupeKey,
     });
   } catch (error: any) {
-    console.error("[Notify] DB 로깅 실패 (무시):", error.message);
-    // 로깅 실패는 무시 (메인 로직 영향 없게)
+    if (error.code === "23505" && error.message?.includes("dedupe")) {
+      return;
+    }
+    console.error("[Notify] DB log failed:", error.message);
   }
 }
 
@@ -320,7 +328,9 @@ async function _sendAdminNotificationInternal(
     return;
   }
   
-  console.log(`[Notify] 수신자 ${recipients.length}명 (출처: ${recipients[0].source})`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[Notify] Recipients: ${recipients.length} (${recipients[0].source})`);
+  }
   
   // 3. 제공자 확인
   const provider = (process.env.NOTIFY_PROVIDER || "console") as NotificationProvider;
@@ -476,7 +486,9 @@ async function _sendAdminNotificationInternal(
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
   
-  console.log(`[Notify] Inquiry ${inquiryId}: ${successCount} sent, ${failCount} failed`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[Notify] #${inquiryId}: ${successCount} sent, ${failCount} failed`);
+  }
 }
 
 /**

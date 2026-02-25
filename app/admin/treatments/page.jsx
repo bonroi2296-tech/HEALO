@@ -66,12 +66,12 @@ const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
         </div>
       </div>
       {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-8 gap-2">
           {images.map((url, idx) => (
             <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
               <img src={url} alt="upload" className="w-full h-full object-cover" />
-              <button onClick={() => onRemove(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition shadow-sm">
-                <X size={12} />
+              <button onClick={() => onRemove(idx)} className="absolute top-0.5 right-0.5 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm">
+                <X size={10} />
               </button>
             </div>
           ))}
@@ -86,22 +86,26 @@ export default function TreatmentsPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [hospitalsList, setHospitalsList] = useState([]);
+  const [treatmentCounts, setTreatmentCounts] = useState({});
   const [treatmentsList, setTreatmentsList] = useState([]);
   const [treatmentsError, setTreatmentsError] = useState(null);
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [editingTreatmentId, setEditingTreatmentId] = useState(null);
-  const [treatmentForm, setTreatmentForm] = useState({ 
-    title: '', 
-    desc: '', 
-    fullDescription: '', 
-    priceMin: '', 
-    recoveryTime: '', 
-    benefits: [], 
-    tags: [], 
-    images: [],
-    displayOrder: null,
-    isPublished: true
-  });
+  const emptyTreatmentForm = { 
+    title: '', desc: '', fullDescription: '', 
+    priceMin: '', priceMax: '',
+    recoveryTimeMin: '', recoveryTimeMax: '',
+    sideEffects: [], sideEffectsDetail: '', precautions: [],
+    anesthesiaType: '', surgeryDurationMin: '', surgeryDurationMax: '',
+    requiredEquipment: [],
+    insuranceCoverage: false, insuranceCoverageDetail: '',
+    annualProcedureCount: '', successRate: '',
+    benefits: [], tags: [], images: [],
+    displayOrder: null, isPublished: true,
+    beforeAfterImages: [], priceIncludes: [],
+    i18n: {}
+  };
+  const [treatmentForm, setTreatmentForm] = useState(emptyTreatmentForm);
 
   // ✅ Admin API를 통한 병원 목록 조회
   const fetchHospitals = async () => {
@@ -124,7 +128,21 @@ export default function TreatmentsPage() {
       const result = await response.json();
 
       if (result.ok) {
-        setHospitalsList(result.hospitals || []);
+        // Sort: hospitals with treatments first
+        const hospitals = result.hospitals || [];
+        setHospitalsList(hospitals);
+
+        // Fetch treatment counts per hospital
+        try {
+          const countRes = await fetch('/api/admin/treatments?counts_only=true', {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+          });
+          const countData = await countRes.json();
+          if (countData.ok && countData.counts) {
+            setTreatmentCounts(countData.counts);
+          }
+        } catch {}
       }
     } catch (error) {
       console.error('[Treatments] ❌ Fetch hospitals exception:', error);
@@ -225,12 +243,28 @@ export default function TreatmentsPage() {
       desc: t.description || '',
       fullDescription: t.full_description || '',
       priceMin: t.price_min || '',
-      recoveryTime: '',
+      priceMax: t.price_max || '',
+      recoveryTimeMin: t.recovery_time_min || '',
+      recoveryTimeMax: t.recovery_time_max || '',
+      sideEffects: t.side_effects || [],
+      sideEffectsDetail: t.side_effects_detail || '',
+      precautions: t.precautions || [],
+      anesthesiaType: t.anesthesia_type || '',
+      surgeryDurationMin: t.surgery_duration_min || '',
+      surgeryDurationMax: t.surgery_duration_max || '',
+      requiredEquipment: t.required_equipment || [],
+      insuranceCoverage: t.insurance_coverage || false,
+      insuranceCoverageDetail: t.insurance_coverage_detail || '',
+      annualProcedureCount: t.annual_procedure_count || '',
+      successRate: t.success_rate || '',
       benefits: t.benefits || [],
       tags: t.tags || [],
       images: imagesArray,
       displayOrder: t.display_order,
-      isPublished: t.is_published !== undefined ? t.is_published : true
+      isPublished: t.is_published !== undefined ? t.is_published : true,
+      beforeAfterImages: Array.isArray(t.before_after_images) ? t.before_after_images : [],
+      priceIncludes: Array.isArray(t.price_includes) ? t.price_includes : [],
+      i18n: t.i18n || {}
     });
   };
 
@@ -247,12 +281,29 @@ export default function TreatmentsPage() {
       name: treatmentForm.title, 
       description: treatmentForm.desc, 
       full_description: treatmentForm.fullDescription, 
-      price_min: Number(treatmentForm.priceMin) || 0, 
+      price_min: Number(treatmentForm.priceMin) || 0,
+      price_max: treatmentForm.priceMax ? Number(treatmentForm.priceMax) : null,
+      recovery_time_min: treatmentForm.recoveryTimeMin ? Number(treatmentForm.recoveryTimeMin) : null,
+      recovery_time_max: treatmentForm.recoveryTimeMax ? Number(treatmentForm.recoveryTimeMax) : null,
+      side_effects: treatmentForm.sideEffects,
+      side_effects_detail: treatmentForm.sideEffectsDetail || null,
+      precautions: treatmentForm.precautions,
+      anesthesia_type: treatmentForm.anesthesiaType || null,
+      surgery_duration_min: treatmentForm.surgeryDurationMin ? Number(treatmentForm.surgeryDurationMin) : null,
+      surgery_duration_max: treatmentForm.surgeryDurationMax ? Number(treatmentForm.surgeryDurationMax) : null,
+      required_equipment: treatmentForm.requiredEquipment,
+      insurance_coverage: treatmentForm.insuranceCoverage,
+      insurance_coverage_detail: treatmentForm.insuranceCoverageDetail || null,
+      annual_procedure_count: treatmentForm.annualProcedureCount ? Number(treatmentForm.annualProcedureCount) : null,
+      success_rate: treatmentForm.successRate ? Number(treatmentForm.successRate) : null,
       benefits: treatmentForm.benefits, 
       tags: treatmentForm.tags, 
       images: imagesArray,
       display_order: treatmentForm.displayOrder ? Number(treatmentForm.displayOrder) : null,
-      is_published: treatmentForm.isPublished !== undefined ? treatmentForm.isPublished : true
+      is_published: treatmentForm.isPublished !== undefined ? treatmentForm.isPublished : true,
+      before_after_images: treatmentForm.beforeAfterImages || [],
+      price_includes: treatmentForm.priceIncludes || [],
+      i18n: treatmentForm.i18n || {}
     };
     
     try {
@@ -286,7 +337,7 @@ export default function TreatmentsPage() {
         toast.success("시술 정보가 저장되었습니다! 💉");
         setEditingTreatmentId(null); 
         await fetchTreatments(selectedHospitalId);
-        setTreatmentForm({ title: '', desc: '', fullDescription: '', priceMin: '', recoveryTime: '', benefits: [], tags: [], images: [], displayOrder: null, isPublished: true }); 
+        setTreatmentForm(emptyTreatmentForm); 
       } else {
         console.error('[Treatments] Save error:', result.error);
         toast.error("저장 실패: " + (result.detail || result.error));
@@ -341,6 +392,7 @@ export default function TreatmentsPage() {
   return (
     <TreatmentManager
       hospitalsList={hospitalsList}
+      treatmentCounts={treatmentCounts}
       selectedHospitalId={selectedHospitalId}
       setSelectedHospitalId={setSelectedHospitalId}
       fetchTreatments={fetchTreatments}

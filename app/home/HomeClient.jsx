@@ -8,20 +8,25 @@ import {
   CardListSection,
   PersonalConciergeCTA,
 } from "../../src/components.jsx";
+import { Leaf, ArrowRight } from "lucide-react";
 import { supabaseClient } from "../../src/lib/data/supabaseClient";
 import { mapHospitalRow, mapTreatmentRow } from "../../src/lib/mapper";
-import { getLocationColumn } from "../../src/lib/language";
+import { getLocationColumn, getCurrentLangCode } from "../../src/lib/language";
+import { getLangCodeFromCookie, t } from "../../src/lib/i18n";
 
 export default function HomeClient() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [featuredTreatments, setFeaturedTreatments] = useState([]);
-  const [featuredHospitals, setFeaturedHospitals] = useState([]);
+  const [partnerHospitals, setPartnerHospitals] = useState([]);
+  const [otherHospitals, setOtherHospitals] = useState([]);
   const [siteConfig, setSiteConfig] = useState({ logo: "", hero: "" });
   const [treatmentsError, setTreatmentsError] = useState(null);
   const [hospitalsError, setHospitalsError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const isDev = process.env.NODE_ENV !== "production";
+  const [langCode, setLangCode] = useState("en");
+  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -36,22 +41,25 @@ export default function HomeClient() {
         // ✅ 최적화 1: Promise.all로 병렬 fetch (순차 → 병렬)
         marks.fetchStart = performance.now();
         
+        const HOSPITAL_PUBLIC_COLS = `id,slug,name,location_en,location_kr,address_detail,description,tags,rating,reviews_count,images,thumbnail_image,gallery_images,latitude,longitude,operating_hours,doctor_profile,amenities,supported_languages,specialties,medical_equipment,certifications,insurance_accepted,insurance_details,annual_surgery_count,establishment_date,doctor_count,external_ratings,is_published,display_order,created_at,i18n,is_partner`;
+        const TREATMENT_PUBLIC_COLS = `id,slug,name,description,full_description,hospital_id,price_min,price_max,tags,images,benefits,i18n`;
+
         const [settingsResult, treatmentsResult, hospitalsResult] = await Promise.all([
-          supabaseClient.from("site_settings").select("*").single(),
+          supabaseClient.from("site_settings").select("site_name,hero_title,hero_subtitle,logo_url,primary_color,hero_background_url").single(),
           supabaseClient
             .from("treatments")
-            .select(`*, hospitals(slug, name, location:${locCol})`)
+            .select(`${TREATMENT_PUBLIC_COLS}, hospitals(slug, name, location:${locCol}, location_kr, location_en, i18n)`)
             .eq("is_published", true)
             .order("display_order", { ascending: true, nullsFirst: false })
             .order("created_at", { ascending: false })
             .limit(4),
           supabaseClient
             .from("hospitals")
-            .select(`*, location:${locCol}`)
+            .select(`${HOSPITAL_PUBLIC_COLS}, location:${locCol}`)
             .eq("is_published", true)
             .order("display_order", { ascending: true, nullsFirst: false })
             .order("created_at", { ascending: false })
-            .limit(4),
+            .limit(12),
         ]);
 
         marks.fetchEnd = performance.now();
@@ -71,7 +79,8 @@ export default function HomeClient() {
         } else {
           setTreatmentsError(null);
           if (treatmentsResult.data) {
-            const mapped = treatmentsResult.data.map(mapTreatmentRow).filter(Boolean);
+            const lang = getCurrentLangCode();
+            const mapped = treatmentsResult.data.map(r => mapTreatmentRow(r, lang)).filter(Boolean);
             setFeaturedTreatments(mapped);
             marks.treatmentsRendered = performance.now();
           }
@@ -84,8 +93,10 @@ export default function HomeClient() {
         } else {
           setHospitalsError(null);
           if (hospitalsResult.data) {
-            const mapped = hospitalsResult.data.map(mapHospitalRow).filter(Boolean);
-            setFeaturedHospitals(mapped);
+            const hLang = getCurrentLangCode();
+            const mapped = hospitalsResult.data.map(r => mapHospitalRow(r, hLang)).filter(Boolean);
+            setPartnerHospitals(mapped.filter(h => h.is_partner));
+            setOtherHospitals(mapped.filter(h => !h.is_partner));
             marks.hospitalsRendered = performance.now();
           }
         }
@@ -112,7 +123,7 @@ export default function HomeClient() {
   return (
     <>
       <HeroSection
-        setView={() => router.push("/treatments")}
+        setView={() => router.push(searchTerm.trim() ? `/search?q=${encodeURIComponent(searchTerm.trim())}` : "/treatments")}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         siteConfig={siteConfig}
@@ -142,7 +153,7 @@ export default function HomeClient() {
         <>
           <div>
             <CardListSection
-              title="HEALO's Signature Collection"
+              title={t("home.signatureCollection", langCode)}
               items={featuredTreatments}
               onCardClick={(id) => {
                 const item = featuredTreatments.find((entry) => entry.id === id);
@@ -165,19 +176,35 @@ export default function HomeClient() {
             )}
           </div>
 
-          <CardListSection
-            title="Official Medical Partners"
-            items={featuredHospitals}
-            onCardClick={(id) => {
-              const item = featuredHospitals.find((entry) => entry.id === id);
-              const slugOrId = item?.slug || item?.id || id;
-              router.push(`/hospitals/${slugOrId}`);
-            }}
-            type="hospital"
-          />
+          {partnerHospitals.length > 0 && (
+            <CardListSection
+              title={t("home.partnerHospitals", langCode)}
+              items={partnerHospitals}
+              onCardClick={(id) => {
+                const item = partnerHospitals.find((entry) => entry.id === id);
+                const slugOrId = item?.slug || item?.id || id;
+                router.push(`/hospitals/${slugOrId}`);
+              }}
+              type="hospital"
+              showPartnerBadge
+            />
+          )}
+
+          {otherHospitals.length > 0 && (
+            <CardListSection
+              title={t("home.otherHospitals", langCode)}
+              items={otherHospitals}
+              onCardClick={(id) => {
+                const item = otherHospitals.find((entry) => entry.id === id);
+                const slugOrId = item?.slug || item?.id || id;
+                router.push(`/hospitals/${slugOrId}`);
+              }}
+              type="hospital"
+            />
+          )}
           {isDev && (
             <div className="max-w-6xl mx-auto px-4 mt-2">
-              {featuredHospitals.length === 0 && !hospitalsError && (
+              {partnerHospitals.length === 0 && otherHospitals.length === 0 && !hospitalsError && (
                 <p className="text-xs text-gray-500">No hospitals loaded</p>
               )}
               {hospitalsError && (
@@ -187,6 +214,27 @@ export default function HomeClient() {
               )}
             </div>
           )}
+
+          {/* Korean Traditional Medicine Banner */}
+          <section className="max-w-6xl mx-auto px-4 mt-8 md:mt-12">
+            <div
+              onClick={() => router.push("/specialties/korean-medicine")}
+              className="rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 p-5 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 cursor-pointer hover:shadow-xl transition group"
+            >
+              <div className="flex items-center gap-4 text-white">
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                  <Leaf size={24} className="text-emerald-200" />
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-extrabold">{t("home.koreanMedicine", langCode)}</h3>
+                  <p className="text-white/70 text-sm mt-0.5">{t("home.koreanMedicineDesc", langCode)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-white font-bold text-sm bg-white/15 px-5 py-2.5 rounded-full group-hover:bg-white/25 transition shrink-0">
+                {t("km.viewAll", langCode)} <ArrowRight size={16} />
+              </div>
+            </div>
+          </section>
 
           <div className="mt-4 md:mt-10">
             <PersonalConciergeCTA onClick={() => router.push("/inquiry")} />

@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
 import { requireAdminAuth } from "../../../../../src/lib/auth/requireAdminAuth";
-import { supabaseAdmin } from "../../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../../src/lib/rag/supabaseAdmin";
 import { maskPhone } from "../../../../../src/lib/notifications/recipients";
 
 // 테스트 알림 발송 함수 import
@@ -108,6 +108,7 @@ async function sendTestNotification(data: {
  * }
  */
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   // ✅ 관리자 인증 확인
   const auth = await requireAdminAuth(request);
   if (!auth.success) {

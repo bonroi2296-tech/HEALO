@@ -1,0 +1,412 @@
+/**
+ * HEALO: 공통 AI 응답 생성 로직
+ *
+ * /api/chat (스트리밍) 과 /api/public/chat/message (비스트리밍) 모두 사용
+ * RAG: rag_search_chunks_v1_1 RPC 전용 (무필터 fallback 금지)
+ * playbook_pattern 회수/사용 로그 수집 (PLAYBOOK-ANALYTICS-V1)
+ */
+
+import "server-only";
+
+import { createHash } from "crypto";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
+import { supabaseAdmin } from "../rag/supabaseAdmin";
+
+type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
+
+const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai").toLowerCase();
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const EMBEDDING_DIMS = 768;
+
+const TIER_LABELS: Record<number, string> = {
+  1: "Official",
+  2: "Partner-verified",
+  3: "Public source",
+};
+
+export function getModel() {
+  if (LLM_PROVIDER === "google") {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return null;
+    return google("gemini-2.5-flash") as any;
+  }
+  if (!process.env.OPENAI_API_KEY) return null;
+  return openai("gpt-4o-mini") as any;
+}
+
+export function getModelName() {
+  return LLM_PROVIDER === "google" ? "gemini-2.5-flash" : "gpt-4o-mini";
+}
+
+export async function getEmbedding(text: string): Promise<number[] | null> {
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: { parts: [{ text }] },
+        taskType: "RETRIEVAL_QUERY",
+        outputDimensionality: EMBEDDING_DIMS,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.embedding?.values ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function computeThreadHash(threadId: string): number {
+  const hash = createHash("sha256").update(threadId).digest();
+  return (hash[0] | (hash[1] << 8)) % 100;
+}
+
+export async function fetchRagChunks(query: string, lang: string, threadId?: string): Promise<any[]> {
+  const TOTAL_LIMIT = 6;
+  const PLAYBOOK_LIMIT = 3;
+
+  const abEnabled = !!threadId;
+  const threadHash = threadId ? computeThreadHash(threadId) : 0;
+
+  const embedding = await getEmbedding(query);
+  let playbookChunks: any[] = [];
+  let generalChunks: any[] = [];
+  const seenIds = new Set<string>();
+
+  if (embedding) {
+    const { data: pbData } = await supabaseAdmin.rpc("rag_search_chunks_v1_1", {
+      query_embedding: JSON.stringify(embedding),
+      match_count: PLAYBOOK_LIMIT,
+      p_lang: lang,
+      p_source_type: "playbook_pattern",
+      p_partner_only: false,
+      p_ab_enabled: abEnabled,
+      p_thread_hash: threadHash,
+    });
+    if (pbData?.length) {
+      playbookChunks = pbData.map((row: any) => {
+        seenIds.add(row.chunk_id);
+        return {
+          content: row.content,
+          trust_tier: row.trust_tier,
+          source_label: row.source_label,
+          doc_title: row.doc_title,
+          doc_source_type: row.doc_source_type,
+          doc_source_id: row.doc_source_id,
+          rag_documents: { source_type: row.doc_source_type, title: row.doc_title },
+        };
+      });
+    }
+
+    const remaining = TOTAL_LIMIT - playbookChunks.length;
+    if (remaining > 0) {
+      const { data: genData } = await supabaseAdmin.rpc("rag_search_chunks_v1_1", {
+        query_embedding: JSON.stringify(embedding),
+        match_count: remaining + 2,
+        p_lang: lang,
+        p_source_type: null,
+        p_partner_only: false,
+        p_ab_enabled: abEnabled,
+        p_thread_hash: threadHash,
+      });
+      if (genData?.length) {
+        for (const row of genData) {
+          if (seenIds.has(row.chunk_id)) continue;
+          if (generalChunks.length >= remaining) break;
+          seenIds.add(row.chunk_id);
+          generalChunks.push({
+            content: row.content,
+            trust_tier: row.trust_tier,
+            source_label: row.source_label,
+            doc_title: row.doc_title,
+            doc_source_type: row.doc_source_type,
+            doc_source_id: row.doc_source_id,
+            rag_documents: { source_type: row.doc_source_type, title: row.doc_title },
+          });
+        }
+      }
+    }
+  }
+
+  return [...playbookChunks, ...generalChunks];
+}
+
+export function buildContext(chunks: any[]) {
+  if (!chunks?.length) return { text: "", hasTier3: false, usedPatternIds: [] as string[] };
+  let hasTier3 = false;
+  const usedPatternIds: string[] = [];
+  const lines = chunks.map((c) => {
+    const tier = c?.trust_tier ?? 3;
+    if (tier >= 3) hasTier3 = true;
+    const tierLabel = TIER_LABELS[tier] || TIER_LABELS[3];
+    const sourceLabel = c?.source_label || c?.rag_documents?.source_type || "unknown";
+    const title = c?.rag_documents?.title || c?.doc_title || "";
+    const srcType = c?.doc_source_type || c?.rag_documents?.source_type;
+    const srcId = c?.doc_source_id || c?.rag_documents?.source_id;
+    const patternMarker = srcType === "playbook_pattern" && srcId ? `\n[PATTERN_ID:${srcId}]` : "";
+    if (srcType === "playbook_pattern" && srcId) usedPatternIds.push(srcId);
+    return `[Tier ${tier} | ${tierLabel} | ${sourceLabel}${title ? ` | ${title}` : ""}]${patternMarker}\n${String(c.content || "").trim()}`;
+  });
+  return { text: lines.join("\n\n"), hasTier3, usedPatternIds };
+}
+
+export function buildSystemPrompt(contextText: string, hasTier3: boolean): string {
+  return [
+    "You are a medical concierge assistant for HEALO.",
+    "Do not provide diagnosis, medical advice, or guarantees.",
+    "Do not make definitive claims about pricing, rankings, or treatment outcomes.",
+    "Ask clarifying questions when constraints are missing.",
+    "Primary objective: guide the user to submit an inquiry or connect with a human coordinator.",
+    "If the user explicitly asks for a human agent, respond that you will connect them with a coordinator.",
+    "If relevant, reference the provided context briefly.",
+    "When citing context, prefer higher-tier (Tier 1/2) sources over lower-tier (Tier 3) sources.",
+    "",
+    contextText ? "Context:\n" + contextText : "",
+    hasTier3
+      ? "\nIMPORTANT: Some context is from public/unverified sources (Tier 3). When using Tier 3 information, include a note that it is based on publicly available information and may not be fully verified."
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+const HAND_OFF_PATTERNS = [
+  /\b(?:human|real\s*person|agent|coordinator|representative|staff|operator)\b/i,
+  /\b(?:사람|상담[원사]|직원|담당자|연결)\b/,
+  /\b(?:人間|担当者|スタッフ|オペレーター)\b/,
+];
+
+const HIGH_RISK_PATTERNS = [
+  /\b(?:emergency|urgent|severe\s*pain|chest\s*pain|breathing\s*difficulty|suicidal|overdose)\b/i,
+  /\b(?:응급|긴급|극심한|자살|과다복용|호흡곤란)\b/,
+];
+
+export function detectHandOff(text: string): { requested: boolean; reason: string | null } {
+  for (const p of HAND_OFF_PATTERNS) {
+    if (p.test(text)) return { requested: true, reason: "user_requested_human" };
+  }
+  for (const p of HIGH_RISK_PATTERNS) {
+    if (p.test(text)) return { requested: true, reason: "high_risk_detected" };
+  }
+  return { requested: false, reason: null };
+}
+
+function sha256(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+function extractRetrievedPatternIds(chunks: any[]): string[] {
+  const ids: string[] = [];
+  for (const c of chunks) {
+    const srcType = c?.doc_source_type || c?.rag_documents?.source_type;
+    const srcId = c?.doc_source_id || c?.rag_documents?.source_id;
+    if (srcType === "playbook_pattern" && srcId && !ids.includes(srcId)) {
+      ids.push(srcId);
+    }
+  }
+  return ids;
+}
+
+export interface ChatReplyResult {
+  reply: string;
+  ragChunks: any[];
+  error?: string;
+  _analytics?: {
+    retrievedPatternIds: string[];
+    usedPatternIds: string[];
+    declaredUsedPatternIds: string[];
+    analyticsFallback: boolean;
+    ragScoring: string;
+    latencyMs: number;
+  };
+}
+
+const JSON_OUTPUT_INSTRUCTION = `
+IMPORTANT: You MUST respond with ONLY a valid JSON object (no markdown fences, no extra text).
+Schema:
+{
+  "answer": "Your full answer text to the user",
+  "used_pattern_ids": ["<PATTERN_ID values you actually used as basis — only from [PATTERN_ID:xxx] markers in context, empty array if none>"],
+  "used_sources": [{"type":"official|partner|public|playbook_pattern","label":"source name","url":"optional url or null"}]
+}
+Only include a PATTERN_ID in used_pattern_ids if you directly used that playbook context to form your answer.
+`.trim();
+
+function parseStructuredReply(
+  raw: string,
+  injectedPatternIds: string[]
+): { answer: string; declaredUsedIds: string[]; fallback: boolean } {
+  try {
+    let jsonStr = raw.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+
+    const parsed = JSON.parse(jsonStr);
+    if (typeof parsed.answer !== "string" || !parsed.answer) {
+      throw new Error("missing answer field");
+    }
+
+    const declared: string[] = (Array.isArray(parsed.used_pattern_ids) ? parsed.used_pattern_ids : [])
+      .filter((id: any) => typeof id === "string" && injectedPatternIds.includes(id));
+
+    return { answer: parsed.answer, declaredUsedIds: declared, fallback: false };
+  } catch {
+    return { answer: raw, declaredUsedIds: [], fallback: true };
+  }
+}
+
+/**
+ * 비스트리밍 AI 응답 생성 (thread 기반 채팅용)
+ * V1.1: 모델에 JSON 출력 강제 → used_pattern_ids 선언 기반 판정
+ */
+export async function generateChatReply(
+  messages: ChatMessage[],
+  query: string,
+  lang: string,
+  threadId?: string
+): Promise<ChatReplyResult> {
+  const t0 = Date.now();
+  let ragScoring = "none";
+
+  try {
+    const ragChunks = await fetchRagChunks(query, lang, threadId);
+    ragScoring = ragChunks.length > 0 ? "vector_cosine_similarity" : "no_results";
+    const { text: contextText, hasTier3, usedPatternIds: injectedPatternIds } = buildContext(ragChunks);
+    const systemPrompt = buildSystemPrompt(contextText, hasTier3);
+    const retrievedPatternIds = extractRetrievedPatternIds(ragChunks);
+
+    const model = getModel();
+    if (!model) {
+      return {
+        reply: "I'm sorry, the AI service is temporarily unavailable. Please try again later.",
+        ragChunks,
+        error: "model_unavailable",
+        _analytics: {
+          retrievedPatternIds,
+          usedPatternIds: injectedPatternIds,
+          declaredUsedPatternIds: [],
+          analyticsFallback: true,
+          ragScoring,
+          latencyMs: Date.now() - t0,
+        },
+      };
+    }
+
+    const fullSystemPrompt = injectedPatternIds.length > 0
+      ? systemPrompt + "\n\n" + JSON_OUTPUT_INSTRUCTION
+      : systemPrompt;
+
+    const result = await generateText({
+      model,
+      system: fullSystemPrompt,
+      messages: messages as any,
+    });
+
+    let finalReply: string;
+    let declaredUsedIds: string[];
+    let fallback: boolean;
+
+    if (injectedPatternIds.length > 0) {
+      const parsed = parseStructuredReply(result.text, injectedPatternIds);
+      finalReply = parsed.answer;
+      declaredUsedIds = parsed.declaredUsedIds;
+      fallback = parsed.fallback;
+    } else {
+      finalReply = result.text;
+      declaredUsedIds = [];
+      fallback = false;
+    }
+
+    return {
+      reply: finalReply,
+      ragChunks,
+      _analytics: {
+        retrievedPatternIds,
+        usedPatternIds: fallback ? injectedPatternIds : declaredUsedIds,
+        declaredUsedPatternIds: declaredUsedIds,
+        analyticsFallback: fallback,
+        ragScoring,
+        latencyMs: Date.now() - t0,
+      },
+    };
+  } catch (err: any) {
+    console.error("[generateChatReply] error:", err.message);
+    return {
+      reply: "I'm sorry, something went wrong. Please try again.",
+      ragChunks: [],
+      error: err.message,
+      _analytics: {
+        retrievedPatternIds: [],
+        usedPatternIds: [],
+        declaredUsedPatternIds: [],
+        analyticsFallback: true,
+        ragScoring,
+        latencyMs: Date.now() - t0,
+      },
+    };
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * playbook_usage_events 기록
+ * Promise.race: 최대 200ms 대기 후 응답 반환 (누락 방지)
+ */
+export async function logPlaybookUsage(params: {
+  threadId?: string | null;
+  messageId?: string | null;
+  language: string;
+  queryText: string;
+  model?: string | null;
+  analytics: NonNullable<ChatReplyResult["_analytics"]>;
+  handoffRequested: boolean;
+}): Promise<void> {
+  const {
+    threadId, messageId, language, queryText, model,
+    analytics, handoffRequested,
+  } = params;
+
+  const retrievedPatternIds = analytics.retrievedPatternIds;
+  if (retrievedPatternIds.length === 0 && !handoffRequested) return;
+
+  const declaredIds = analytics.declaredUsedPatternIds;
+  const used = declaredIds.length > 0;
+  const usedPatternId = declaredIds[0] || null;
+
+  const insertPromise = supabaseAdmin
+    .from("playbook_usage_events")
+    .insert({
+      thread_id: threadId || null,
+      message_id: messageId || null,
+      language,
+      query_text_hash: sha256(queryText),
+      query_len: queryText.length,
+      model: model || null,
+      retrieved_count: retrievedPatternIds.length,
+      retrieved_pattern_ids: retrievedPatternIds,
+      used,
+      used_pattern_id: usedPatternId,
+      handoff_requested: handoffRequested,
+      rag_scoring: analytics.ragScoring,
+      latency_ms: analytics.latencyMs,
+      metadata: {
+        declared_used_pattern_ids: declaredIds,
+        analytics_fallback: analytics.analyticsFallback,
+      },
+    })
+    .then(({ error }) => {
+      if (error) console.error("[logPlaybookUsage] insert error:", error.message);
+    })
+    .catch((err: any) => {
+      console.error("[logPlaybookUsage] unexpected:", err.message);
+    });
+
+  await Promise.race([insertPromise, sleep(200)]);
+}

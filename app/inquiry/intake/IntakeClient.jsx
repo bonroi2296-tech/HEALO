@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, UploadCloud, File, X } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';
-import { supabase } from '../../../src/supabase';
+
 
 const BODY_PARTS = ['knee', 'back', 'neck', 'shoulder', 'hip', 'wrist', 'ankle', 'head', 'chest', 'abdomen', 'other'];
 const DURATIONS = ['<1w', '1-4w', '1-6m', '6m-1y', '1y+'];
@@ -55,9 +55,14 @@ export function InquiryIntakePage({ setView }) {
       let extraPaths = [];
       if (files.length) {
         for (const file of files) {
-          const path = `inquiry/${Date.now()}_${file.name}`;
-          const { error } = await supabase.storage.from('attachments').upload(path, file);
-          if (!error) extraPaths.push({ path, name: file.name, type: file.type || null });
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          const uploadRes = await fetch('/api/attachments/upload', {
+            method: 'POST',
+            body: uploadForm,
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.ok) extraPaths.push({ path: uploadResult.path, name: uploadResult.name, type: uploadResult.type || null });
         }
       }
 

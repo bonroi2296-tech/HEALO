@@ -19,61 +19,61 @@ export const HospitalCreateSchema = z.object({
   location_kr: z.string().max(100).optional().nullable(),
   location_en: z.string().max(100).optional().nullable(),
   address_detail: z.string().max(500).optional().nullable(),
+  website: z.string().max(500).optional().nullable(),
   description: z.string().optional().nullable(),
   latitude: z.number().min(-90).max(90).optional().nullable(),
   longitude: z.number().min(-180).max(180).optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
-  images: z.array(z.string().url("이미지 URL이 유효하지 않습니다")).optional().default([]),
-  // New image fields
-  thumbnail_image: z.string().url("썸네일 URL이 유효하지 않습니다").optional().nullable(),
-  gallery_images: z.array(z.string().url("갤러리 이미지 URL이 유효하지 않습니다")).optional().default([]),
+  images: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((s) => typeof s === "string" && s.trim()) : []),
+    z.array(z.string()).default([])
+  ),
+  thumbnail_image: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
+    z.string().nullable().optional()
+  ),
+  gallery_images: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((s) => typeof s === "string" && s.trim()) : []),
+    z.array(z.string()).default([])
+  ),
   supported_languages: z.array(z.string()).optional().default([]),
   amenities: z.array(z.string()).optional().default([]),
   specialties: z.array(z.string()).optional().default([]),
-  operating_hours: z.object({
-    mon_fri: z.string().optional(),
-    sat: z.string().optional(),
-  }).optional().nullable(),
-  doctor_profile: z.object({
-    name: z.string().optional(),
-    title: z.string().optional(),
-    image: z.string().optional(),
-    school: z.string().optional(),
-    years: z.string().optional(),
-    specialties: z.array(z.string()).optional(),
-    heroMetric: z.object({
-      value: z.string().optional(),
-      label: z.string().optional(),
-    }).optional(),
-  }).optional().nullable(),
+  operating_hours: z.record(z.any()).optional().nullable(),
+  doctor_profile: z.record(z.any()).optional().nullable(),
   display_order: z.number().int().min(0).optional().nullable(),
   is_published: z.boolean().optional().default(true),
   // Extended metadata fields
   business_registration_number: z.string().optional().nullable(),
   medical_institution_code: z.string().optional().nullable(),
-  certifications: z.array(z.object({
-    type: z.string(),
-    issuer: z.string(),
-    date: z.string().optional(),
-    valid_until: z.string().optional(),
-  })).optional().default([]),
+  certifications: z.array(z.any()).optional().default([]),
   medical_equipment: z.array(z.string()).optional().default([]),
   insurance_accepted: z.boolean().optional().default(false),
   insurance_details: z.record(z.any()).optional().nullable(),
-  annual_surgery_count: z.number().int().min(0).optional().nullable(),
+  annual_surgery_count: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0).nullable().optional()
+  ),
   establishment_date: z.string().optional().nullable(),
-  total_staff_count: z.number().int().min(0).optional().nullable(),
-  doctor_count: z.number().int().min(0).optional().nullable(),
-  external_ratings: z.object({
-    naver: z.object({
-      rating: z.number().min(0).max(5).optional(),
-      count: z.number().int().min(0).optional(),
-    }).optional(),
-    kakao: z.object({
-      rating: z.number().min(0).max(5).optional(),
-      count: z.number().int().min(0).optional(),
-    }).optional(),
-  }).optional().nullable(),
+  total_staff_count: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0).nullable().optional()
+  ),
+  doctor_count: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0).nullable().optional()
+  ),
+  external_ratings: z.record(z.any()).optional().nullable(),
+  faq: z.array(z.object({
+    question: z.string().default(""),
+    answer: z.string().default(""),
+  })).optional().default([]),
+  name_kr: z.string().optional().nullable(),
+  description_kr: z.string().optional().nullable(),
+  tags_kr: z.array(z.string()).optional().default([]),
+  specialties_kr: z.array(z.string()).optional().default([]),
+  i18n: z.record(z.any()).optional().default({}),
+  is_partner: z.boolean().optional().default(false),
 });
 
 export const HospitalUpdateSchema = HospitalCreateSchema.partial();
@@ -96,10 +96,18 @@ const TreatmentBaseSchema = z.object({
   price_max: z.number().int().min(0, "가격은 0 이상이어야 합니다").optional().nullable(),
   benefits: z.array(z.string()).optional().default([]),
   tags: z.array(z.string()).optional().default([]),
-  images: z.array(z.string().url("이미지 URL이 유효하지 않습니다")).optional().default([]),
-  // New image fields
-  thumbnail_image: z.string().url("썸네일 URL이 유효하지 않습니다").optional().nullable(),
-  gallery_images: z.array(z.string().url("갤러리 이미지 URL이 유효하지 않습니다")).optional().default([]),
+  images: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((s) => typeof s === "string" && s.trim()) : []),
+    z.array(z.string()).default([])
+  ),
+  thumbnail_image: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
+    z.string().nullable().optional()
+  ),
+  gallery_images: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((s) => typeof s === "string" && s.trim()) : []),
+    z.array(z.string()).default([])
+  ),
   display_order: z.number().int().min(0).optional().nullable(),
   is_published: z.boolean().optional().default(true),
   // Extended metadata fields
@@ -119,6 +127,16 @@ const TreatmentBaseSchema = z.object({
   success_rate: z.number().min(0).max(100).optional().nullable(),
   similar_treatments: z.array(z.string().uuid()).optional().default([]),
   comparison_data: z.record(z.any()).optional().nullable(),
+  before_after_images: z.array(z.object({
+    before: z.string(),
+    after: z.string(),
+    caption: z.string().optional(),
+  })).optional().default([]),
+  price_includes: z.array(z.string()).optional().default([]),
+  name_kr: z.string().optional().nullable(),
+  description_kr: z.string().optional().nullable(),
+  tags_kr: z.array(z.string()).optional().default([]),
+  i18n: z.record(z.any()).optional().default({}),
 });
 
 // Create schema with refinements

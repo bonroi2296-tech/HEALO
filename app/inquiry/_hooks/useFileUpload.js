@@ -1,8 +1,7 @@
 /**
- * 파일 업로드 커스텀 훅
+ * 파일 업로드 커스텀 훅 (서버 경유)
  */
 import { useState, useCallback } from 'react';
-import { supabase } from '../../../src/supabase';
 
 export function useFileUpload() {
   const [uploading, setUploading] = useState(false);
@@ -15,23 +14,27 @@ export function useFileUpload() {
     setUploadError(null);
 
     try {
-      const filePath = `inquiry/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file);
+      const formData = new FormData();
+      formData.append('file', file);
 
-      if (uploadError) throw uploadError;
+      const res = await fetch('/api/attachments/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await res.json();
+
+      if (!result.ok) throw new Error(result.error || 'Upload failed');
 
       const attachmentsList = [
         {
-          path: filePath,
-          name: file.name,
-          type: file.type || null,
+          path: result.path,
+          name: result.name,
+          type: result.type || null,
         },
       ];
 
       setUploading(false);
-      return { attachmentPath: filePath, attachmentsList };
+      return { attachmentPath: result.path, attachmentsList };
     } catch (error) {
       console.error('File upload error:', error);
       setUploadError(error);

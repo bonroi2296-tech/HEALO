@@ -31,6 +31,7 @@ import {
   TreatmentUpdateSchema,
   validationErrorResponse,
 } from "../../../../src/lib/validation/admin";
+import { extractKrFields, triggerMultiLangTranslation } from "../../../../src/lib/translate";
 
 /**
  * GET: 시술 목록 조회 (관리자 전용)
@@ -63,11 +64,25 @@ export async function GET(request: NextRequest) {
   // ========================================
   const { searchParams } = new URL(request.url);
   const hospitalId = searchParams.get("hospital_id");
+  const countsOnly = searchParams.get("counts_only") === "true";
 
   // ========================================
   // 3. DB 조회
   // ========================================
   try {
+    if (countsOnly) {
+      const { data, error } = await supabaseAdmin
+        .from("treatments")
+        .select("hospital_id");
+      if (error) {
+        return Response.json({ ok: false, error: error.message }, { status: 500 });
+      }
+      const counts: Record<string, number> = {};
+      for (const row of data || []) {
+        counts[row.hospital_id] = (counts[row.hospital_id] || 0) + 1;
+      }
+      return Response.json({ ok: true, counts });
+    }
     let query = supabaseAdmin
       .from("treatments")
       .select("*", { count: "exact" })
@@ -192,18 +207,41 @@ export async function POST(request: NextRequest) {
   // ========================================
   // 4. Payload 구성
   // ========================================
-  const payload = {
+  const payload: Record<string, any> = {
     hospital_id: validatedData.hospital_id.trim(),
     name: validatedData.name.trim(),
     slug,
     description: validatedData.description || null,
     full_description: validatedData.full_description || null,
     price_min: validatedData.price_min,
+    price_max: validatedData.price_max ?? null,
     benefits: validatedData.benefits || [],
     tags: validatedData.tags || [],
     images: validatedData.images || [],
+    thumbnail_image: validatedData.thumbnail_image ?? null,
+    gallery_images: validatedData.gallery_images || [],
     display_order: validatedData.display_order || null,
     is_published: validatedData.is_published,
+    recovery_time_min: validatedData.recovery_time_min ?? null,
+    recovery_time_max: validatedData.recovery_time_max ?? null,
+    side_effects: validatedData.side_effects || [],
+    side_effects_detail: validatedData.side_effects_detail ?? null,
+    precautions: validatedData.precautions || [],
+    anesthesia_type: validatedData.anesthesia_type ?? null,
+    surgery_duration_min: validatedData.surgery_duration_min ?? null,
+    surgery_duration_max: validatedData.surgery_duration_max ?? null,
+    required_equipment: validatedData.required_equipment || [],
+    insurance_coverage: validatedData.insurance_coverage ?? false,
+    insurance_coverage_detail: validatedData.insurance_coverage_detail ?? null,
+    annual_procedure_count: validatedData.annual_procedure_count ?? null,
+    success_rate: validatedData.success_rate ?? null,
+    before_after_images: validatedData.before_after_images || [],
+    price_includes: validatedData.price_includes || [],
+    ...extractKrFields({
+      name: validatedData.name,
+      description: validatedData.description,
+      tags: validatedData.tags,
+    }),
   };
 
   // ========================================
@@ -241,6 +279,12 @@ export async function POST(request: NextRequest) {
     }).catch((err) => {
       console.error("[admin/treatments] Audit log failed:", err.message);
     });
+
+    if (payload.name || payload.description || payload.tags) {
+      triggerMultiLangTranslation("treatments", data.id, payload, supabaseAdmin).catch((e) =>
+        console.error("[admin/treatments] translation error:", e.message)
+      );
+    }
 
     // ========================================
     // 7. 응답 반환
@@ -363,15 +407,36 @@ export async function PATCH(request: NextRequest) {
 
     if (validatedData.hospital_id !== undefined) payload.hospital_id = validatedData.hospital_id;
     if (validatedData.name !== undefined) payload.name = validatedData.name.trim();
-    payload.slug = finalSlug; // 항상 포함 (유지 또는 변경)
+    payload.slug = finalSlug;
     if (validatedData.description !== undefined) payload.description = validatedData.description;
     if (validatedData.full_description !== undefined) payload.full_description = validatedData.full_description;
     if (validatedData.price_min !== undefined) payload.price_min = validatedData.price_min;
+    if (validatedData.price_max !== undefined) payload.price_max = validatedData.price_max;
     if (validatedData.benefits !== undefined) payload.benefits = validatedData.benefits ?? [];
     if (validatedData.tags !== undefined) payload.tags = validatedData.tags ?? [];
     if (validatedData.images !== undefined) payload.images = validatedData.images ?? [];
+    if (validatedData.thumbnail_image !== undefined) payload.thumbnail_image = validatedData.thumbnail_image;
+    if (validatedData.gallery_images !== undefined) payload.gallery_images = validatedData.gallery_images ?? [];
     if (validatedData.display_order !== undefined) payload.display_order = validatedData.display_order;
     if (validatedData.is_published !== undefined) payload.is_published = validatedData.is_published;
+    if (validatedData.recovery_time_min !== undefined) payload.recovery_time_min = validatedData.recovery_time_min;
+    if (validatedData.recovery_time_max !== undefined) payload.recovery_time_max = validatedData.recovery_time_max;
+    if (validatedData.side_effects !== undefined) payload.side_effects = validatedData.side_effects ?? [];
+    if (validatedData.side_effects_detail !== undefined) payload.side_effects_detail = validatedData.side_effects_detail;
+    if (validatedData.precautions !== undefined) payload.precautions = validatedData.precautions ?? [];
+    if (validatedData.anesthesia_type !== undefined) payload.anesthesia_type = validatedData.anesthesia_type;
+    if (validatedData.surgery_duration_min !== undefined) payload.surgery_duration_min = validatedData.surgery_duration_min;
+    if (validatedData.surgery_duration_max !== undefined) payload.surgery_duration_max = validatedData.surgery_duration_max;
+    if (validatedData.required_equipment !== undefined) payload.required_equipment = validatedData.required_equipment ?? [];
+    if (validatedData.insurance_coverage !== undefined) payload.insurance_coverage = validatedData.insurance_coverage;
+    if (validatedData.insurance_coverage_detail !== undefined) payload.insurance_coverage_detail = validatedData.insurance_coverage_detail;
+    if (validatedData.annual_procedure_count !== undefined) payload.annual_procedure_count = validatedData.annual_procedure_count;
+    if (validatedData.success_rate !== undefined) payload.success_rate = validatedData.success_rate;
+    if (validatedData.before_after_images !== undefined) payload.before_after_images = validatedData.before_after_images ?? [];
+    if (validatedData.price_includes !== undefined) payload.price_includes = validatedData.price_includes ?? [];
+
+    const krFields = extractKrFields(payload);
+    Object.assign(payload, krFields);
 
     // ========================================
     // 7. DB 업데이트
@@ -408,6 +473,12 @@ export async function PATCH(request: NextRequest) {
     }).catch((err) => {
       console.error("[admin/treatments] Audit log failed:", err.message);
     });
+
+    if (payload.name || payload.description || payload.tags) {
+      triggerMultiLangTranslation("treatments", id, payload, supabaseAdmin).catch((e) =>
+        console.error("[admin/treatments] translation error:", e.message)
+      );
+    }
 
     // ========================================
     // 9. 응답 반환

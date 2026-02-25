@@ -1,7 +1,12 @@
 /**
- * HEALO: 서버 사이드 암호화 유틸리티
- * pgcrypto 함수를 호출하여 데이터 암호화/복호화
- * 주의: 클라이언트에서는 사용하지 않음
+ * @deprecated 이 모듈은 더 이상 새 코드에서 사용하지 마세요.
+ * 대신 encryptionV2.ts (AES-256-GCM, Node.js crypto)를 사용하세요.
+ * 
+ * 이 파일은 pgcrypto RPC 기반 암호화로, 기존 데이터 복호화를 위해서만 유지됩니다.
+ * 새로운 암호화: encryptString / encryptStringNullable (from encryptionV2)
+ * 기존 데이터 복호화: decryptAuto (from encryptionV2, 양쪽 형식 자동 감지)
+ * 
+ * 마이그레이션 완료 후 이 파일은 삭제될 예정입니다.
  */
 
 import { supabaseAdmin } from "../rag/supabaseAdmin";

@@ -10,7 +10,7 @@
  */
 export const runtime = "nodejs";
 
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import {
   createEmptyIntake,
   type Intake,
@@ -153,6 +153,7 @@ function buildIntakeFromTextOnly(text: string): Intake {
 }
 
 export async function POST(request: Request) {
+  assertSupabaseEnv();
   const clientIp = getClientIp(request);
   const apiPath = '/api/inquiry/normalize';
 

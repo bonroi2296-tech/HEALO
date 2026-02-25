@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
-import { supabaseAdmin } from "../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../src/lib/rag/supabaseAdmin";
 import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../src/lib/rateLimit";
 import { logRateLimitExceeded, logEncryptionFailed, logOperational } from "../../../src/lib/operationalLog";
 import { trackFunnelEvent } from "../../../src/lib/events/funnelTracking";
@@ -34,7 +34,8 @@ import {
   extractDurationFromQuery,
   extractSeverityFromQuery,
 } from "../../../src/lib/intakeExtract";
-import { encryptText, assertEncryptionKey } from "../../../src/lib/security/encryption";
+import { encryptStringNullable } from "../../../src/lib/security/encryptionV2";
+import { safeRagSearch } from "../../../src/lib/rag/safeSearch";
 
 type ChatMessage = { role: string; content: string };
 
@@ -63,7 +64,7 @@ const getModel = () => {
       console.error("[api/chat] GOOGLE_GENERATIVE_AI_API_KEY is missing");
       return { error: jsonError(500, "google_key_missing", "GOOGLE_GENERATIVE_AI_API_KEY is missing") };
     }
-    return { model: google("gemini-2.0-flash") as any };
+    return { model: google("gemini-2.5-flash") as any };
   }
   if (!process.env.OPENAI_API_KEY) {
     console.error("[api/chat] OPENAI_API_KEY is missing");
@@ -73,7 +74,7 @@ const getModel = () => {
 };
 
 const getModelName = () =>
-  LLM_PROVIDER === "google" ? "gemini-2.0-flash" : "gpt-4o-mini";
+  LLM_PROVIDER === "google" ? "gemini-2.5-flash" : "gpt-4o-mini";
 
 const classifyOpenAiError = (error: any) => {
   const message = String(error?.message || "");
@@ -116,16 +117,25 @@ const classifyGoogleError = (error: any) => {
   return { status: 502, code: "google_error", message };
 };
 
+const TIER_LABELS: Record<number, string> = {
+  1: "Official",
+  2: "Partner-verified",
+  3: "Public source",
+};
+
 const buildContext = (chunks: Array<any>) => {
-  if (!Array.isArray(chunks) || chunks.length === 0) return "";
+  if (!Array.isArray(chunks) || chunks.length === 0) return { text: "", hasTier3: false };
+  let hasTier3 = false;
   const lines = chunks.map((c) => {
-    const title = c?.rag_documents?.title ? ` | ${c.rag_documents.title}` : "";
-    const source = c?.rag_documents?.source_type
-      ? `[${c.rag_documents.source_type}${title}]`
-      : "[source]";
-    return `${source} ${String(c.content || "").trim()}`;
+    const tier = c?.trust_tier ?? 3;
+    if (tier >= 3) hasTier3 = true;
+    const tierLabel = TIER_LABELS[tier] || TIER_LABELS[3];
+    const sourceLabel = c?.source_label || c?.rag_documents?.source_type || "unknown";
+    const title = c?.rag_documents?.title || c?.doc_title || "";
+    const header = `[Tier ${tier} | ${tierLabel} | ${sourceLabel}${title ? ` | ${title}` : ""}]`;
+    return `${header}\n${String(c.content || "").trim()}`;
   });
-  return lines.join("\n\n");
+  return { text: lines.join("\n\n"), hasTier3 };
 };
 
 const getLastUserMessage = (messages: ChatMessage[] = []) => {
@@ -160,6 +170,7 @@ function buildIntakeFromQuery(query: string): Intake {
 }
 
 export async function POST(request: Request) {
+  assertSupabaseEnv();
   const clientIp = getClientIp(request);
   const apiPath = '/api/chat';
 
@@ -193,13 +204,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // ✅ Security: 암호화 키 검증 (fail-fast)
-  try {
-    assertEncryptionKey();
-  } catch (error: any) {
-    console.error("[api/chat] encryption key validation failed:", error);
-    logEncryptionFailed(apiPath, clientIp, error?.message || 'encryption_key_missing');
-    return jsonError(500, "encryption_key_missing", error?.message || "encryption_key_missing");
+  // ✅ Security: 암호화 키 검증 (fail-fast, V2 AES-256-GCM)
+  if (!process.env.ENCRYPTION_KEY_V1) {
+    const msg = "ENCRYPTION_KEY_V1 is missing";
+    console.error("[api/chat]", msg);
+    logEncryptionFailed(apiPath, clientIp, msg);
+    return jsonError(500, "encryption_key_missing", msg);
   }
 
   let body: any = {};
@@ -259,8 +269,8 @@ export async function POST(request: Request) {
     if (page != null) constraints.page = page;
     if (utm != null) constraints.utm = utm;
 
-    // ✅ Security: raw_message 암호화
-    const rawMessageEnc = await encryptText(query);
+    // ✅ Security: raw_message 암호화 (V2: AES-256-GCM)
+    const rawMessageEnc = encryptStringNullable(query);
 
     // ✅ DB insert를 await로 완료 (서버리스 환경에서 유실 방지)
     const { error: insertError } = await supabaseAdmin.from("normalized_inquiries").insert({
@@ -315,34 +325,27 @@ export async function POST(request: Request) {
     });
   }
 
-  // RAG retrieval (top 6).
+  // RAG retrieval — RPC 전용 (무필터 fallback 금지)
   let ragChunks: any[] = [];
   try {
-    let q = supabaseAdmin
-      .from("rag_chunks")
-      .select(
-        "id, document_id, chunk_index, content, rag_documents!inner(id, source_type, source_id, lang, title)"
-      )
-      .ilike("content", `%${query}%`)
-      .limit(6);
-    if (lang) q = q.eq("rag_documents.lang", lang);
-    const { data, error } = await q;
-    if (!error) ragChunks = data || [];
-    if (error) console.error("[api/chat] rag query error:", error);
+    ragChunks = await safeRagSearch({ query, lang: lang || "en", matchCount: 6 });
   } catch (error) {
-    console.error("[api/chat] rag query failed:", error);
+    console.error("[api/chat] rag search failed:", error);
   }
 
-  const context = buildContext(ragChunks);
+  const { text: contextText, hasTier3 } = buildContext(ragChunks);
 
   const systemPrompt = [
     "You are a medical concierge assistant for HEALO.",
     "Do not provide diagnosis, medical advice, or guarantees.",
+    "Do not make definitive claims about pricing, rankings, or treatment outcomes.",
     "Ask clarifying questions when constraints are missing.",
     "Primary objective: guide the user to submit an inquiry.",
     "If relevant, reference the provided context briefly.",
+    "When citing context, prefer higher-tier (Tier 1/2) sources over lower-tier (Tier 3) sources.",
     "",
-    context ? "Context:\n" + context : "",
+    contextText ? "Context:\n" + contextText : "",
+    hasTier3 ? "\nIMPORTANT: Some context is from public/unverified sources (Tier 3). When using Tier 3 information, include a note that it is based on publicly available information and may not be fully verified." : "",
   ]
     .filter(Boolean)
     .join("\n");

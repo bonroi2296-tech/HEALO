@@ -68,3 +68,6 @@ coverage/
 temp/
 tmp/
 *.temp
+
+# Local output / crawl/import data
+output/

@@ -10,7 +10,7 @@
  */
 export const runtime = "nodejs";
 
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
 
 const ALLOWED_EVENT_TYPES = [
@@ -25,6 +25,7 @@ type EventType = (typeof ALLOWED_EVENT_TYPES)[number];
 const REQUIRES_INQUIRY_ID: EventType[] = ["step1_submitted", "step2_viewed", "step2_submitted"];
 
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   try {
     const body = await request.json().catch(() => ({}));
     const eventType = body?.eventType ? String(body.eventType) : null;

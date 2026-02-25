@@ -7,9 +7,10 @@
  */
 export const runtime = "nodejs";
 
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 
 export async function GET() {
+  assertSupabaseEnv();
   try {
     const { data, error } = await supabaseAdmin
       .from("inquiries")

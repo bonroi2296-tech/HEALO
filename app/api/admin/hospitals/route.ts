@@ -30,6 +30,7 @@ import {
   HospitalUpdateSchema,
   validationErrorResponse,
 } from "../../../../src/lib/validation/admin";
+import { extractKrFields, triggerMultiLangTranslation } from "../../../../src/lib/translate";
 
 /**
  * GET: 병원 목록 조회 (관리자 전용)
@@ -181,23 +182,43 @@ export async function POST(request: NextRequest) {
   // ========================================
   // 4. Payload 구성
   // ========================================
-  const payload = {
+  const payload: Record<string, any> = {
     name: validatedData.name.trim(),
     slug,
     location_kr: validatedData.location_kr?.trim() || null,
     location_en: validatedData.location_en?.trim() || null,
     address_detail: validatedData.address_detail?.trim() || null,
+    website: validatedData.website?.trim() || null,
     description: validatedData.description || null,
     latitude: validatedData.latitude || null,
     longitude: validatedData.longitude || null,
     tags: validatedData.tags || [],
     images: validatedData.images || [],
+    thumbnail_image: validatedData.thumbnail_image ?? null,
+    gallery_images: validatedData.gallery_images || [],
     supported_languages: validatedData.supported_languages || [],
     amenities: validatedData.amenities || [],
+    specialties: validatedData.specialties || [],
+    medical_equipment: validatedData.medical_equipment || [],
     operating_hours: validatedData.operating_hours || null,
     doctor_profile: validatedData.doctor_profile || null,
+    certifications: validatedData.certifications || [],
+    insurance_accepted: validatedData.insurance_accepted ?? false,
+    insurance_details: validatedData.insurance_details ?? null,
+    annual_surgery_count: validatedData.annual_surgery_count ?? null,
+    establishment_date: validatedData.establishment_date ?? null,
+    doctor_count: validatedData.doctor_count ?? null,
+    external_ratings: validatedData.external_ratings ?? null,
     display_order: validatedData.display_order || null,
     is_published: validatedData.is_published,
+    is_partner: validatedData.is_partner ?? false,
+    faq: validatedData.faq || [],
+    ...extractKrFields({
+      name: validatedData.name,
+      description: validatedData.description,
+      tags: validatedData.tags,
+      specialties: validatedData.specialties,
+    }),
   };
 
   // ========================================
@@ -235,6 +256,15 @@ export async function POST(request: NextRequest) {
     }).catch((err) => {
       console.error("[admin/hospitals] Audit log failed:", err.message);
     });
+
+    // ========================================
+    // 6.5. 비동기 번역 트리거
+    // ========================================
+    if (payload.name || payload.description || payload.tags || payload.specialties) {
+      triggerMultiLangTranslation("hospitals", data.id, payload, supabaseAdmin).catch((e) =>
+        console.error("[admin/hospitals] translation error:", e.message)
+      );
+    }
 
     // ========================================
     // 7. 응답 반환
@@ -360,6 +390,7 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.location_kr !== undefined) payload.location_kr = validatedData.location_kr?.trim() || null;
     if (validatedData.location_en !== undefined) payload.location_en = validatedData.location_en?.trim() || null;
     if (validatedData.address_detail !== undefined) payload.address_detail = validatedData.address_detail?.trim() || null;
+    if (validatedData.website !== undefined) payload.website = validatedData.website?.trim() || null;
     if (validatedData.description !== undefined) payload.description = validatedData.description;
     if (validatedData.latitude !== undefined) payload.latitude = validatedData.latitude;
     if (validatedData.longitude !== undefined) payload.longitude = validatedData.longitude;
@@ -371,6 +402,23 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.doctor_profile !== undefined) payload.doctor_profile = validatedData.doctor_profile;
     if (validatedData.display_order !== undefined) payload.display_order = validatedData.display_order;
     if (validatedData.is_published !== undefined) payload.is_published = validatedData.is_published;
+    if (validatedData.thumbnail_image !== undefined) payload.thumbnail_image = validatedData.thumbnail_image;
+    if (validatedData.gallery_images !== undefined) payload.gallery_images = validatedData.gallery_images ?? [];
+    if (validatedData.specialties !== undefined) payload.specialties = validatedData.specialties ?? [];
+    if (validatedData.medical_equipment !== undefined) payload.medical_equipment = validatedData.medical_equipment ?? [];
+    if (validatedData.certifications !== undefined) payload.certifications = validatedData.certifications ?? [];
+    if (validatedData.insurance_accepted !== undefined) payload.insurance_accepted = validatedData.insurance_accepted;
+    if (validatedData.insurance_details !== undefined) payload.insurance_details = validatedData.insurance_details;
+    if (validatedData.annual_surgery_count !== undefined) payload.annual_surgery_count = validatedData.annual_surgery_count;
+    if (validatedData.establishment_date !== undefined) payload.establishment_date = validatedData.establishment_date;
+    if (validatedData.doctor_count !== undefined) payload.doctor_count = validatedData.doctor_count;
+    if (validatedData.external_ratings !== undefined) payload.external_ratings = validatedData.external_ratings;
+    if (validatedData.faq !== undefined) payload.faq = validatedData.faq ?? [];
+    if (validatedData.i18n !== undefined) payload.i18n = validatedData.i18n ?? {};
+    if (validatedData.is_partner !== undefined) payload.is_partner = validatedData.is_partner;
+
+    const krFields = extractKrFields(payload);
+    Object.assign(payload, krFields);
 
     // ========================================
     // 7. DB 업데이트
@@ -407,6 +455,16 @@ export async function PATCH(request: NextRequest) {
     }).catch((err) => {
       console.error("[admin/hospitals] Audit log failed:", err.message);
     });
+
+    // ========================================
+    // 8.5. 비동기 번역 트리거 (수동 i18n 입력이 없을 때만)
+    // ========================================
+    const hasManualI18n = payload.i18n && Object.keys(payload.i18n).length > 0;
+    if (!hasManualI18n && (payload.name || payload.description || payload.tags || payload.specialties)) {
+      triggerMultiLangTranslation("hospitals", id, payload, supabaseAdmin).catch((e) =>
+        console.error("[admin/hospitals] translation error:", e.message)
+      );
+    }
 
     // ========================================
     // 9. 응답 반환

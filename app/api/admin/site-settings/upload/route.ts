@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "../../../../../src/lib/auth/requireAdminAuth";
-import { supabaseAdmin } from "../../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../../src/lib/rag/supabaseAdmin";
 
 const ALLOWED_TYPES = {
   logo: ["image/png", "image/svg+xml", "image/webp"],
@@ -28,6 +28,7 @@ const MAX_SIZE = {
  * FormData: file, type (logo | hero)
  */
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   const apiPath = "/api/admin/site-settings/upload [POST]";
 
   try {

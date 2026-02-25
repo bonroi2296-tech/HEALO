@@ -13,13 +13,14 @@
 export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
-import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import {
   buildReferralSummaryJson,
   buildReferralSummaryMarkdown,
 } from "../../../../src/lib/referral/buildReferralSummary";
 
 export async function POST(request: NextRequest) {
+  assertSupabaseEnv();
   try {
     const body = await request.json().catch(() => ({}));
     const normalizedInquiryId = body?.normalizedInquiryId ? String(body.normalizedInquiryId) : null;

@@ -3,9 +3,12 @@
  * CSV/Excel 데이터 일괄 등록
  */
 
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '../../../../../src/lib/supabase/server';
-import { checkAdminAuth } from '../../../../../src/lib/auth/checkAdminAuth';
+import { requireAdminAuth } from '../../../../../src/lib/auth/requireAdminAuth';
 import { TreatmentCreateSchema } from '../../../../../src/lib/validation/admin';
 import { getFallbackImage, getTreatmentGalleryImages } from '../../../../../src/lib/utils/imageFallback';
 import { z } from 'zod';
@@ -27,14 +30,8 @@ interface ImportResult {
 
 export async function POST(request: NextRequest) {
   try {
-    // 관리자 인증
-    const authResult = await checkAdminAuth(request);
-    if (!authResult.isAdmin) {
-      return NextResponse.json(
-        { ok: false, error: 'unauthorized' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAdminAuth(request);
+    if (!auth.success) return auth.response;
 
     const body = await request.json();
     const { data, mode } = body;

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { RefreshCw, Paperclip, Eye, X, Loader2 } from 'lucide-react';
+import { RefreshCw, Paperclip, Eye, X, Loader2, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { formatDate } from "../../../../src/lib/i18n/format";
 import { createSupabaseBrowserClient } from "../../../../src/lib/supabase/browser";
 
 const supabase = createSupabaseBrowserClient();
 
 export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) => {
+  const router = useRouter();
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [translationResult, setTranslationResult] = useState(null);
   const [loadingTranslation, setLoadingTranslation] = useState(false);
+  const [resolvingPlaybook, setResolvingPlaybook] = useState(false);
   
   const handleViewDetail = async (inquiryId) => {
     setLoadingDetail(true);
@@ -91,6 +94,53 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
       alert('번역 중 오류가 발생했습니다.');
     } finally {
       setLoadingTranslation(false);
+    }
+  };
+
+  const handleResolvePlaybook = async () => {
+    if (!selectedInquiry) return;
+    if (!confirm('이 문의를 기반으로 대화 스레드를 생성하고 Playbook Draft를 만드시겠습니까?')) return;
+    
+    setResolvingPlaybook(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) { alert('세션 만료'); return; }
+      const headers = { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+      const opts = { headers, credentials: 'include' };
+
+      const threadRes = await fetch('/api/admin/chat/threads', {
+        method: 'POST', ...opts,
+        body: JSON.stringify({
+          inquiry_id: selectedInquiry.id,
+          subject: selectedInquiry.treatment_type || 'Inquiry Thread',
+        }),
+      });
+      const threadJson = await threadRes.json();
+      if (!threadJson.ok) { alert(`스레드 생성 실패: ${threadJson.error}`); return; }
+      const threadId = threadJson.thread.id;
+
+      if (selectedInquiry.message) {
+        await fetch(`/api/admin/chat/threads/${threadId}/messages`, {
+          method: 'POST', ...opts,
+          body: JSON.stringify({ actor_type: 'patient', message_text: selectedInquiry.message }),
+        });
+      }
+
+      const resolveRes = await fetch(`/api/admin/chat/threads/${threadId}/resolve`, {
+        method: 'POST', ...opts,
+      });
+      const resolveJson = await resolveRes.json();
+      if (!resolveJson.ok) { alert(`Resolve 실패: ${resolveJson.error}`); return; }
+
+      alert(`Playbook Draft 생성 완료! (Score: ${resolveJson.quality_score})`);
+      closeDetailModal();
+      router.push('/admin/playbook');
+    } catch (e) {
+      console.error('[InquiryManager] Resolve error:', e);
+      alert('처리 중 오류 발생');
+    } finally {
+      setResolvingPlaybook(false);
     }
   };
 
@@ -345,7 +395,18 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
               )}
             </div>
             
-            <div className="p-4 lg:p-6 border-t bg-gray-50 flex justify-end rounded-b-xl">
+            <div className="p-4 lg:p-6 border-t bg-gray-50 flex justify-between rounded-b-xl">
+              <button
+                onClick={handleResolvePlaybook}
+                disabled={resolvingPlaybook}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm transition disabled:opacity-50"
+              >
+                {resolvingPlaybook ? (
+                  <><Loader2 size={14} className="animate-spin" /> 처리중...</>
+                ) : (
+                  <><BookOpen size={14} /> Resolve & Playbook Draft</>
+                )}
+              </button>
               <button
                 onClick={closeDetailModal}
                 className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition"

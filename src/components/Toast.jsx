@@ -14,25 +14,25 @@ const ToastContext = createContext(null);
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  // Toast 메시지 추가 함수
   const addToast = useCallback((message, type = 'info', duration = 3000) => {
     const id = Date.now() + Math.random();
+    const persistent = type === 'error';
     const newToast = { id, message, type };
     
     setToasts(prev => [...prev, newToast]);
 
-    // duration 시간 후 자동으로 사라지게
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, duration);
+    if (!persistent) {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(toast => toast.id !== id));
+      }, duration);
+    }
   }, []);
 
-  // 편의 함수들 - 사용하기 쉽게
   const toast = {
     success: (message) => addToast(message, 'success'),
     error: (message) => addToast(message, 'error'),
     info: (message) => addToast(message, 'info'),
-    warning: (message) => addToast(message, 'warning'),
+    warning: (message) => addToast(message, 'warning', 5000),
   };
 
   // Toast 제거 함수
@@ -44,7 +44,7 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={{ toast, removeToast }}>
       {children}
       {/* Toast 메시지들을 화면에 표시하는 영역 */}
-      <div className="fixed top-20 right-4 z-[200] space-y-2 pointer-events-none">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] space-y-2 pointer-events-none">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
@@ -97,7 +97,7 @@ const ToastItem = ({ toast, onRemove }) => {
       `}
     >
       <div className="shrink-0 mt-0.5">{style.icon}</div>
-      <div className="flex-1 text-sm font-medium">{message}</div>
+      <div className="flex-1 text-sm font-medium whitespace-pre-line">{message}</div>
       <button
         onClick={() => onRemove(toast.id)}
         className="shrink-0 p-1 hover:bg-black/5 rounded transition"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createSupabaseBrowserClient } from "../../../src/lib/supabase/browser";
 import { useToast } from "../../../src/components/Toast";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 import { RefreshCw, ChevronDown } from "lucide-react";
 
 // ✅ Supabase는 세션 확인용으로만 사용
@@ -39,6 +40,7 @@ export default function LeadsPage() {
   const [hospitalFilter, setHospitalFilter] = useState("");
   const [total, setTotal] = useState(0);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   // ========================================
   // 데이터 Fetch
@@ -171,6 +173,22 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
+      {showGuide && (
+        <AdminGuideModal title="리드 관리 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>병원으로 <strong>할당된 리드(문의·상담 요청)</strong>의 현황을 보고, 상태를 업데이트합니다. 병원 담당자가 응답·전환했는지 추적할 수 있습니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">상태 의미</h3>
+            <p className="text-gray-600 text-sm">대기 → 발송됨 → 조회됨 → 응답함 → 전환됨(또는 거부/만료). 필터로 상태·병원별로 목록을 좁힐 수 있습니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <p>리드를 선택해 병원에 할당하거나, 상태를 변경할 수 있습니다. 새로고침으로 최신 목록을 불러옵니다.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -179,14 +197,24 @@ export default function LeadsPage() {
             병원별 리드 할당 및 응답 현황 ({total}개)
           </p>
         </div>
-        <button
-          onClick={fetchLeads}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium transition disabled:opacity-50 self-start sm:self-auto"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          새로고침
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
+          <button
+            onClick={fetchLeads}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium transition disabled:opacity-50 self-start sm:self-auto"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            새로고침
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

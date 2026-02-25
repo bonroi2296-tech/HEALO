@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Upload, RefreshCw, X, Check } from "lucide-react";
+import { AdminGuideModal } from "../../_components/AdminGuideModal";
 
 interface SiteSettings {
   logo_url: string | null;
@@ -29,6 +30,7 @@ export default function BrandingSettingsPage() {
   const [uploadingHero, setUploadingHero] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
@@ -154,10 +156,32 @@ export default function BrandingSettingsPage() {
 
   return (
     <div className="p-8 max-w-5xl">
+      {showGuide && (
+        <AdminGuideModal title="브랜딩 설정 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>사이트에 노출되는 <strong>로고</strong>와 <strong>히어로 배경 이미지</strong>를 업로드·관리합니다. 저장 시 Supabase Storage에 올라가고 DB(site_settings)에 반영되어 프론트에서 바로 사용됩니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <p className="text-gray-600 text-sm">로고·히어로 각각 파일을 선택하면 업로드가 진행되고, 미리보기로 확인할 수 있습니다. Storage 버킷 및 RLS 설정이 필요할 수 있습니다. 자세한 내용은 docs/STORAGE_SETUP.md를 참고하세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">브랜딩 설정</h1>
-        <p className="text-gray-600">사이트 로고 및 히어로 배경 이미지를 관리합니다.</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">브랜딩 설정</h1>
+          <p className="text-gray-600">사이트 로고 및 히어로 배경 이미지를 관리합니다.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          사용 가이드
+        </button>
       </div>
 
       {/* 에러 배너 */}

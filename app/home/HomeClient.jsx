@@ -45,7 +45,7 @@ export default function HomeClient() {
         const TREATMENT_PUBLIC_COLS = `id,slug,name,description,full_description,hospital_id,price_min,price_max,tags,images,benefits,i18n`;
 
         const [settingsResult, treatmentsResult, hospitalsResult] = await Promise.all([
-          supabaseClient.from("site_settings").select("site_name,hero_title,hero_subtitle,logo_url,primary_color,hero_background_url").single(),
+          supabaseClient.from("site_settings").select("logo_url,hero_background_url").single(),
           supabaseClient
             .from("treatments")
             .select(`${TREATMENT_PUBLIC_COLS}, hospitals(slug, name, location:${locCol}, location_kr, location_en, i18n)`)

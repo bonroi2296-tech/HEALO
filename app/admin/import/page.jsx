@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { AdminGuideModal } from '../_components/AdminGuideModal';
 
 const CHUNK_SIZE = 500;
 
@@ -21,6 +22,7 @@ export default function ImportPage() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [step, setStep] = useState(1); // 1: 업로드, 2: 미리보기, 3: 검증, 4: 완료
+  const [showGuide, setShowGuide] = useState(false);
 
   // 파일 드롭 핸들러
   const onDrop = useCallback((acceptedFiles) => {
@@ -175,7 +177,37 @@ export default function ImportPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <h1 className="text-3xl font-bold mb-8">대량 데이터 Import</h1>
+      {showGuide && (
+        <AdminGuideModal title="대량 Import 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>CSV/Excel/JSON 파일로 <strong>병원</strong> 또는 <strong>시술</strong> 데이터를 일괄 등록합니다. 파일 형식에 맞춰 업로드 → 미리보기 → 검증 → 등록 순으로 진행합니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <ol className="list-decimal list-inside space-y-1 text-gray-600">
+              <li>데이터 타입(병원/시술) 선택 후 파일을 드래그 또는 선택합니다.</li>
+              <li>파싱된 데이터를 미리보기에서 확인하고, 검증을 실행합니다.</li>
+              <li>검증 통과 시 등록 버튼으로 DB에 반영합니다. 실패 건은 오류 메시지를 확인해 수정 후 재시도하세요.</li>
+            </ol>
+          </section>
+          <section className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-base font-semibold text-teal-800 mb-1">권장</h3>
+            <p className="text-teal-700 text-sm">컬럼명·필수 필드는 API/스키마에 맞춰져 있어야 합니다. 샘플 파일이나 기존 내보내기 형식을 참고하세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
+      <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+        <h1 className="text-3xl font-bold">대량 데이터 Import</h1>
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          사용 가이드
+        </button>
+      </div>
 
       {/* 데이터 타입 선택 */}
       <div className="mb-6">

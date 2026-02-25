@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { TreatmentManager } from "./_client/TreatmentManager";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 import { createSupabaseBrowserClient } from "../../../src/lib/supabase/browser";
 import { useToast } from "../../../src/components/Toast";
 import { X, UploadCloud, Loader2 } from "lucide-react";
@@ -385,12 +386,41 @@ export default function TreatmentsPage() {
     }
   };
 
+  const [showGuide, setShowGuide] = useState(false);
+
   useEffect(() => {
     fetchHospitals();
   }, []);
 
   return (
-    <TreatmentManager
+    <div className="space-y-4">
+      {showGuide && (
+        <AdminGuideModal title="시술관리 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>병원별 <strong>시술(트리트먼트) 카탈로그</strong>를 등록·수정·삭제합니다. 가격, 소요 시간, 부작용, 이미지 등 상세 정보를 넣으면 사용자에게 노출됩니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <p>먼저 병원을 선택한 뒤, 해당 병원의 시술 목록에서 신규 등록 또는 수정합니다. 시술명·설명·가격·이미지·태그·공개 여부 등을 편집할 수 있습니다.</p>
+          </section>
+          <section className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-base font-semibold text-teal-800 mb-1">권장</h3>
+            <p className="text-teal-700 text-sm">병원관리에서 병원을 먼저 등록한 후, 여기서 해당 병원의 시술을 추가하세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          사용 가이드
+        </button>
+      </div>
+      <TreatmentManager
       hospitalsList={hospitalsList}
       treatmentCounts={treatmentCounts}
       selectedHospitalId={selectedHospitalId}
@@ -411,5 +441,6 @@ export default function TreatmentsPage() {
       DynamicListInput={DynamicListInput}
       ImageUploader={ImageUploader}
     />
+    </div>
   );
 }

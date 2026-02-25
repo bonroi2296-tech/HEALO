@@ -26,6 +26,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { useToast } from "../../../src/components/Toast";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 
 const SOURCE_ICONS = {
   hira: Building2,
@@ -238,6 +239,7 @@ export default function CrawlPage() {
   const [selectedFields, setSelectedFields] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [showGuide, setShowGuide] = useState(false);
+  const [showPageGuide, setShowPageGuide] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [searchLimit, setSearchLimit] = useState(20);
 
@@ -394,7 +396,27 @@ export default function CrawlPage() {
   if (step === 1) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
-        <Header />
+        {showPageGuide && (
+          <AdminGuideModal title="데이터 크롤링 가이드" onClose={() => setShowPageGuide(false)}>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+              <p>외부 공개 데이터(HIRA, Google Places, Kakao 등)에서 <strong>병원 정보를 검색·선택해 DB에 등록</strong>하는 도구입니다. 소스 선택 → 검색 조건 설정 → 결과에서 선택 → 수집/다운로드 순으로 진행합니다.</p>
+            </section>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">흐름</h3>
+              <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                <li><strong>1. 데이터 소스 선택</strong>: HIRA, Google Places 등 사용할 소스를 고릅니다. (API 키가 필요한 소스는 .env 설정 필요)</li>
+                <li><strong>2. 검색 조건 설정</strong>: 지역·과목·수집 필드·키워드 등을 선택합니다. 「필드 가이드」로 각 소스 필드 설명을 볼 수 있습니다.</li>
+                <li><strong>3. 검색 실행 후 결과</strong>: 조건에 맞는 항목을 선택해 DB 등록 또는 CSV 다운로드합니다.</li>
+              </ol>
+            </section>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">파이프라인과의 관계</h3>
+              <p className="text-gray-600 text-sm">정기 자동 수집은 <strong>크롤링 파이프라인</strong> 페이지에서 스케줄·수동 실행을 설정합니다. 이 페이지는 수동으로 한 번씩 검색·등록할 때 사용합니다.</p>
+            </section>
+          </AdminGuideModal>
+        )}
+        <Header onGuideClick={() => setShowPageGuide(true)} />
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-1">1. 데이터 소스 선택</h2>
           <p className="text-sm text-gray-500 mb-6">병원 데이터를 수집할 외부 소스를 선택하세요</p>
@@ -466,7 +488,19 @@ export default function CrawlPage() {
   if (step === 2 && sourceConfig) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
-        <Header />
+        {showPageGuide && (
+          <AdminGuideModal title="데이터 크롤링 가이드" onClose={() => setShowPageGuide(false)}>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+              <p>외부 공개 데이터(HIRA, Google Places, Kakao 등)에서 <strong>병원 정보를 검색·선택해 DB에 등록</strong>하는 도구입니다.</p>
+            </section>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">흐름</h3>
+              <p className="text-gray-600 text-sm">소스 선택 → 검색 조건(지역·과목·필드)·실행 → 결과에서 선택 후 DB 등록 또는 다운로드. 「필드 가이드」로 소스별 필드 설명을 볼 수 있습니다.</p>
+            </section>
+          </AdminGuideModal>
+        )}
+        <Header onGuideClick={() => setShowPageGuide(true)} />
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">2. 검색 조건 설정</h2>
@@ -792,7 +826,15 @@ export default function CrawlPage() {
 
     return (
       <div className="max-w-6xl mx-auto space-y-6">
-        <Header />
+        {showPageGuide && (
+          <AdminGuideModal title="데이터 크롤링 가이드" onClose={() => setShowPageGuide(false)}>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+              <p>외부 공개 데이터에서 병원 정보를 검색·선택해 DB에 등록하는 도구입니다. 결과에서 신규 항목을 선택해 등록하거나 CSV로 내보낼 수 있습니다.</p>
+            </section>
+          </AdminGuideModal>
+        )}
+        <Header onGuideClick={() => setShowPageGuide(true)} />
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -916,7 +958,15 @@ export default function CrawlPage() {
   if (step === 4 && importResult) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
-        <Header />
+        {showPageGuide && (
+          <AdminGuideModal title="데이터 크롤링 가이드" onClose={() => setShowPageGuide(false)}>
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+              <p>외부 공개 데이터에서 병원 정보를 검색·선택해 DB에 등록하는 도구입니다. 등록 결과 요약을 확인한 뒤, 병원관리에서 상세를 편집할 수 있습니다.</p>
+            </section>
+          </AdminGuideModal>
+        )}
+        <Header onGuideClick={() => setShowPageGuide(true)} />
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-6">임포트 결과</h2>
 
@@ -1054,7 +1104,7 @@ function FieldGuideModal({ sourceId, onClose }) {
   );
 }
 
-function Header() {
+function Header({ onGuideClick }) {
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -1064,12 +1114,24 @@ function Header() {
         </h1>
         <p className="text-sm text-gray-500 mt-1">외부 공개 데이터에서 병원 정보를 검색하고 선택적으로 DB에 등록합니다</p>
       </div>
-      <a
-        href="/admin/crawl/pipeline"
-        className="px-3 py-2 text-sm text-teal-600 bg-teal-50 rounded-lg hover:bg-teal-100 transition font-medium"
-      >
-        파이프라인
-      </a>
+      <div className="flex items-center gap-2">
+        {onGuideClick && (
+          <button
+            type="button"
+            onClick={onGuideClick}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
+        )}
+        <a
+          href="/admin/crawl/pipeline"
+          className="px-3 py-2 text-sm text-teal-600 bg-teal-50 rounded-lg hover:bg-teal-100 transition font-medium"
+        >
+          파이프라인
+        </a>
+      </div>
     </div>
   );
 }

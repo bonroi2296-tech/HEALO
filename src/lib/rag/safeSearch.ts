@@ -4,6 +4,7 @@
  * 모든 RAG 검색은 rag_search_chunks_v1_1 RPC만 사용.
  * 임베딩 실패 또는 RPC 실패 시 빈 배열 반환 (안전 모드).
  * 직접 rag_documents/rag_chunks 조회 또는 ILIKE fallback 금지.
+ * RAG_DISABLED=true 시 embedding/RPC 없이 [] 반환, rag_query_events에 1건 기록(detail.reason=disabled).
  */
 
 import "server-only";
@@ -11,6 +12,7 @@ import "server-only";
 import { createHash } from "crypto";
 import { supabaseAdmin } from "./supabaseAdmin";
 import { getEmbedding } from "../chat/generateReply";
+import { hashQuery, logRagDisabled } from "./ragQueryEvents";
 
 function computeThreadHash(threadId: string): number {
   const hash = createHash("sha256").update(threadId).digest();
@@ -24,6 +26,8 @@ export type SafeRagSearchParams = {
   matchCount?: number;
   pSourceType?: string | null;
   partnerOnly?: boolean;
+  /** 이벤트 로깅용 (RAG_DISABLED 시). 기본 'api' */
+  source?: string;
 };
 
 export type SafeRagChunk = {
@@ -52,7 +56,17 @@ export async function safeRagSearch(params: SafeRagSearchParams): Promise<SafeRa
     matchCount = 6,
     pSourceType = null,
     partnerOnly = false,
+    source = "api",
   } = params;
+
+  if (process.env.RAG_DISABLED === "true") {
+    await logRagDisabled({
+      source,
+      queryTextHash: hashQuery(query),
+      lang: lang || null,
+    });
+    return [];
+  }
 
   const embedding = await getEmbedding(query);
   if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {

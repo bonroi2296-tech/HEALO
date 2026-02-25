@@ -19,6 +19,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { useToast } from "../../../src/components/Toast";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 
 const SOURCE_META = {
   google: { label: "Google Places", icon: Globe, color: "text-blue-600 bg-blue-50" },
@@ -44,6 +45,7 @@ export default function EnrichmentPage() {
   const [running, setRunning] = useState(false);
   const [batchResults, setBatchResults] = useState(null);
   const [expandedResult, setExpandedResult] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   const fetchManifest = useCallback(async () => {
     try {
@@ -131,6 +133,27 @@ export default function EnrichmentPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {showGuide && (
+        <AdminGuideModal title="데이터 보강 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>이미 등록된 <strong>병원</strong>에 대해 외부 소스(Google Places, Kakao 등)에서 주소·전화·영업시간·이미지·평점 등을 가져와 DB를 보강합니다. 수집 소스와 필터를 선택한 뒤 일괄 실행합니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>수집 소스: Google Places, Kakao 등 사용할 API를 선택합니다. (API 키 설정 필요)</li>
+              <li>필터: 공개 여부·파트너 여부·지역·이미지 유무로 대상 병원을 좁힐 수 있습니다.</li>
+              <li>배치 제한: 한 번에 처리할 병원 수를 제한해 API 한도를 지키세요.</li>
+              <li>실행 후 결과 요약과 개별 병원 상세를 확인할 수 있습니다.</li>
+            </ul>
+          </section>
+          <section className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-base font-semibold text-teal-800 mb-1">권장</h3>
+            <p className="text-teal-700 text-sm">병원관리에서 먼저 병원을 등록한 뒤, 여기서 보강하면 해당 병원 정보가 풍부해집니다.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -142,13 +165,23 @@ export default function EnrichmentPage() {
             등록된 병원의 외부 데이터를 일괄 수집합니다
           </p>
         </div>
-        <button
-          onClick={fetchHospitals}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-        >
-          <RefreshCw size={16} />
-          새로고침
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
+          <button
+            onClick={fetchHospitals}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+          >
+            <RefreshCw size={16} />
+            새로고침
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

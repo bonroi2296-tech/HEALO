@@ -144,7 +144,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
 
   return (
     <>
-      <header className="bg-teal-600 text-white sticky top-0 z-50 shadow-sm">
+      <header className="bg-teal-600 text-white sticky top-0 z-50 shadow-sm pt-safe-area">
         <div className="max-w-6xl mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-6 z-20">
@@ -302,16 +302,29 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
                 </div>
               )}
 
+              {/* CTA (모바일) */}
+              {!isAdmin && (
+                <div className="px-5 pt-2 pb-3">
+                  <button
+                    onClick={() => { handleGlobalInquiry(); setIsMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-white text-teal-700 rounded-xl text-sm font-bold shadow-md border border-teal-100 hover:bg-teal-50 transition"
+                  >
+                    <Zap size={18} className="text-teal-600" />
+                    {t("cta.freePlan", langCode)}
+                  </button>
+                </div>
+              )}
+
               {/* Navigation */}
               <div className="px-5 py-3">
                 <div className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-2 px-1">Menu</div>
-                <button onClick={() => onNavClick('list_treatment')} className={`w-full text-left py-3 px-3 rounded-lg text-sm font-medium flex items-center justify-between transition-colors ${isActive('treatment') ? 'text-teal-600 bg-teal-50' : 'text-gray-700 hover:bg-gray-50'}`}>
-                  <span className="flex items-center gap-2.5"><Stethoscope size={16} className="text-gray-400" /> {t("nav.treatments", langCode)}</span>
-                  <ArrowRight size={14} className="text-gray-300" />
+                <button onClick={() => onNavClick('list_treatment')} className={`w-full text-left py-3 px-3 rounded-lg text-sm font-medium flex items-center justify-between transition-colors min-h-[44px] ${isActive('treatment') ? 'text-teal-600 bg-teal-50' : 'text-gray-700 hover:bg-gray-50'}`}>
+                  <span className="flex items-center gap-2.5"><Stethoscope size={16} className="text-gray-400 shrink-0" /> {t("nav.treatments", langCode)}</span>
+                  <ArrowRight size={14} className="text-gray-300 shrink-0" />
                 </button>
-                <button onClick={() => onNavClick('list_hospital')} className={`w-full text-left py-3 px-3 rounded-lg text-sm font-medium flex items-center justify-between transition-colors ${isActive('hospital') ? 'text-teal-600 bg-teal-50' : 'text-gray-700 hover:bg-gray-50'}`}>
-                  <span className="flex items-center gap-2.5"><Building2 size={16} className="text-gray-400" /> {t("nav.hospitals", langCode)}</span>
-                  <ArrowRight size={14} className="text-gray-300" />
+                <button onClick={() => onNavClick('list_hospital')} className={`w-full text-left py-3 px-3 rounded-lg text-sm font-medium flex items-center justify-between transition-colors min-h-[44px] ${isActive('hospital') ? 'text-teal-600 bg-teal-50' : 'text-gray-700 hover:bg-gray-50'}`}>
+                  <span className="flex items-center gap-2.5"><Building2 size={16} className="text-gray-400 shrink-0" /> {t("nav.hospitals", langCode)}</span>
+                  <ArrowRight size={14} className="text-gray-300 shrink-0" />
                 </button>
               </div>
 
@@ -525,11 +538,11 @@ export const CardListSection = ({ title, items, onCardClick, type, showPartnerBa
 export const FloatingInquiryBtn = ({ onClick }) => {
   const langCode = useLangCode();
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 group cursor-pointer" onClick={onClick}>
+    <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end gap-2 group cursor-pointer pb-safe-area" onClick={onClick}>
       <div className="bg-white text-gray-800 text-xs font-extrabold px-3 py-2 rounded-xl shadow-md border border-gray-100 mb-1 animate-bounce">
         {t("floatingHelp", langCode)} 💬
       </div>
-      <button className="w-14 h-14 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform transform hover:scale-110 active:scale-95 relative">
+      <button className="w-14 h-14 min-w-[56px] min-h-[56px] bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform transform hover:scale-110 active:scale-95 relative touch-target">
         <MessageCircle size={28} fill="currentColor" className="text-teal-100" />
         <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-white rounded-full"></span>
       </button>

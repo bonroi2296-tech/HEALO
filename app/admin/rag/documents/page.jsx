@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Brain, RefreshCw, Save, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { AdminGuideModal } from "../../_components/AdminGuideModal";
 
 const TIER_LABELS = { 1: "Tier 1 — 공공/공식", 2: "Tier 2 — 제휴", 3: "Tier 3 — 공개수집" };
 const TIER_COLORS = {
@@ -24,6 +25,7 @@ export default function RagDocumentsPage() {
 
   const [edits, setEdits] = useState({});
   const [saving, setSaving] = useState({});
+  const [showGuide, setShowGuide] = useState(false);
 
   const fetchDocs = useCallback(async () => {
     setLoading(true);
@@ -99,15 +101,37 @@ export default function RagDocumentsPage() {
 
   return (
     <div className="space-y-4">
+      {showGuide && (
+        <AdminGuideModal title="RAG 문서/Tier 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>RAG 검색에 사용되는 <strong>문서(rag_documents)</strong>의 Trust Tier, 만료일(expires_at), 소스 라벨 등을 조회·편집합니다. Tier가 높을수록 검색 결과에서 우선 노출됩니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Trust Tier</h3>
+            <p className="text-gray-600 text-sm">Tier 1(공공/공식) → Tier 2(제휴) → Tier 3(공개수집) 순으로 우선순위가 높습니다. 필터로 Tier·소스 타입·만료 여부별로 목록을 볼 수 있고, 저장하면 DB에 반영됩니다.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-          <Brain size={20} className="text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Brain size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">RAG 문서 관리</h1>
+            <p className="text-sm text-gray-500">Trust Tier 설정 · 만료 관리</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">RAG 문서 관리</h1>
-          <p className="text-sm text-gray-500">Trust Tier 설정 · 만료 관리</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          사용 가이드
+        </button>
       </div>
 
       {/* Filters */}

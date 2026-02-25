@@ -170,7 +170,7 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
               <button
                 key={chip.value}
                 onClick={() => handleTagClick(chip.value)}
-                className={`inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                className={`inline-flex items-center gap-1 px-3.5 py-2 sm:py-1.5 rounded-full text-sm font-semibold border transition-all min-h-[44px] sm:min-h-0 touch-target ${
                   activeTag === chip.value
                     ? "bg-teal-600 text-white border-teal-600 shadow-sm"
                     : "bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600"
@@ -248,7 +248,7 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
         </div>
       )}
 
-      <div className="flex justify-center mt-8 mb-12">
+      <div className="flex justify-center mt-8 mb-20 sm:mb-12 pb-safe-area">
         {loading && page === 0 ? (
           <div className="flex items-center gap-2 text-teal-600 font-bold">
             <Loader2 className="animate-spin" /> Loading...
@@ -256,7 +256,7 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
         ) : hasMore ? (
           <button
             onClick={() => fetchItems(true)}
-            className="px-8 py-3 bg-white border border-gray-200 text-gray-600 rounded-full font-bold shadow-sm hover:bg-gray-50 hover:border-teal-500 hover:text-teal-600 transition"
+            className="px-8 py-3.5 min-h-[48px] bg-white border border-gray-200 text-gray-600 rounded-full font-bold shadow-sm hover:bg-gray-50 hover:border-teal-500 hover:text-teal-600 transition"
           >
             {loading ? <Loader2 className="animate-spin" /> : `${t("common.loadMore", lang)} +`}
           </button>

@@ -20,7 +20,10 @@
     "test:smoke:auth": "node scripts/smoke-test-auth.js",
     "collect": "tsx scripts/data-collection/index.ts",
     "collect:hospitals": "tsx scripts/data-collection/index.ts collect",
-    "collect:template": "tsx scripts/data-collection/index.ts template"
+    "collect:template": "tsx scripts/data-collection/index.ts template",
+    "verify:rag": "node scripts/verify-rag.mjs",
+    "audit:playbook-rag": "tsx scripts/audit-playbook-rag.ts",
+    "loadtest:rag": "tsx scripts/loadtest-rag-rpc.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.22",

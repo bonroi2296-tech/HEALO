@@ -13,6 +13,7 @@ import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { supabaseAdmin } from "../rag/supabaseAdmin";
+import { hashQuery, logRagDisabled } from "../rag/ragQueryEvents";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -68,6 +69,15 @@ function computeThreadHash(threadId: string): number {
 }
 
 export async function fetchRagChunks(query: string, lang: string, threadId?: string): Promise<any[]> {
+  if (process.env.RAG_DISABLED === "true") {
+    await logRagDisabled({
+      source: "chat",
+      queryTextHash: hashQuery(query),
+      lang: lang || null,
+    });
+    return [];
+  }
+
   const TOTAL_LIMIT = 6;
   const PLAYBOOK_LIMIT = 3;
 

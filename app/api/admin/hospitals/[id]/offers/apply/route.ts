@@ -1,0 +1,186 @@
+/**
+ * HOSPITAL_OFFER_IMPORT_V1: 미리보기 payload로 treatments + treatment_sources DB 반영
+ * POST /api/admin/hospitals/[id]/offers/apply
+ * Body: OffersPreviewPayload (preview 응답과 동일)
+ */
+
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+import { NextRequest } from "next/server";
+import { supabaseAdmin, assertSupabaseEnv } from "../../../../../../../src/lib/rag/supabaseAdmin";
+import { requireAdminAuth } from "../../../../../../../src/lib/auth/requireAdminAuth";
+import {
+  logAdminAction,
+  getIpFromRequest,
+  getUserAgentFromRequest,
+} from "../../../../../../../src/lib/audit/adminAuditLog";
+import { generateSlug } from "../../../../../../../src/lib/utils/slug";
+import type { OffersPreviewPayload, OfferItem } from "../../../../../../../src/lib/hospitalOffers/types";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  assertSupabaseEnv();
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) return auth.response;
+  const { id: hospitalId } = await params;
+  if (!hospitalId) {
+    return Response.json({ ok: false, error: "missing_hospital_id" }, { status: 400 });
+  }
+
+  let body: OffersPreviewPayload;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+  }
+
+  if (body.hospital_id !== hospitalId) {
+    return Response.json(
+      { ok: false, error: "hospital_id_mismatch" },
+      { status: 400 }
+    );
+  }
+
+  const { data: hospital } = await supabaseAdmin
+    .from("hospitals")
+    .select("id")
+    .eq("id", hospitalId)
+    .single();
+
+  if (!hospital) {
+    return Response.json({ ok: false, error: "hospital_not_found" }, { status: 404 });
+  }
+
+  const offers: OfferItem[] = Array.isArray(body.offers) ? body.offers : [];
+  const captured_at = body.captured_at || new Date().toISOString();
+  const sources = Array.isArray(body.sources) ? body.sources : [];
+
+  const { data: existingTreatments } = await supabaseAdmin
+    .from("treatments")
+    .select("id, slug")
+    .eq("hospital_id", hospitalId);
+  const usedSlugs = new Set((existingTreatments || []).map((t) => t.slug).filter(Boolean));
+
+  function ensureUniqueSlug(baseSlug: string): string {
+    let slug = baseSlug;
+    let n = 1;
+    while (usedSlugs.has(slug)) {
+      slug = `${baseSlug}-${n}`;
+      n++;
+    }
+    usedSlugs.add(slug);
+    return slug;
+  }
+
+  const treatmentIds: string[] = [];
+  let created = 0;
+  let updated = 0;
+
+  for (const offer of offers.slice(0, 3)) {
+    const t = offer.treatment;
+    if (!t?.name?.trim()) continue;
+
+    const baseSlug =
+      t.slug && t.slug.trim() ? t.slug.trim() : generateSlug(t.name);
+    const slug = ensureUniqueSlug(baseSlug);
+
+    const payload: Record<string, unknown> = {
+      hospital_id: hospitalId,
+      name: t.name.trim(),
+      slug,
+      description: t.description ?? null,
+      full_description: t.full_description ?? null,
+      price_min: t.price_min ?? null,
+      price_max: t.price_max ?? null,
+      benefits: [],
+      tags: t.tags ?? [],
+      images: t.images ?? [],
+      thumbnail_image: (t.images && t.images[0]) ?? null,
+      gallery_images: t.images ?? [],
+      display_order: null,
+      is_published: true,
+      recovery_time_min: t.recovery_time_min ?? null,
+      recovery_time_max: t.recovery_time_max ?? null,
+      side_effects: t.side_effects ?? [],
+      side_effects_detail: null,
+      precautions: t.precautions ?? [],
+      anesthesia_type: t.anesthesia_type ?? null,
+      surgery_duration_min: t.duration ?? null,
+      surgery_duration_max: t.duration ?? null,
+      required_equipment: [],
+      insurance_coverage: false,
+      insurance_coverage_detail: null,
+      annual_procedure_count: null,
+      success_rate: null,
+      before_after_images: [],
+      price_includes: t.price_includes ?? [],
+    };
+
+    const existing = (existingTreatments || []).find((e) => e.slug === slug);
+    let treatmentId: string;
+
+    if (existing) {
+      const { data: up, error: err } = await supabaseAdmin
+        .from("treatments")
+        .update(payload)
+        .eq("id", existing.id)
+        .select("id")
+        .single();
+      if (err || !up?.id) {
+        if (err) console.error("[offers/apply] update error:", err.message);
+        continue;
+      }
+      treatmentId = up.id;
+      updated++;
+    } else {
+      const { data: ins, error: err } = await supabaseAdmin
+        .from("treatments")
+        .insert([payload])
+        .select("id")
+        .single();
+      if (err) {
+        console.error("[offers/apply] insert error:", err.message);
+        continue;
+      }
+      treatmentId = ins.id;
+      created++;
+    }
+
+    treatmentIds.push(treatmentId);
+
+    const rawHash = body.captured_at + treatmentId + JSON.stringify(offer.evidence);
+    await supabaseAdmin.from("treatment_sources").insert({
+      treatment_id: treatmentId,
+      hospital_id: hospitalId,
+      captured_at: captured_at,
+      sources,
+      evidence: offer.evidence ?? {},
+      raw_hash: rawHash.slice(0, 512),
+    });
+  }
+
+  const { authResult } = auth;
+  logAdminAction({
+    adminEmail: authResult.email || "unknown",
+    adminUserId: authResult.userId,
+    action: "HOSPITAL_OFFERS_APPLY",
+    ipAddress: getIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    metadata: {
+      hospital_id: hospitalId,
+      created,
+      updated,
+      treatment_ids: treatmentIds,
+    },
+  }).catch((err) => console.error("[offers/apply] audit log failed:", err.message));
+
+  return Response.json({
+    ok: true,
+    created,
+    updated,
+    treatment_ids: treatmentIds,
+  });
+}

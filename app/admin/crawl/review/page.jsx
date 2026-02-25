@@ -17,6 +17,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { useToast } from "../../../../src/components/Toast";
+import { AdminGuideModal } from "../../_components/AdminGuideModal";
 import Link from "next/link";
 
 const TABS = [
@@ -42,6 +43,7 @@ export default function ReviewPage() {
   const [itemsLoading, setItemsLoading] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [processing, setProcessing] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   // Filters
   const [searchText, setSearchText] = useState("");
@@ -197,6 +199,26 @@ export default function ReviewPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-4">
+      {showGuide && (
+        <AdminGuideModal title="검토 큐 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>크롤링 파이프라인에서 <strong>완료된 수집 작업</strong>의 결과를 검토하는 곳입니다. 신규 병원, 변경 감지, 폐업 의심 항목을 탭별로 보고, 승인하면 병원관리에 반영되거나 기존 병원이 업데이트됩니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">탭 의미</h3>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li><strong>신규</strong>: DB에 없던 병원. 승인 시 병원관리에 새 레코드로 등록됩니다 (is_published=false).</li>
+              <li><strong>변경</strong>: 기존 병원 정보가 바뀐 경우. 승인 시 해당 병원 데이터가 업데이트됩니다.</li>
+              <li><strong>폐업 의심</strong>: 영업 중단 등으로 판단된 항목. 검토 후 거부하거나 병원관리에서 비공개 처리할 수 있습니다.</li>
+            </ul>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <p>항목을 선택한 뒤 「승인」하면 병원관리 쪽에 반영됩니다. 승인 후 병원관리에서 상세를 편집하고 공개할 수 있습니다.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -210,12 +232,22 @@ export default function ReviewPage() {
             </span>
           </div>
         </div>
-        <button
-          onClick={() => { fetchJob(); fetchItems(); }}
-          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-        >
-          <RefreshCw size={14} /> 새로고침
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
+          <button
+            onClick={() => { fetchJob(); fetchItems(); }}
+            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          >
+            <RefreshCw size={14} /> 새로고침
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

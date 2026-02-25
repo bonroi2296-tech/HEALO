@@ -5,6 +5,7 @@ import {
   BookOpen, Plus, Check, X, RefreshCw, ChevronLeft, ChevronRight,
   Eye, EyeOff, Send, Tag, AlertTriangle
 } from "lucide-react";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 
 const STATUS_TABS = [
   { value: "", label: "전체" },
@@ -37,6 +38,7 @@ export default function PlaybookPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
   const [approving, setApproving] = useState({});
+  const [showGuide, setShowGuide] = useState(false);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -119,6 +121,22 @@ export default function PlaybookPage() {
 
   return (
     <div className="space-y-4">
+      {showGuide && (
+        <AdminGuideModal title="플레이북 관리 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p><strong>응대 원문(플레이북 응답)</strong>을 등록하고, PII 정제·검토·승인한 뒤 RAG에 반영하는 흐름을 관리합니다. 여기서 등록·승인된 응대는 응대 패턴(Playbook Patterns)과 RAG 검색에 활용됩니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>「응대 등록」으로 원문을 넣으면 서버에서 PII 마스킹 후 초안으로 저장됩니다.</li>
+              <li>상태: 초안 → 검토중 → 승인/반려. 승인 시 응대 패턴으로 전달되거나 RAG에 반영될 수 있습니다.</li>
+              <li>목록에서 항목을 선택해 상세를 보고 승인·반려할 수 있습니다.</li>
+            </ul>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -130,13 +148,23 @@ export default function PlaybookPage() {
             <p className="text-sm text-gray-500">응대 등록 · PII 정제 · 승인 → RAG 반영</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <Plus size={16} />
-          응대 등록
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition"
+          >
+            <Plus size={16} />
+            응대 등록
+          </button>
+        </div>
       </div>
 
       {/* Create form */}

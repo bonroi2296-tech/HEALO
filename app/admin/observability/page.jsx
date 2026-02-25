@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { AdminGuideModal } from "../_components/AdminGuideModal";
 
 function zeroRateColor(zeroRate) {
   if (zeroRate < 10) return "text-green-600 bg-green-50 border-green-200";
@@ -32,6 +33,7 @@ export default function ObservabilityPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [windowParam, setWindowParam] = useState("7d");
+  const [showGuide, setShowGuide] = useState(false);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
@@ -84,9 +86,36 @@ export default function ObservabilityPage() {
 
   return (
     <div className="space-y-6">
+      {showGuide && (
+        <AdminGuideModal title="관측성 / RAG Health 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>RAG 검색의 <strong>품질·건강도</strong>를 기간별로 확인합니다. Zero Rate(결과 0건 비율), 총 요청 수, 임베딩/RPC 실패율 등을 한눈에 보고, 이상 시 대응할 수 있습니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">지표 설명</h3>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li><strong>Zero Rate</strong>: 검색 결과가 0건인 비율. 20% 초과 시 경고로 표시되며, RAG 데이터·필터를 점검하는 것이 좋습니다.</li>
+              <li><strong>Embedding/RPC 실패율</strong>: 임베딩 API 또는 RPC 호출 실패 비율입니다.</li>
+            </ul>
+          </section>
+          <section className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-base font-semibold text-teal-800 mb-1">권장</h3>
+            <p className="text-teal-700 text-sm">주기적으로 Zero Rate를 확인하고, 높으면 RAG 문서·패턴·ingest 상태를 점검하세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-xl font-bold text-gray-900">관측성 / RAG Health</h1>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            사용 가이드
+          </button>
           <label className="text-sm font-medium text-gray-600">기간</label>
           <select
             value={windowParam}

@@ -120,19 +120,33 @@ export function AdminNav() {
             <div className="space-y-0.5 lg:space-y-1">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
-                
+                const isExactActive = pathname === item.href;
+                const isParentOfActive =
+                  item.href !== "/admin" &&
+                  pathname !== item.href &&
+                  pathname.startsWith(item.href + "/");
+                // 정확히 현재 페이지만 강한 활성(teal 배경), 부모는 '열린 섹션'만 연하게 표시
+                const strongActive = isExactActive;
+                const parentOpen = !strongActive && isParentOfActive;
+
                 return (
                   <Link
                     key={item.id}
                     href={item.href}
-                    className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm font-medium transition-all ${
-                      isActive
+                    className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px] lg:min-h-0 items-center ${
+                      strongActive
                         ? "bg-teal-50 text-teal-700 shadow-sm"
+                        : parentOpen
+                        ? "bg-gray-50/80 text-gray-600 border-l-2 border-teal-200 -ml-0.5 pl-[14px]"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    <Icon size={18} className={isActive ? "text-teal-600" : "text-gray-400"} />
+                    <Icon
+                      size={18}
+                      className={
+                        strongActive ? "text-teal-600" : parentOpen ? "text-gray-500" : "text-gray-400"
+                      }
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -142,10 +156,10 @@ export function AdminNav() {
         ))}
       </nav>
 
-      <div className="p-3 lg:p-4 border-t border-gray-200">
+      <div className="p-3 lg:p-4 border-t border-gray-200 pb-safe-area">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all"
+          className="w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all min-h-[44px] md:min-h-0"
         >
           <LogOut size={18} />
           <span>로그아웃</span>

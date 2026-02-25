@@ -67,7 +67,7 @@ export const LoginPage = ({ setView }) => {
     };
 
     return (
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-white px-4 animate-in fade-in slide-in-from-bottom-4">
+        <div className="min-h-[calc(100vh-64px)] min-h-screen-safe flex items-center justify-center bg-white px-4 py-8 pb-safe-area animate-in fade-in slide-in-from-bottom-4">
             <div className="max-w-sm w-full">
                 <div className="text-center mb-10">
                     <h2 className="text-3xl font-extrabold text-gray-900">Welcome to HEALO</h2>

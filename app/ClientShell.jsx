@@ -196,7 +196,7 @@ export default function ClientShell({ children }) {
   }, [isPortalPage, session, resetActivity, router, toast]);
 
   return (
-    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen relative">
+    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen min-h-screen-safe relative">
       {isPortalPage ? (
         <PortalTopBar session={session} onLogout={handleLogout} siteConfig={siteConfig} />
       ) : (
@@ -215,11 +215,11 @@ export default function ClientShell({ children }) {
       )}
 
       <ErrorBoundary>
-        <main className={isPortalPage ? "" : "pb-24"}>{children}</main>
+        <main className={isPortalPage ? "" : "pb-24 pb-safe-area"}>{children}</main>
       </ErrorBoundary>
 
-      {!isPortalPage && <footer className="bg-white border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-10 text-sm text-gray-600">
+      {!isPortalPage && <footer className="bg-white border-t border-gray-100 pt-safe-area">
+        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 text-sm text-gray-600">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="text-gray-900 font-bold">{SITE_INFO.brand.name}</div>
@@ -257,7 +257,7 @@ export default function ClientShell({ children }) {
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 text-xs text-gray-500 space-y-1">
+          <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-100 text-xs text-gray-500 space-y-1.5 break-words">
             <div>Service Name: {SITE_INFO.legal.serviceName}</div>
             <div>Operated by: {SITE_INFO.legal.operatedBy}</div>
             <div>Business Type: {SITE_INFO.legal.businessType}</div>
@@ -306,7 +306,7 @@ export default function ClientShell({ children }) {
    ────────────────────────────────────────────── */
 function PortalTopBar({ session, onLogout, siteConfig }) {
   return (
-    <header className="fixed top-0 left-0 right-0 h-12 z-50 bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-4">
+    <header className="fixed top-0 left-0 right-0 h-12 z-50 bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-4 pt-safe-area">
       <Link href="/" className="flex items-center gap-2 shrink-0">
         {siteConfig?.logo ? (
           <img src={siteConfig.logo} alt="HEALO" className="h-7 w-auto" />

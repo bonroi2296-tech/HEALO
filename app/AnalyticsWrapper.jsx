@@ -42,6 +42,11 @@ export default function AnalyticsWrapper() {
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
         strategy="lazyOnload"
+        onError={() => {
+          if (typeof console !== "undefined" && console.warn) {
+            console.warn("[Analytics] GA/GTM 스크립트 로드 실패(500 등). 페이지 동작에는 영향 없음.");
+          }
+        }}
       />
       <Script id="ga-init" strategy="lazyOnload">
         {`window.dataLayer = window.dataLayer || [];

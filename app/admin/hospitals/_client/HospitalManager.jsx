@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Loader2, Save, Globe, Coffee, Trophy, Info, User, X, ChevronLeft, Shield, Activity, Building, Star, Stethoscope, Calendar, HelpCircle, Search, Eye, EyeOff, ArrowUpDown, ChevronDown, MapPin, MessageCircle, Sparkles, Database, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { TranslationPanel } from '../../_shared/TranslationPanel';
+import { HospitalOffersPreviewModal } from './HospitalOffersPreview';
 
 const SORT_OPTIONS = [
   { value: 'name_asc', label: '이름 (A→Z)' },
@@ -101,6 +102,37 @@ export const HospitalManager = ({
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [offersModalOpen, setOffersModalOpen] = useState(false);
+  const [offersPayload, setOffersPayload] = useState(null);
+  const [offersLoading, setOffersLoading] = useState(false);
+
+  const requestOffersPreview = useCallback(async () => {
+    if (!editingHospitalId) return;
+    setOffersModalOpen(true);
+    setOffersLoading(true);
+    setOffersPayload(null);
+    try {
+      const res = await fetch(`/api/admin/hospitals/${editingHospitalId}/offers/preview`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json();
+      if (j.ok) {
+        setOffersPayload({
+          hospital_id: j.hospital_id,
+          captured_at: j.captured_at,
+          sources: j.sources || [],
+          offers: j.offers || [],
+        });
+      } else {
+        toast?.error?.(j.detail || j.error || '미리보기 생성 실패');
+      }
+    } catch (e) {
+      toast?.error?.('미리보기 요청 실패: ' + e?.message);
+    } finally {
+      setOffersLoading(false);
+    }
+  }, [editingHospitalId, toast]);
 
   const filtered = useFilteredHospitals(hospitalsList, search, statusFilter, sortBy);
 
@@ -329,6 +361,12 @@ export const HospitalManager = ({
               ImageUploader={ImageUploader}
               AddressInput={AddressInput}
               toast={toast}
+              offersModalOpen={offersModalOpen}
+              offersPayload={offersPayload}
+              offersLoading={offersLoading}
+              onRequestOffersPreview={requestOffersPreview}
+              onCloseOffersModal={() => setOffersModalOpen(false)}
+              onOffersApplyComplete={() => { setOffersModalOpen(false); setOffersPayload(null); fetchHospitals?.(); }}
             />
           </div>
         )}
@@ -485,13 +523,35 @@ function EnrichmentPanel({ editingHospitalId, enrichmentLog, onComplete, toast }
   );
 }
 
-function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, handleEditHospital, hospitalsList, uploadToSupabase, DynamicListInput, ImageUploader, AddressInput, toast }) {
+function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, handleEditHospital, hospitalsList, uploadToSupabase, DynamicListInput, ImageUploader, AddressInput, toast, offersModalOpen, offersPayload, offersLoading, onRequestOffersPreview, onCloseOffersModal, onOffersApplyComplete }) {
 
   return (
     <div className="relative">
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex justify-between items-center shadow-sm">
-        <h2 className="text-base lg:text-xl font-bold">{editingHospitalId?'병원 정보 수정':'신규 병원 등록'}</h2>
-        <div className="flex items-center gap-2 lg:gap-3">
+      <HospitalOffersPreviewModal
+        open={offersModalOpen}
+        onClose={onCloseOffersModal}
+        payload={offersPayload}
+        loading={offersLoading}
+        onConfirmSave={onOffersApplyComplete}
+        hospitalId={editingHospitalId}
+        toast={toast}
+      />
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex flex-wrap items-center justify-between gap-y-2 shadow-sm">
+        <h2 className="text-base lg:text-xl font-bold shrink-0">{editingHospitalId?'병원 정보 수정':'신규 병원 등록'}</h2>
+        <div className="flex items-center gap-2 lg:gap-3 flex-wrap justify-end min-w-0">
+          {editingHospitalId && (
+            <button
+              type="button"
+              onClick={onRequestOffersPreview}
+              disabled={offersLoading}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition disabled:opacity-50 shrink-0"
+              title="병원 웹사이트에서 대표 시술 최대 3개 자동 수집·미리보기"
+            >
+              {offersLoading ? <Loader2 size={14} className="animate-spin"/> : <Stethoscope size={14}/>}
+              <span className="hidden sm:inline">대표 시술 3개 자동 생성 (OCR 포함)</span>
+              <span className="sm:hidden">시술 자동생성</span>
+            </button>
+          )}
           <EnrichmentPanel
             editingHospitalId={editingHospitalId}
             enrichmentLog={hospitalForm._enrichmentLog}

@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import AdminFormFooter from "../../_components/AdminFormFooter";
+import { AdminGuideModal } from "../../_components/AdminGuideModal";
 import { useNotificationRecipients } from "./_hooks/useNotificationRecipients";
 import { useToast } from "./_hooks/useToast";
 import { RecipientList } from "./_components/RecipientList";
@@ -38,6 +39,7 @@ export default function NotificationsSettingsPage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   const tableMissing = errorCode === "TABLE_NOT_FOUND";
 
@@ -129,6 +131,18 @@ export default function NotificationsSettingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {showGuide && (
+        <AdminGuideModal title="알림 관리 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p>문의 접수·리드 등 이벤트 발생 시 <strong>알림을 받을 수신자</strong>를 등록·수정·삭제합니다. SMS, 알림톡, 이메일 등 채널별로 수신자를 두고 테스트 발송으로 동작을 확인할 수 있습니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">사용법</h3>
+            <p className="text-gray-600 text-sm">수신자 추가로 연락처·채널을 등록하고, 활성/비활성 토글로 수신 여부를 제어합니다. 「테스트 알림」으로 실제 발송을 시험해 보세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       <AdminFormFooter targetSection="notifications" />
 
       <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mt-6">
@@ -140,8 +154,17 @@ export default function NotificationsSettingsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddForm(true)}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowGuide(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              사용 가이드
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
             disabled={tableMissing || showAddForm}
             className={`px-4 py-2 rounded-lg font-medium transition ${
               tableMissing || showAddForm
@@ -151,6 +174,7 @@ export default function NotificationsSettingsPage() {
           >
             + 수신자 추가
           </button>
+          </div>
         </div>
 
         {/* 테이블 누락 경고 */}

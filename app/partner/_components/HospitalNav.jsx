@@ -79,7 +79,7 @@ export function HospitalNav() {
             <Link
               key={item.id}
               href={item.href}
-              className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px] lg:min-h-0 items-center ${
                 isActive
                   ? "bg-teal-50 text-teal-700 shadow-sm"
                   : "text-gray-700 hover:bg-gray-50"
@@ -92,10 +92,10 @@ export function HospitalNav() {
         })}
       </nav>
 
-      <div className="p-3 lg:p-4 border-t border-gray-200">
+      <div className="p-3 lg:p-4 border-t border-gray-200 pb-safe-area">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all"
+          className="w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all min-h-[44px] md:min-h-0"
         >
           <LogOut size={18} />
           <span>로그아웃</span>

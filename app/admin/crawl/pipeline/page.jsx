@@ -26,6 +26,7 @@ import {
   Database,
 } from "lucide-react";
 import { useToast } from "../../../../src/components/Toast";
+import { AdminGuideModal } from "../../_components/AdminGuideModal";
 import Link from "next/link";
 
 const SOURCE_ICONS = {
@@ -110,6 +111,7 @@ export default function PipelinePage() {
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const saveTimerRef = useRef(null);
 
   const fetchJobs = useCallback(async () => {
@@ -268,15 +270,45 @@ export default function PipelinePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {showGuide && (
+        <AdminGuideModal title="크롤링 파이프라인 가이드" onClose={() => setShowGuide(false)}>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">이 페이지는 무엇인가요?</h3>
+            <p><strong>자동 수집 스케줄</strong>과 <strong>수동 수집 실행</strong>, <strong>실행 이력</strong>을 관리합니다. 데이터 크롤링 페이지에서 한 번씩 검색하는 것과 달리, 여기서는 주기적으로 전체/지역·과목 조합을 자동 수집하고, 완료된 작업의 검토 큐로 이동합니다.</p>
+          </section>
+          <section>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">주요 기능</h3>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li><strong>자동 수집 스케줄</strong>: 매주/격주/매월/분기, 요일·시간을 정해 두면 그때마다 HIRA 등 선택 소스로 수집이 실행됩니다.</li>
+              <li><strong>수동 수집</strong>: 지금 바로 소스를 선택해 전체 수집을 시작합니다. 실행 이력에 표시됩니다.</li>
+              <li><strong>검토 (N건)</strong>: 수집이 끝난 작업을 클릭하면 검토 큐로 이동해 신규/변경/폐업 의심 항목을 승인·거부할 수 있습니다. 승인 시 병원관리에 반영됩니다.</li>
+            </ul>
+          </section>
+          <section className="bg-teal-50 rounded-lg p-4">
+            <h3 className="text-base font-semibold text-teal-800 mb-1">권장</h3>
+            <p className="text-teal-700 text-sm">스케줄을 켜두면 정기적으로 데이터가 갱신됩니다. 검토 큐에서 승인한 건만 병원관리에 새로 추가되므로, 검토는 주기적으로 진행하세요.</p>
+          </section>
+        </AdminGuideModal>
+      )}
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          <BarChart3 className="text-teal-600" size={28} />
-          크롤링 파이프라인
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          전체 데이터 수집, 증분 업데이트, 폐업 감지를 자동으로 처리합니다
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <BarChart3 className="text-teal-600" size={28} />
+            크롤링 파이프라인
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            전체 데이터 수집, 증분 업데이트, 폐업 감지를 자동으로 처리합니다
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition text-sm font-medium flex-shrink-0"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          사용 가이드
+        </button>
       </div>
 
       {/* Schedule Settings */}

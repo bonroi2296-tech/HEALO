@@ -49,6 +49,14 @@ if (fs.existsSync(envLocalPath)) {
 // ========================================
 import { createClient } from "@supabase/supabase-js";
 
+/** listUsers() 응답의 user 항목 타입 (Supabase 생성 타입이 never로 추론되는 경우 대비) */
+interface AuthAdminUser {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+}
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -74,7 +82,7 @@ function getSupabaseAdmin() {
 /**
  * ✅ 이메일로 유저 찾기
  */
-async function findUserByEmail(email: string): Promise<any> {
+async function findUserByEmail(email: string): Promise<AuthAdminUser> {
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase.auth.admin.listUsers();
@@ -83,7 +91,8 @@ async function findUserByEmail(email: string): Promise<any> {
     throw new Error(`유저 조회 실패: ${error.message}`);
   }
 
-  const user = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  const users = (data?.users ?? []) as AuthAdminUser[];
+  const user = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
 
   if (!user) {
     throw new Error(`유저를 찾을 수 없습니다: ${email}`);
@@ -133,8 +142,8 @@ async function listAdmins(): Promise<void> {
     throw new Error(`유저 조회 실패: ${error.message}`);
   }
 
-  // user_metadata.role === "admin" 또는 app_metadata.role === "admin"인 유저 필터링
-  const admins = data.users.filter(
+  const users = (data?.users ?? []) as AuthAdminUser[];
+  const admins = users.filter(
     (u) => u.user_metadata?.role === "admin" || u.app_metadata?.role === "admin"
   );
 
@@ -147,7 +156,7 @@ async function listAdmins(): Promise<void> {
   console.log("=".repeat(60));
 
   if (admins.length === 0) {
-    console.log("❌ metadata.role="admin"인 유저가 없습니다.");
+    console.log('❌ metadata.role="admin"인 유저가 없습니다.');
   } else {
     console.log(`✅ metadata.role="admin"인 유저 (${admins.length}명):\n`);
     admins.forEach((u, idx) => {

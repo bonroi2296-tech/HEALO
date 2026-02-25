@@ -62,7 +62,8 @@ export function AdminGateClient({ children }) {
             router.push('/login');
           }
         } else {
-          console.warn('[AdminGate] Auth check failed, status:', response.status);
+          const errBody = await response.json().catch(() => ({}));
+          console.warn('[AdminGate] Auth check failed, status:', response.status, errBody?.hint ? `— ${errBody.hint}` : '');
           router.push('/login');
         }
       } catch (error) {

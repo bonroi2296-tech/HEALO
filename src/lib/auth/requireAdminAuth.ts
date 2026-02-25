@@ -109,14 +109,14 @@ export async function requireAdminAuth(
       console.error("[requireAdminAuth] Audit log failed:", err.message);
     });
 
-    // 403 응답 반환
+    // 403 응답 반환 (운영에서도 힌트 제공: Vercel env / Supabase role)
     const response: any = {
       ok: false,
       error: "unauthorized",
       detail: "관리자 권한이 필요합니다",
+      hint: "Vercel: ADMIN_EMAIL_ALLOWLIST 설정. Supabase: 사용자 app_metadata.role = admin",
     };
 
-    // 개발 환경에서만 debug 정보 포함
     if (process.env.NODE_ENV !== "production" && authResult.debug) {
       response.debug = authResult.debug;
     }

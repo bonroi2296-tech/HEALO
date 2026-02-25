@@ -23,19 +23,21 @@ import { createServerClient } from "@supabase/ssr";
  * 1. user.user_metadata.role === "admin"
  * 2. user.app_metadata.role === "admin"
  * 3. ADMIN_EMAIL_ALLOWLIST에 포함된 이메일
+ *
+ * ⚠️ isAdmin일 때 반드시 반환된 response를 사용해야 함.
+ * Supabase가 세션 갱신 시 setAll로 쿠키를 넣은 response를 그대로 돌려줘야
+ * Vercel 등에서 쿠키가 브라우저에 전달되어 다음 요청에서 로그인 유지됨.
  */
 async function checkAdminInMiddleware(request: NextRequest): Promise<{
   isAdmin: boolean;
   email?: string;
+  response: NextResponse;
 }> {
-  try {
-    // Supabase 클라이언트 생성 (middleware용)
-    let response = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
+  try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -45,12 +47,10 @@ async function checkAdminInMiddleware(request: NextRequest): Promise<{
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             );
-            response = NextResponse.next({
-              request,
-            });
+            response = NextResponse.next({ request });
             cookiesToSet.forEach(({ name, value, options }) =>
               response.cookies.set(name, value, options)
             );
@@ -59,55 +59,52 @@ async function checkAdminInMiddleware(request: NextRequest): Promise<{
       }
     );
 
-    // 세션 확인
     const {
       data: { user },
       error,
     } = await supabase.auth.getUser();
 
     if (error || !user) {
-      return { isAdmin: false };
+      return { isAdmin: false, response };
     }
 
     const userEmail = user.email?.trim().toLowerCase();
 
-    // 1. user_metadata.role === "admin"
     if (user.user_metadata?.role === "admin") {
-      return { isAdmin: true, email: userEmail };
+      return { isAdmin: true, email: userEmail, response };
     }
-
-    // 2. app_metadata.role === "admin"
     if (user.app_metadata?.role === "admin") {
-      return { isAdmin: true, email: userEmail };
+      return { isAdmin: true, email: userEmail, response };
     }
 
-    // 3. ADMIN_EMAIL_ALLOWLIST 체크
     const allowlistEnv = process.env.ADMIN_EMAIL_ALLOWLIST;
     if (allowlistEnv && userEmail) {
       const allowlist = allowlistEnv
         .split(",")
         .map((email) => email.trim().toLowerCase())
         .filter((email) => email.length > 0);
-
       if (allowlist.includes(userEmail)) {
-        return { isAdmin: true, email: userEmail };
+        return { isAdmin: true, email: userEmail, response };
       }
     }
 
-    // ❌ Admin 권한 없음
-    return { isAdmin: false, email: userEmail };
+    return { isAdmin: false, email: userEmail, response };
   } catch (error: any) {
     console.error("[middleware] Admin check error:", error.message);
-    return { isAdmin: false };
+    return { isAdmin: false, response };
   }
 }
 
 /**
  * ✅ /partner 경로용: 로그인 세션 존재 여부만 체크
+ * 통과 시 쿠키가 담긴 response를 반환해 세션 유지.
  */
-async function checkSessionInMiddleware(request: NextRequest): Promise<boolean> {
+async function checkSessionInMiddleware(request: NextRequest): Promise<{
+  hasSession: boolean;
+  response: NextResponse;
+}> {
+  let response = NextResponse.next({ request: { headers: request.headers } });
   try {
-    let response = NextResponse.next({ request: { headers: request.headers } });
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -123,9 +120,9 @@ async function checkSessionInMiddleware(request: NextRequest): Promise<boolean> 
       }
     );
     const { data: { user }, error } = await supabase.auth.getUser();
-    return !error && !!user;
+    return { hasSession: !error && !!user, response };
   } catch {
-    return false;
+    return { hasSession: false, response };
   }
 }
 
@@ -158,7 +155,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const { isAdmin, email } = await checkAdminInMiddleware(request);
+    const { isAdmin, email, response: adminResponse } = await checkAdminInMiddleware(request);
 
     if (!isAdmin) {
       if (process.env.NODE_ENV !== "production") {
@@ -168,18 +165,21 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
+    // ✅ 쿠키가 담긴 response 반환 (세션 갱신 쿠키가 브라우저에 전달됨)
+    return adminResponse;
   }
 
   // ========================================
   // /partner 경로 보호 (로그인 여부만 체크, 세부 권한은 GateClient에서)
   // ========================================
   if (pathname.startsWith("/partner")) {
-    const hasSession = await checkSessionInMiddleware(request);
+    const { hasSession, response: partnerResponse } = await checkSessionInMiddleware(request);
     if (!hasSession) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
+    return partnerResponse;
   }
 
   return NextResponse.next();

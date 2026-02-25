@@ -22,6 +22,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
@@ -64,6 +65,28 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
         } catch (error) {
           // Route Handler에서 set/remove는 실패할 수 있음
         }
+      },
+    },
+  })
+}
+
+/**
+ * ✅ API Route 전용: 요청의 Cookie 헤더로 Supabase 클라이언트 생성
+ * Vercel 서버리스에서 next/headers cookies()가 요청 쿠키를 못 넘기는 경우 대비
+ */
+export function createSupabaseServerClientFromRequest(request: NextRequest): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('[supabase/server] NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
+  }
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll() {
+        // API Route에서는 읽기만 (세션 갱신 쿠키는 미들웨어에서 처리)
       },
     },
   })

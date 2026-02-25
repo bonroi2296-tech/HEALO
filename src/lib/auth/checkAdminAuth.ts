@@ -24,7 +24,7 @@
  * ```
  */
 
-import { createSupabaseServerClient } from "../supabase/server";
+import { createSupabaseServerClient, createSupabaseServerClientFromRequest } from "../supabase/server";
 
 /**
  * ✅ 환경변수에서 관리자 이메일 화이트리스트 로드
@@ -110,17 +110,32 @@ export async function checkAdminAuth(request?: any): Promise<{
     }
 
     // ========================================
-    // 2. 쿠키 기반 fallback (서버 SSR)
+    // 2. 쿠키 기반 fallback: 요청 쿠키 우선 (Vercel에서 next/headers보다 신뢰)
     // ========================================
+    if (!user && request?.cookies) {
+      try {
+        const supabase = createSupabaseServerClientFromRequest(request);
+        const { data, error } = await supabase.auth.getUser();
+        user = data?.user;
+        userError = error;
+        authMethod = "cookie_request";
+        if (isDev) {
+          debugInfo.cookieAuthAttempted = true;
+          debugInfo.cookieAuthValid = !!user;
+          debugInfo.cookieAuthError = error?.message;
+        }
+      } catch (err: any) {
+        console.error("[checkAdminAuth] Cookie (request) auth error:", err.message);
+        userError = err;
+      }
+    }
     if (!user) {
       try {
         const supabase = await createSupabaseServerClient();
         const { data, error } = await supabase.auth.getUser();
-        
         user = data?.user;
         userError = error;
-        authMethod = "cookie";
-        
+        if (!authMethod || authMethod === "unknown") authMethod = "cookie";
         if (isDev) {
           debugInfo.cookieAuthAttempted = true;
           debugInfo.cookieAuthValid = !!user;

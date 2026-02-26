@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "../../src/lib/supabase/browser";
+import { getLangCodeFromCookie, t } from "../../src/lib/i18n";
 
 const supabaseClient = createSupabaseBrowserClient();
 import { mapHospitalRow, mapTreatmentRow } from "../../src/lib/mapper";
@@ -17,6 +18,8 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [itemsError, setItemsError] = useState(null);
+  const [langCode, setLangCode] = useState("en");
+  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
   const ITEMS_PER_PAGE = 6;
   const isDev = process.env.NODE_ENV !== "production";
 
@@ -105,7 +108,7 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
       <div className="flex justify-center mt-8 mb-12">
         {loading && page === 0 ? (
           <div className="flex items-center gap-2 text-teal-600 font-bold">
-            <Loader2 className="animate-spin" /> Loading...
+            <Loader2 className="animate-spin" /> {t("list.loading", langCode)}
           </div>
         ) : hasMore ? (
           <button

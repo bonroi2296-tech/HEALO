@@ -50,7 +50,7 @@ export default function InquiryWrapper() {
           console.error("[InquiryWrapper] simple list error:", error);
           return;
         }
-        if (data) {
+        if (Array.isArray(data)) {
           setTreatments(
             data.map((treatment) => ({
               id: treatment.id,
@@ -63,6 +63,9 @@ export default function InquiryWrapper() {
             }))
           );
         }
+      })
+      .catch((err) => {
+        console.error("[InquiryWrapper] fetch exception:", err);
       });
     return () => {
       isMounted = false;

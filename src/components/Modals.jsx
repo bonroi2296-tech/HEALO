@@ -39,7 +39,7 @@ export const ReviewModal = ({ isOpen, onClose, reviews }) => {
                             <div className="flex justify-between items-start mb-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                        {review.name[0]}
+                                        {review.name?.[0]}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">

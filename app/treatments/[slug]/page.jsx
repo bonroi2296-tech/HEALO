@@ -5,6 +5,7 @@ import {
   getTreatmentBySlug,
   getTreatmentSlugById,
 } from "../../../src/lib/data/treatments";
+import { normalizeImages } from "../../../src/lib/mapper";
 import TreatmentDetailClient from "./TreatmentDetailClient";
 
 const UUID_REGEX =
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }) {
   const canonical = `/treatments/${treatment.slug || slug}`;
   const ogImages =
     Array.isArray(treatment.images) && treatment.images.length > 0
-      ? [{ url: treatment.images[0] }]
+      ? [{ url: treatment.images?.[0] }]
       : undefined;
   return {
     title: treatment.title,

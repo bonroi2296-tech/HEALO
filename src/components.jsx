@@ -233,7 +233,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
           <div className="md:hidden flex items-center gap-3 z-20">
             {session && (
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">
-                {session.user.email.split('@')[0].substring(0, 2).toUpperCase()}
+                {session?.user?.email?.split('@')?.[0]?.substring(0, 2)?.toUpperCase()}
               </div>
             )}
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white">
@@ -351,7 +351,7 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
       <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 mb-4 md:mb-6">{title}</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-        {items.map((item) => (
+        {Array.isArray(items) && items.map((item) => (
           <div
             key={item.id}
             onClick={() => onCardClick(item.id)}
@@ -387,7 +387,7 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
                   </h3>
                 </>
               )}
-              {item.tags && (
+              {Array.isArray(item.tags) && (
                 <div className="flex flex-wrap gap-1 mb-1 md:mb-3">
                   {item.tags.slice(0, 2).map((tag, idx) => (
                     <span key={idx} className="text-[9px] md:text-[10px] bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded font-extrabold">

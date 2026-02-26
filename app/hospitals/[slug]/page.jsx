@@ -5,6 +5,7 @@ import {
   getHospitalBySlug,
   getHospitalSlugById,
 } from "../../../src/lib/data/hospitals";
+import { normalizeImages } from "../../../src/lib/mapper";
 import HospitalDetailClient from "./HospitalDetailClient";
 
 const UUID_REGEX =
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }) {
   const canonical = `/hospitals/${hospital.slug || slug}`;
   const ogImages =
     Array.isArray(hospital.images) && hospital.images.length > 0
-      ? [{ url: hospital.images[0] }]
+      ? [{ url: hospital.images?.[0] }]
       : undefined;
   return {
     title: hospital.name,

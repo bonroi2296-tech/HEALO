@@ -112,7 +112,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
   };
 
   const handleFileChange = (e) => {
-      const file = e.target.files[0];
+      const file = e.target.files?.[0];
       if (file) {
           setFormData({ ...formData, file: file });
       }
@@ -361,7 +361,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {mode === 'ai' && (
         <div className="bg-white border border-gray-200 rounded-3xl shadow-xl h-[600px] flex flex-col p-4 animate-in fade-in slide-in-from-right-4">
            <div className="flex-1 overflow-y-auto mb-4 bg-gray-50 rounded-2xl p-4 text-left space-y-4" ref={chatContainerRef}>
-             {messages.map((msg) => {
+             {Array.isArray(messages) && messages.map((msg) => {
                  const partText = Array.isArray(msg.parts)
                    ? msg.parts
                        .filter((p) => p.type === 'text')

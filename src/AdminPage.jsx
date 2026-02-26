@@ -43,7 +43,7 @@ const DynamicListInput = ({ items, onAdd, onRemove, placeholder, icon: Icon }) =
                 <button type="button" onClick={handleAdd} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-lg font-bold text-sm transition">추가</button>
             </div>
             <div className="flex flex-wrap gap-2">
-                {items.map((item, idx) => (
+                {Array.isArray(items) && items.map((item, idx) => (
                     <span key={idx} className="bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 border border-teal-100">
                         {item} <button type="button" onClick={() => onRemove(idx)} className="hover:text-red-500"><X size={12}/></button>
                     </span>
@@ -91,7 +91,7 @@ const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
             
             {images.length > 0 && (
                 <div className="grid grid-cols-4 gap-2">
-                    {images.map((url, idx) => (
+                    {Array.isArray(images) && images.map((url, idx) => (
                         <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
                             <img src={url} alt="upload" className="w-full h-full object-cover" />
                             <button 
@@ -228,14 +228,14 @@ export const AdminPage = ({ setView }) => {
           setView('login');
         } else {
           // 에러 표시 (fallback 제거 - 암호문 표시 방지)
-          alert(`문의 로딩 실패: ${result.error}\n\n관리자에게 문의하세요.`);
+          toast.error(`문의 로딩 실패: ${result.error}. 관리자에게 문의하세요.`);
           setInquiries([]);
         }
       }
     } catch (error) {
       console.error('[AdminPage] ❌ fetchInquiries error:', error);
       // 에러 표시 (fallback 제거 - 암호문 표시 방지)
-      alert(`문의 로딩 실패: ${error.message}\n\n새로고침 후 다시 시도하세요.`);
+      toast.error(`문의 로딩 실패: ${error.message}. 새로고침 후 다시 시도하세요.`);
       setInquiries([]);
     }
   };
@@ -340,7 +340,7 @@ export const AdminPage = ({ setView }) => {
   // 🔒 RLS 보안: 클라이언트에서 직접 update 금지
   // Status 변경은 추후 /api/admin/inquiries/[id] PATCH로 구현 필요
   const handleStatusChange = async (id, newStatus) => { 
-    alert('⚠️ Status 변경은 현재 비활성화되어 있습니다.\n관리자 API를 통해 구현 예정입니다.');
+    toast.info('⚠️ Status 변경은 현재 비활성화되어 있습니다. 관리자 API를 통해 구현 예정입니다.');
     // await supabase.from('inquiries').update({ status: newStatus }).eq('id', id); 
     // fetchInquiries(); 
   };

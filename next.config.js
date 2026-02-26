@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ✅ 성능 최적화: 코드 스플리팅 및 번들 최적화
@@ -144,4 +146,10 @@ const nextConfig = {
 };
 
 // ✅ ES 모듈 형식 (package.json의 "type": "module"과 일치)
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG || "",
+  project: process.env.SENTRY_PROJECT || "",
+  widenClientFileUpload: true,
+  disableLogger: true,
+});

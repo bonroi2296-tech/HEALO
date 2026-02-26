@@ -743,8 +743,8 @@
 # This rulebook is a LIVING DOCUMENT. It must evolve with the project.
 # 이 규율서는 살아있는 문서이다. 프로젝트와 함께 진화해야 한다.
 
-## 8.1 Auto-Update Trigger
-## 8.1 자동 업데이트 트리거
+## 8.1 Auto-Update Trigger (ASK-FIRST Protocol)
+## 8.1 자동 업데이트 트리거 (먼저 물어보기 프로토콜)
 
 # When the founder gives an instruction that contains a DURABLE RULE
 # (not a one-time task), the agent MUST:
@@ -752,7 +752,7 @@
 # 에이전트는 반드시:
 #
 # 1. Execute the instruction as requested.
-#    지시를 실행한다.
+#    지시된 작업을 먼저 실행한다.
 #
 # 2. Determine if the instruction implies a permanent rule change.
 #    지시가 영구적 규칙 변경을 내포하는지 판단한다.
@@ -766,17 +766,46 @@
 #    - "이 페이지에 버튼 추가해"
 #    - "린트 돌려봐"
 #
-# 3. If durable: update this file (.cursorrules) in the appropriate section.
-#    영구 규칙이면: 이 파일의 적절한 섹션에 추가한다.
+# 3. If durable: DO NOT update .cursorrules immediately.
+#    영구 규칙이면: 바로 수정하지 않는다.
+#    Instead, ASK the founder first in this exact format:
+#    대신, 아래 형식으로 대표에게 먼저 확인을 구한다:
 #
-# 4. If durable: also record in CORPORATE_LOG.md with date and context.
-#    영구 규칙이면: CORPORATE_LOG.md에도 날짜와 맥락과 함께 기록한다.
+#    ─────────────────────────────────────────
+#    **규칙 변경 요청 감지**
 #
-# 5. Notify the founder: "이 지시를 영구 규칙으로 .cursorrules에 추가했습니다: [요약]"
-#    대표에게 알린다: "이 지시를 영구 규칙으로 .cursorrules에 추가했습니다: [요약]"
+#    지금은 이렇게 되어 있습니다:
+#    > [현재 규칙을 쉬운 말로 설명]
 #
-# 6. Commit with message: "chore(.cursorrules): add rule — [brief description]"
-#    커밋 메시지: "chore(.cursorrules): add rule — [간단한 설명]"
+#    대표님 지시에 따라 이렇게 바꾸려 합니다:
+#    > [변경할 내용을 쉬운 말로 설명]
+#
+#    이대로 적용할까요?
+#    ─────────────────────────────────────────
+#
+#    CRITICAL: The explanation must use PLAIN LANGUAGE.
+#    중요: 설명은 반드시 쉬운 말로 한다.
+#    - No technical jargon. Assume the founder is non-technical.
+#      기술 용어를 쓰지 않는다. 대표가 비개발자라고 가정한다.
+#    - If a technical term is unavoidable, add a parenthetical explanation.
+#      기술 용어가 불가피하면 괄호 안에 쉬운 설명을 추가한다.
+#      Example: "API(서버에 데이터를 요청하는 통로)"
+#
+# 4. Only after the founder confirms ("ㅇㅇ", "맞아", "적용해", etc.):
+#    대표가 확인한 후에만 ("ㅇㅇ", "맞아", "적용해" 등):
+#    a. Update this file (.cursorrules) in the appropriate section.
+#       이 파일의 적절한 섹션에 추가한다.
+#    b. Record in CORPORATE_LOG.md with date and context.
+#       CORPORATE_LOG.md에 날짜와 맥락과 함께 기록한다.
+#    c. Commit with message: "chore(.cursorrules): add rule — [brief description]"
+#       커밋: "chore(.cursorrules): add rule — [간단한 설명]"
+#    d. Confirm to founder: "적용했습니다."
+#       대표에게 확인: "적용했습니다."
+#
+# 5. If the founder says no ("아니", "그건 아니야", etc.):
+#    대표가 거부하면:
+#    Do nothing. Do not update .cursorrules. Acknowledge and move on.
+#    아무것도 하지 않는다. 확인하고 넘어간다.
 
 ## 8.2 What NOT to Auto-Update
 ## 8.2 자동 업데이트하지 않는 것

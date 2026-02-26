@@ -25,8 +25,21 @@ import { supabase } from "../supabase";
 import { ReviewModal } from "../components/Modals";
 import { normalizeImages } from "../lib/mapper";
 import { isValidUUID } from "../lib/utils";
-import { GoogleMapComponent } from "../components/GoogleMap";
+import dynamic from "next/dynamic";
 import { getLocationColumn } from "../lib/language";
+
+const GoogleMapComponent = dynamic(
+  () =>
+    import("../components/GoogleMap").then((mod) => mod.GoogleMapComponent),
+  {
+    loading: () => (
+      <div className="h-64 bg-gray-100 rounded-xl animate-pulse flex items-center justify-center">
+        <span className="text-gray-400">Loading map...</span>
+      </div>
+    ),
+    ssr: false,
+  }
+);
 import { formatDate, formatPriceRange } from "../lib/i18n/format";
 import { getLangCodeFromCookie } from "../lib/i18n";
 import { event } from "../lib/ga";

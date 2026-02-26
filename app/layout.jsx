@@ -1,8 +1,11 @@
 // ✅ 성능 최적화: CSS는 Next.js가 자동으로 최적화하지만, 명시적으로 처리
 import "./globals.css";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import Providers from "./providers";
 import ClientShell from "./ClientShell";
+
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
 
 export const metadata = {
   title: {
@@ -23,8 +26,8 @@ export default function RootLayout({ children }) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en">
-      <body className="font-sans text-gray-800 bg-gray-50 min-h-screen">
+    <html lang="en" className={inter.variable}>
+      <body className={`${inter.className} font-sans text-gray-800 bg-gray-50 min-h-screen`}>
         {/* ✅ 성능 최적화: Google Analytics 지연 로딩 */}
         {gaId && (
           <>

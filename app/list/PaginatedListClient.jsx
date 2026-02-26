@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { supabaseClient } from "../../src/lib/data/supabaseClient";
+import { createSupabaseBrowserClient } from "../../src/lib/supabase/browser";
+
+const supabaseClient = createSupabaseBrowserClient();
 import { mapHospitalRow, mapTreatmentRow } from "../../src/lib/mapper";
 import { getLocationColumn } from "../../src/lib/language";
 import { CardListSection, PersonalConciergeCTA } from "../../src/components.jsx";

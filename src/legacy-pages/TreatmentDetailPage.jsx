@@ -22,7 +22,9 @@ import {
   FileText,
   Globe,
 } from "lucide-react";
-import { supabase } from "../supabase";
+import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+
+const supabase = createSupabaseBrowserClient();
 import { ReviewModal } from "../components/Modals";
 import { normalizeImages } from "../lib/mapper";
 import { isValidUUID } from "../lib/utils";

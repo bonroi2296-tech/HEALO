@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { supabaseClient } from "../src/lib/data/supabaseClient";
+import { createSupabaseBrowserClient } from "../src/lib/supabase/browser";
+
+const supabaseClient = createSupabaseBrowserClient();
 import { SITE_INFO } from "../src/lib/siteSettings";
 import { getLangCodeFromCookie, t } from "../src/lib/i18n";
 // import { pageview } from "../src/lib/ga"; // 임시 비활성화: 자동 새로고침 문제

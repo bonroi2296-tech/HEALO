@@ -3,7 +3,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Bot, MessageCircle, ClipboardList, ArrowRight, AlertCircle, Headset, UploadCloud, File, X, Check } from 'lucide-react';
 import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
-import { supabase } from '../../src/supabase'; 
+import { createSupabaseBrowserClient } from '../../src/lib/supabase/browser';
+
+const supabase = createSupabaseBrowserClient();
 import { PolicyModal } from '../../src/components/Modals';
 import { useToast } from '../../src/components/Toast';
 import { getLangCodeFromCookie } from '../../src/lib/i18n';

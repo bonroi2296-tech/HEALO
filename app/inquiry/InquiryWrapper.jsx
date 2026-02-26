@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InquiryPage } from "./InquiryClient";
-import { supabaseClient } from "../../src/lib/data/supabaseClient";
+import { createSupabaseBrowserClient } from "../../src/lib/supabase/browser";
+
+const supabaseClient = createSupabaseBrowserClient();
 
 export default function InquiryWrapper() {
   const router = useRouter();

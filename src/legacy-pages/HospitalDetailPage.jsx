@@ -8,7 +8,9 @@ import {
   GraduationCap, Award, ShieldCheck, Check, Building2, Image as ImageIcon, ArrowRight,
   MessageCircle, HelpCircle, CheckCircle2
 } from "lucide-react";
-import { supabase } from "../supabase";
+import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+
+const supabase = createSupabaseBrowserClient();
 import { mapHospitalRow, mapTreatmentRow, normalizeImages } from "../lib/mapper";
 import { isValidUUID } from "../lib/utils";
 import { getLocationColumn } from "../lib/language";

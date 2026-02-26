@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, UploadCloud, File, X } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';
-import { supabase } from '../../../src/supabase';
+import { createSupabaseBrowserClient } from '../../../src/lib/supabase/browser';
+
+const supabase = createSupabaseBrowserClient();
 
 const BODY_PARTS = ['knee', 'back', 'neck', 'shoulder', 'hip', 'wrist', 'ankle', 'head', 'chest', 'abdomen', 'other'];
 const DURATIONS = ['<1w', '1-4w', '1-6m', '6m-1y', '1y+'];

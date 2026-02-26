@@ -1,5 +1,5 @@
 import { mapHospitalRow, mapTreatmentRow } from "../mapper";
-import { supabaseServer } from "./supabaseServer";
+import { createSupabaseServerClient } from "../supabase/server";
 import { logError } from "../logger";
 
 const HOSPITAL_SELECT =
@@ -7,6 +7,7 @@ const HOSPITAL_SELECT =
 const HOSPITAL_LIST_SELECT = "id, slug, created_at, updated_at";
 
 export const getFeaturedHospitals = async (limit = 6) => {
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
@@ -24,6 +25,7 @@ export const getFeaturedHospitals = async (limit = 6) => {
 };
 
 export const getAllHospitals = async () => {
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
@@ -40,6 +42,7 @@ export const getAllHospitals = async () => {
 };
 
 export const getHospitalList = async ({ limit = 1000 } = {}) => {
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_LIST_SELECT)
@@ -55,6 +58,7 @@ export const getHospitalList = async ({ limit = 1000 } = {}) => {
 };
 
 export const getHospitalById = async (id) => {
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
@@ -71,6 +75,7 @@ export const getHospitalById = async (id) => {
 
 export const getHospitalBySlug = async (slug) => {
   if (!slug) return null;
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select(HOSPITAL_SELECT)
@@ -87,6 +92,7 @@ export const getHospitalBySlug = async (slug) => {
 
 export const getHospitalSlugById = async (id) => {
   if (!id) return null;
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("hospitals")
     .select("slug")
@@ -103,6 +109,7 @@ export const getHospitalSlugById = async (id) => {
 
 export const getHospitalTreatments = async (hospitalId) => {
   if (!hospitalId) return [];
+  const supabaseServer = await createSupabaseServerClient();
   const { data, error } = await supabaseServer
     .from("treatments")
     .select(

@@ -733,3 +733,91 @@
 # sentry.client.config.js       → Sentry client-side init
 # sentry.server.config.js       → Sentry server-side init
 # sentry.edge.config.js         → Sentry edge runtime init
+
+
+# ================================================================
+# [SECTION 8] SELF-EVOLUTION PROTOCOL
+# [섹션 8] 자가 진화 프로토콜
+# ================================================================
+
+# This rulebook is a LIVING DOCUMENT. It must evolve with the project.
+# 이 규율서는 살아있는 문서이다. 프로젝트와 함께 진화해야 한다.
+
+## 8.1 Auto-Update Trigger
+## 8.1 자동 업데이트 트리거
+
+# When the founder gives an instruction that contains a DURABLE RULE
+# (not a one-time task), the agent MUST:
+# 대표가 일회성 작업이 아닌 영구적 규칙을 포함하는 지시를 내리면,
+# 에이전트는 반드시:
+#
+# 1. Execute the instruction as requested.
+#    지시를 실행한다.
+#
+# 2. Determine if the instruction implies a permanent rule change.
+#    지시가 영구적 규칙 변경을 내포하는지 판단한다.
+#    Examples of DURABLE rules (영구 규칙의 예):
+#    - "앞으로 모든 API에 rate limit 걸어"
+#    - "일본어를 항상 우선 지원해"
+#    - "커밋 메시지는 한국어로 써"
+#    - "이 라이브러리는 쓰지 마"
+#    Examples of ONE-TIME tasks (일회성 작업의 예):
+#    - "이 버그 고쳐줘"
+#    - "이 페이지에 버튼 추가해"
+#    - "린트 돌려봐"
+#
+# 3. If durable: update this file (.cursorrules) in the appropriate section.
+#    영구 규칙이면: 이 파일의 적절한 섹션에 추가한다.
+#
+# 4. If durable: also record in CORPORATE_LOG.md with date and context.
+#    영구 규칙이면: CORPORATE_LOG.md에도 날짜와 맥락과 함께 기록한다.
+#
+# 5. Notify the founder: "이 지시를 영구 규칙으로 .cursorrules에 추가했습니다: [요약]"
+#    대표에게 알린다: "이 지시를 영구 규칙으로 .cursorrules에 추가했습니다: [요약]"
+#
+# 6. Commit with message: "chore(.cursorrules): add rule — [brief description]"
+#    커밋 메시지: "chore(.cursorrules): add rule — [간단한 설명]"
+
+## 8.2 What NOT to Auto-Update
+## 8.2 자동 업데이트하지 않는 것
+
+# - One-time bug fixes or feature requests.
+#   일회성 버그 수정이나 기능 요청.
+# - Temporary debugging instructions.
+#   임시 디버깅 지시.
+# - Questions or information requests.
+#   질문이나 정보 요청.
+# - Instructions that contradict existing ABSOLUTE CODING RULES
+#   without explicit "이 규칙을 변경해" confirmation from the founder.
+#   대표의 명시적 "이 규칙을 변경해" 확인 없이
+#   기존 절대 코딩 규칙과 모순되는 지시.
+
+## 8.3 Conflict Resolution
+## 8.3 충돌 해결
+
+# If a new instruction conflicts with an existing rule:
+# 새 지시가 기존 규칙과 충돌하면:
+#
+# 1. Do NOT silently override the existing rule.
+#    기존 규칙을 조용히 덮어쓰지 않는다.
+#
+# 2. Inform the founder: "이 지시는 기존 규칙 [X]와 충돌합니다.
+#    기존 규칙을 변경할까요?"
+#    대표에게 알린다: "이 지시는 기존 규칙과 충돌합니다. 변경할까요?"
+#
+# 3. Only update after explicit confirmation.
+#    명시적 확인 후에만 업데이트한다.
+
+## 8.4 Version Tracking
+## 8.4 버전 추적
+
+# Every .cursorrules update must include at the top of the commit message:
+# 모든 .cursorrules 업데이트의 커밋 메시지 시작에 포함:
+# "chore(.cursorrules):" prefix.
+#
+# CORPORATE_LOG.md must log every rule change with:
+# CORPORATE_LOG.md에 모든 규칙 변경을 기록:
+# - Date (날짜)
+# - What changed (변경 내용)
+# - Why (이유)
+# - Who requested (요청자 — 대표 or AI recommendation)

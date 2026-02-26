@@ -65,6 +65,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       message: '', file: null, privacyAgreed: false
   });
   
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeSharing, setAgreeSharing] = useState(false);
+
   // ✅ 실시간 검증 에러 상태
   const [emailError, setEmailError] = useState('');
 
@@ -138,8 +141,12 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       return;
     }
     
-    if (!formData.privacyAgreed) {
+    if (!agreePrivacy) {
       toast.error("Please agree to the Privacy Policy.");
+      return;
+    }
+    if (!agreeSharing) {
+      toast.error("Please consent to sharing information with partner hospitals.");
       return;
     }
 
@@ -362,6 +369,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
 
       {mode === 'ai' && (
         <div className="bg-white border border-gray-200 rounded-3xl shadow-xl h-[600px] flex flex-col p-4 animate-in fade-in slide-in-from-right-4">
+           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+             <strong>Important:</strong> HEALO is not a medical institution. Our AI assistant provides general information only and cannot diagnose, treat, or provide medical advice. Always consult qualified medical professionals.
+           </div>
            <div className="flex-1 overflow-y-auto mb-4 bg-gray-50 rounded-2xl p-4 text-left space-y-4" ref={chatContainerRef}>
              {Array.isArray(messages) && messages.map((msg) => {
                  const partText = Array.isArray(msg.parts)
@@ -394,13 +404,6 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
              <button onClick={handleSend} className="absolute right-2 top-1.5 bg-teal-600 text-white p-1.5 rounded-full hover:bg-teal-700 transition"><ArrowRight size={18}/></button>
            </div>
 
-           <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start gap-2.5 text-left">
-                <AlertCircle size={16} className="text-gray-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-bold text-gray-800">Disclaimer:</span> AI may produce inaccurate information. 
-                    This is not medical advice. Please consult with our coordinators for confirmation.
-                </p>
-           </div>
         </div>
       )}
 
@@ -637,11 +640,15 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 </div>
 
                 {/* 약관 동의 */}
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <input type="checkbox" id="privacyForm" checked={formData.privacyAgreed} onChange={(e) => setFormData({...formData, privacyAgreed: e.target.checked})} className="mt-0.5 h-4 w-4 cursor-pointer accent-teal-600"/>
-                    <label htmlFor="privacyForm" className="text-[11px] text-gray-500 cursor-pointer select-none leading-snug">
-                        I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">Privacy Policy</span>. <span className="text-red-500">*</span>
-                    </label>
+                <div className="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" required className="mt-1 accent-teal-600" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)} />
+                    <span>I have read and agree to the <a href="/privacy" target="_blank" className="text-teal-600 underline">Privacy Policy</a> (required)</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" required className="mt-1 accent-teal-600" checked={agreeSharing} onChange={e => setAgreeSharing(e.target.checked)} />
+                    <span>I consent to sharing my information with partner hospitals for treatment matching (required)</span>
+                  </label>
                 </div>
 
                 <button onClick={handleFormSubmit} className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 transition transform active:scale-95 shadow-lg shadow-teal-100 mt-2">

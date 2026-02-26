@@ -357,7 +357,7 @@ export const TreatmentDetailPage = ({
   const ServiceBenefits = () => (
     <div className="bg-teal-50/80 rounded-xl p-4 border border-teal-100">
       <p className="text-xs font-bold text-teal-800 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-        <ShieldCheck size={14} /> HEALO Guarantee
+        <ShieldCheck size={14} /> HEALO Commitment
       </p>
       <ul className="space-y-2.5">
         <li className="flex items-start gap-2.5">
@@ -552,6 +552,9 @@ export const TreatmentDetailPage = ({
 
             {/* Reviews */}
             <section className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+              <p className="text-xs text-gray-500 mb-3">
+                Individual results may vary. Reviews reflect personal experiences and do not guarantee similar outcomes.
+              </p>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">

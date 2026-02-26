@@ -15,6 +15,7 @@ import {
 } from "../src/components.jsx";
 import ErrorBoundary from "../src/components/ErrorBoundary";
 import { useToast } from "../src/components/Toast";
+import CookieConsent from "../src/components/CookieConsent";
 
 export default function ClientShell({ children }) {
   const router = useRouter();
@@ -233,6 +234,8 @@ export default function ClientShell({ children }) {
           </div>
         </>
       )}
+
+      <CookieConsent />
     </div>
   );
 }

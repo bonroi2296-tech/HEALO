@@ -1,23 +1,23 @@
 // ✅ 성능 최적화: CSS는 Next.js가 자동으로 최적화하지만, 명시적으로 처리
 import "./globals.css";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import Providers from "./providers";
 import ClientShell from "./ClientShell";
+import GoogleAnalytics from "./GoogleAnalytics";
 
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
 
 export const metadata = {
   title: {
-    default: "HEALO | Korea's #1 Medical Concierge",
+    default: "HEALO | Your Medical Concierge in Korea",
     template: "%s | HEALO",
   },
   description:
-    "Find the best clinics in Korea. Free comparison quotes and concierge service.",
+    "Find the right clinic in Korea. Free comparison quotes and concierge service.",
   openGraph: {
-    title: "HEALO | Korea's #1 Medical Concierge",
+    title: "HEALO | Your Medical Concierge in Korea",
     description:
-      "Find the best clinics in Korea. Free comparison quotes and concierge service.",
+      "Find the right clinic in Korea. Free comparison quotes and concierge service.",
     type: "website",
   },
 };
@@ -28,21 +28,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} font-sans text-gray-800 bg-gray-50 min-h-screen`}>
-        {/* ✅ 성능 최적화: Google Analytics 지연 로딩 */}
-        {gaId && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-              strategy="lazyOnload"
-            />
-            <Script id="ga-init" strategy="lazyOnload">
-              {`window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '${gaId}', { send_page_view: false });`}
-            </Script>
-          </>
-        )}
+        {/* GA loads only when user accepts all cookies (GDPR) */}
+        {gaId && <GoogleAnalytics gaId={gaId} />}
         <Providers>
           <ClientShell>{children}</ClientShell>
         </Providers>

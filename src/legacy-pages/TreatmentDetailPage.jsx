@@ -366,7 +366,7 @@ export const TreatmentDetailPage = ({
           </div>
           <div>
             <span className="text-xs font-bold text-gray-800 block">Free Comparison Quote</span>
-            <span className="text-[10px] text-gray-500 leading-tight">Compare top 3 clinics at once.</span>
+            <span className="text-[10px] text-gray-500 leading-tight">Compare multiple clinics at once.</span>
           </div>
         </li>
         <li className="flex items-start gap-2.5">

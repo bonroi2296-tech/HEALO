@@ -5,13 +5,13 @@ import { getFeaturedHospitals } from "../src/lib/data/hospitals";
 import { supabaseServer } from "../src/lib/data/supabaseServer";
 
 export const metadata = {
-  title: "HEALO | Korea's #1 Medical Concierge",
+  title: "HEALO | Your Medical Concierge in Korea",
   description:
-    "Find the best clinics in Korea. AI-powered comparison of treatments, doctors, and prices. Free personalized treatment plans.",
+    "Find the right clinic in Korea. AI-powered comparison of treatments, doctors, and prices. Free personalized treatment plans.",
   openGraph: {
-    title: "HEALO | Korea's #1 Medical Concierge",
+    title: "HEALO | Your Medical Concierge in Korea",
     description:
-      "Find the best clinics in Korea. AI-powered comparison of treatments, doctors, and prices.",
+      "Find the right clinic in Korea. AI-powered comparison of treatments, doctors, and prices.",
     type: "website",
   },
 };

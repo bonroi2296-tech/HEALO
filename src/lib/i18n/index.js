@@ -14,7 +14,7 @@ const DICTIONARY = {
     "auth.signedInAs": "Signed in as",
     "footer.company": "Company",
     "footer.legal": "Legal",
-    "hero.title.line1": "Find the Best Hospital in Korea",
+    "hero.title.line1": "Find the Right Hospital for You",
     "hero.title.highlight": "in 30 Seconds.",
     "hero.subtitle.line1":
       "AI compares treatments, doctors, and prices so you don't have to.",

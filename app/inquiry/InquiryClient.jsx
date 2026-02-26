@@ -353,7 +353,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 Start Consultation (Beta)
               </button>
               <p className="text-xs text-gray-500 mt-3 max-w-md mx-auto">
-                Let us review your situation and guide you to the best next step.
+                Let us review your situation and guide you to the right next step.
               </p>
             </div>
           </div>

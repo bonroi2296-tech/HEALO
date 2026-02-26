@@ -163,7 +163,7 @@ export default function ConsultWrapper() {
               Start Consultation
             </h1>
             <p className="text-gray-500 text-sm">
-              Tell us what you need. We'll guide you to the best next step.
+              Tell us what you need. We'll guide you to the right next step.
             </p>
           </div>
 

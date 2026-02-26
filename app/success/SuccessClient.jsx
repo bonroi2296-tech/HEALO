@@ -98,7 +98,7 @@ export const SuccessPage = ({ setView }) => {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-teal-600 leading-none mb-1">Medical Review</p>
-                                    <p className="text-xs text-gray-500">Coordinator is matching the best hospital.</p>
+                                    <p className="text-xs text-gray-500">Coordinator is matching the right hospital for you.</p>
                                 </div>
                             </div>
 

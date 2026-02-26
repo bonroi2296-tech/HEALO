@@ -18,9 +18,19 @@ import {
   buildReferralSummaryJson,
   buildReferralSummaryMarkdown,
 } from "../../../../src/lib/referral/buildReferralSummary";
+import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.INQUIRY);
+    if (!rateLimitResult.allowed) {
+      return Response.json(
+        { ok: false, error: rateLimitResult.reason || "rate_limit_exceeded" },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const normalizedInquiryId = body?.normalizedInquiryId ? String(body.normalizedInquiryId) : null;
     const publicToken = body?.publicToken ? String(body.publicToken) : null;

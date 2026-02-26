@@ -97,15 +97,16 @@ export interface RateLimitResult {
  * @returns Rate limit 결과
  */
 export function checkRateLimit(
-  identifier: string | null | undefined,
+  rawIdentifier: string | null | undefined,
   config: RateLimitConfig
 ): RateLimitResult {
   const { windowMs, maxRequests, apiName = 'api' } = config;
   
-  // identifier 없으면 허용 (실패 안전)
+  let identifier = rawIdentifier;
+  // identifier 없으면 fallback 식별자 사용 (bypass 방지)
   if (!identifier) {
-    console.warn(`[rateLimit:${apiName}] No identifier provided, allowing request`);
-    return { allowed: true, remaining: maxRequests, resetAt: Date.now() + windowMs };
+    identifier = "unknown-client";
+    console.warn(`[rateLimit:${apiName}] No identifier provided, using fallback "${identifier}"`);
   }
   
   const now = Date.now();

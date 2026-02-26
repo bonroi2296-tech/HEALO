@@ -13,7 +13,7 @@ export const OfferBanner = ({ onClick }) => (
         <div className="p-2 bg-white rounded-lg shadow-sm text-teal-600"><FileText size={20}/></div>
         <div>
           <div className="font-bold text-sm text-gray-900">Free Comparison</div>
-          <div className="text-xs text-gray-500 mt-0.5">Get 3 quotes from top clinics.</div>
+          <div className="text-xs text-gray-500 mt-0.5">Get 3 quotes from verified clinics.</div>
         </div>
       </div>
       <div className="flex items-start gap-3">

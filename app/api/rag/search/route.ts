@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 import { z } from "zod";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
+import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
 
 const searchSchema = z.object({
   query: z.string().min(1, "query_required"),
@@ -19,6 +20,15 @@ const searchSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.CHAT);
+    if (!rateLimitResult.allowed) {
+      return Response.json(
+        { ok: false, error: rateLimitResult.reason || "rate_limit_exceeded" },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     assertSupabaseEnv();
     const body = await request.json();
 
@@ -42,7 +52,8 @@ export async function POST(request: Request) {
       .slice(0, 6);
 
     const terms = tokens.length ? tokens : [query];
-    const orFilter = terms.map((t) => `content.ilike.%${t}%`).join(",");
+    const sanitize = (s: string) => s.replace(/[%_\\]/g, '\\$&');
+    const orFilter = terms.map((t) => `content.ilike.%${sanitize(t)}%`).join(",");
 
     let q = supabaseAdmin
       .from("rag_chunks")

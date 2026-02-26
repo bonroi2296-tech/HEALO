@@ -27,7 +27,7 @@ ${data.treatmentType ? `Treatment of interest: ${data.treatmentType}` : ""}
 
 What happens next:
 1. Our team will review your inquiry within 24 hours.
-2. We'll match you with the best-suited partner hospitals.
+2. We'll match you with the most suitable partner hospitals.
 3. You'll receive personalized treatment plans and price quotes.
 
 If you have any questions, please contact us at contact@healo.com.

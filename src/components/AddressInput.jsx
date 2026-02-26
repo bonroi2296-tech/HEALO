@@ -70,6 +70,7 @@ export const AddressInput = ({
               </button>
             </div>
             <div className="p-3">
+              {/* DaumPostcode (react-daum-postcode) only accepts a style prop for dimensions; className is not supported */}
               <DaumPostcode onComplete={handleComplete} style={{ width: '100%', height: '420px' }} />
             </div>
           </div>

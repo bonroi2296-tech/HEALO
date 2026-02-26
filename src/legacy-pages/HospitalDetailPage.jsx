@@ -8,16 +8,15 @@ import {
   MessageCircle, HelpCircle, CheckCircle2
 } from "lucide-react";
 import { supabase } from "../supabase";
-import { mapHospitalRow, mapTreatmentRow } from "../lib/mapper";
+import { mapHospitalRow, mapTreatmentRow, normalizeImages } from "../lib/mapper";
+import { isValidUUID } from "../lib/utils";
 import { getLocationColumn } from "../lib/language";
 import { getLangCodeFromCookie } from "../lib/i18n";
 import { event } from "../lib/ga";
 
 export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) => {
   const isDev = process.env.NODE_ENV !== "production";
-  const UUID_REGEX =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const isUuid = (value) => UUID_REGEX.test(String(value || ""));
+  const isUuid = (value) => isValidUUID(String(value || ""));
   // ✅ state (DB single source of truth)
   const [hospital, setHospital] = useState(null);
   const [hospitalTreatments, setHospitalTreatments] = useState([]);
@@ -28,24 +27,6 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
   // ✅ safe defaults for reviews (later DB)
   const [loadingReviews] = useState(false);
   const [realReviews] = useState([]);
-
-  // ✅ normalize images: array | json string | single url
-  const normalizeImages = (raw) => {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw.filter(Boolean);
-
-    if (typeof raw === "string") {
-      const t = raw.trim();
-      if (t.startsWith("[") && t.endsWith("]")) {
-        try {
-          const parsed = JSON.parse(t);
-          if (Array.isArray(parsed)) return parsed.filter(Boolean);
-        } catch {}
-      }
-      if (t.startsWith("http")) return [t];
-    }
-    return [];
-  };
 
   const getAddressText = (h) => {
     const locationText = (h?.location || "").trim();

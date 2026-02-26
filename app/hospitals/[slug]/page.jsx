@@ -6,12 +6,10 @@ import {
   getHospitalSlugById,
 } from "../../../src/lib/data/hospitals";
 import { normalizeImages } from "../../../src/lib/mapper";
+import { isValidUUID } from "../../../src/lib/utils";
 import HospitalDetailClient from "./HospitalDetailClient";
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const isUuid = (value) => UUID_REGEX.test(String(value || ""));
+const isUuid = (value) => isValidUUID(String(value || ""));
 const getBaseUrl = () =>
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 

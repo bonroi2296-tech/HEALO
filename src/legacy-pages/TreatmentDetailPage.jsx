@@ -24,6 +24,7 @@ import {
 import { supabase } from "../supabase";
 import { ReviewModal } from "../components/Modals";
 import { normalizeImages } from "../lib/mapper";
+import { isValidUUID } from "../lib/utils";
 import { GoogleMapComponent } from "../components/GoogleMap";
 import { getLocationColumn } from "../lib/language";
 import { formatDate, formatPriceRange } from "../lib/i18n/format";
@@ -94,9 +95,7 @@ export const TreatmentDetailPage = ({
     window.scrollTo(0, 0);
   }, [id]);
 
-  const UUID_REGEX =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const isUuid = (value) => UUID_REGEX.test(String(value || ""));
+  const isUuid = (value) => isValidUUID(String(value || ""));
 
   // 1) Treatment 단건 fetch (id OR slug)
   useEffect(() => {

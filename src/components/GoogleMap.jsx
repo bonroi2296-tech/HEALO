@@ -37,12 +37,7 @@ const parseLocation = (location) => {
 };
 
 export const GoogleMapComponent = ({ location, hospitalName, latitude, longitude }) => {
-  const apiKey =
-    (typeof process !== "undefined" &&
-      process.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) ||
-    (typeof import.meta !== "undefined" && import.meta.env
-      ? import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-      : undefined);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   // 좌표가 있으면 우선 사용, 없으면 주소 파싱
   const center = useMemo(() => {
@@ -66,8 +61,7 @@ export const GoogleMapComponent = ({ location, hospitalName, latitude, longitude
         <div className="flex flex-col items-center gap-2">
           <span className="text-xs">Google Maps API key required</span>
           <span className="text-[10px] text-gray-300">
-            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY (or VITE_GOOGLE_MAPS_API_KEY) to
-            .env
+            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env
           </span>
         </div>
       </div>

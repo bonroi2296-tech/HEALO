@@ -39,7 +39,8 @@ export default function ClientShell({ children }) {
       .getSession()
       .then(({ data: { session } }) => {
         if (mounted) {
-          console.log("[ClientShell] ✅ Initial session:", session?.user?.email || "none");
+          const _e = session?.user?.email;
+          console.log("[ClientShell] ✅ Initial session:", _e ? _e.charAt(0) + '***@' + _e.split('@')[1] : "none");
           setSession(session);
         }
       })
@@ -50,7 +51,8 @@ export default function ClientShell({ children }) {
     const { data } = supabaseClient.auth.onAuthStateChange(
       (_event, session) => {
         if (mounted) {
-          console.log("[ClientShell] 🔔 Auth state changed:", _event, session?.user?.email || "none");
+          const _em = session?.user?.email;
+          console.log("[ClientShell] 🔔 Auth state changed:", _event, _em ? _em.charAt(0) + '***@' + _em.split('@')[1] : "none");
           setSession(session);
         }
       }

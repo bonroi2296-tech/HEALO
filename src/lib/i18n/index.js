@@ -14,7 +14,7 @@ const DICTIONARY = {
     "auth.signedInAs": "Signed in as",
     "footer.company": "Company",
     "footer.legal": "Legal",
-    "hero.title.line1": "Find the Right Hospital for You",
+    "hero.title.line1": "Find the Right Hospital for You in Korea",
     "hero.title.highlight": "in 30 Seconds.",
     "hero.subtitle.line1":
       "AI compares treatments, doctors, and prices so you don't have to.",
@@ -33,8 +33,13 @@ const DICTIONARY = {
       "Browse all HEALO treatments and compare partner hospitals in Korea.",
     "meta.hospitals.title": "Hospitals",
     "meta.hospitals.desc": "Browse partner hospitals and clinics across Korea.",
+    "offer.freeComparisonDesc": "Get 3 quotes from verified partner clinics.",
+    "detail.compareTop3": "Compare 3 clinics at once.",
+    "success.step2Desc": "Coordinator is matching the right hospital for you.",
   },
-  ko: {},
+  ko: {
+    "hero.title.line1": "나에게 맞는 한국 병원을",
+  },
   zh: {},
   ja: {},
 };

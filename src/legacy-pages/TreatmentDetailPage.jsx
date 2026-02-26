@@ -552,7 +552,7 @@ export const TreatmentDetailPage = ({
 
             {/* Reviews */}
             <section className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-gray-500 italic mb-3">
                 Individual results may vary. Reviews reflect personal experiences and do not guarantee similar outcomes.
               </p>
               <div className="flex items-center justify-between mb-6">

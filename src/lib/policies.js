@@ -29,7 +29,7 @@ export const PRIVACY_SECTIONS = [
     content: [
       "We share personal and medical information only with your consent and only with medical providers relevant to your request.",
       "We do not sell personal information to third parties.",
-      "We may share information with service providers that help us operate the platform, under confidentiality obligations. These include: Supabase (database hosting and authentication), OpenAI and Google (AI-powered features and processing), Google Analytics (website usage analytics), and Resend (transactional email delivery).",
+      "We use the following third-party services to operate the platform: Supabase (database hosting and authentication), OpenAI and Google (AI-powered chat assistant), Google Analytics (website analytics, consent-gated), and Resend (email delivery). Each service processes data under contractual obligations.",
     ],
   },
   {
@@ -157,7 +157,7 @@ export const PRIVACY_SECTIONS_KO = [
     content: [
       "이용자의 동의 하에, 요청과 관련된 의료 기관에 한하여 개인정보 및 의료 정보를 공유합니다.",
       "개인정보를 제3자에게 판매하지 않습니다.",
-      "플랫폼 운영을 돕는 서비스 제공업체와 비밀유지 의무 하에 정보를 공유할 수 있습니다. 해당 업체는 다음과 같습니다: Supabase (데이터베이스 호스팅 및 인증), OpenAI 및 Google (AI 기능 및 처리), Google Analytics (웹사이트 이용 분석), Resend (이메일 발송).",
+      "플랫폼 운영을 위해 다음과 같은 제3자 서비스를 사용합니다: Supabase (데이터베이스 호스팅 및 인증), OpenAI 및 Google (AI 채팅 어시스턴트), Google Analytics (웹사이트 분석, 동의 기반), Resend (이메일 발송). 각 서비스는 계약상의 의무에 따라 데이터를 처리합니다.",
     ],
   },
   {

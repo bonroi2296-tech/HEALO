@@ -420,6 +420,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
                 <Star size={24} className="text-teal-600" /> Patient Reviews
               </h2>
               <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+                <p className="text-xs text-gray-500 italic mb-3">Individual results may vary. Reviews reflect personal experiences and do not guarantee similar outcomes.</p>
                 {loadingReviews ? (
                   <div className="text-center py-8 text-gray-400 text-sm animate-pulse">Loading reviews...</div>
                 ) : realReviews.length > 0 ? (

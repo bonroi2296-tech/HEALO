@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "../../../src/components/Toast";
 
 type InquiryRow = {
   id: number;
@@ -23,6 +24,8 @@ export default function RagAdminPage() {
   const [searchLang, setSearchLang] = useState("en");
   const [searchResult, setSearchResult] = useState<any>(null);
 
+  const toast = useToast();
+
   useEffect(() => {
     fetch("/api/rag/inquiries")
       .then((r) => r.json())
@@ -32,43 +35,58 @@ export default function RagAdminPage() {
 
   const handleNormalize = async () => {
     setNormalizeResult(null);
-    const payload: any = {};
-    if (normalizeText.trim()) payload.text = normalizeText.trim();
-    if (selectedInquiryId) payload.inquiry_id = Number(selectedInquiryId);
-    const res = await fetch("/api/inquiry/normalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    setNormalizeResult(data);
+    try {
+      const payload: any = {};
+      if (normalizeText.trim()) payload.text = normalizeText.trim();
+      if (selectedInquiryId) payload.inquiry_id = Number(selectedInquiryId);
+      const res = await fetch("/api/inquiry/normalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setNormalizeResult(data);
+    } catch (err) {
+      console.error("[RAG Admin] normalize failed:", err);
+      toast.error("Normalize failed. Please try again.");
+    }
   };
 
   const handleIngest = async () => {
     setIngestResult(null);
-    const payload: any = { sourceTypes: [ingestSourceType] };
-    if (ingestSourceId.trim()) payload.source_id = ingestSourceId.trim();
-    const res = await fetch("/api/rag/ingest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    setIngestResult(data);
+    try {
+      const payload: any = { sourceTypes: [ingestSourceType] };
+      if (ingestSourceId.trim()) payload.source_id = ingestSourceId.trim();
+      const res = await fetch("/api/rag/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setIngestResult(data);
+    } catch (err) {
+      console.error("[RAG Admin] ingest failed:", err);
+      toast.error("Ingest failed. Please try again.");
+    }
   };
 
   const handleSearch = async () => {
     setSearchResult(null);
-    const res = await fetch("/api/rag/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: searchQuery.trim(),
-        lang: searchLang,
-      }),
-    });
-    const data = await res.json();
-    setSearchResult(data);
+    try {
+      const res = await fetch("/api/rag/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: searchQuery.trim(),
+          lang: searchLang,
+        }),
+      });
+      const data = await res.json();
+      setSearchResult(data);
+    } catch (err) {
+      console.error("[RAG Admin] search failed:", err);
+      toast.error("Search failed. Please try again.");
+    }
   };
 
   return (

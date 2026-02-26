@@ -236,8 +236,12 @@
 # 규칙: Tailwind CSS만 사용. 예외 없음.
 # - No inline styles (`style={{}}`).
 #   인라인 스타일 금지.
-# - Exception: third-party components that only accept style prop (document with comment).
-#   예외: style prop만 받는 서드파티 컴포넌트 (주석으로 사유 기재).
+# - Exception 1: third-party components that only accept style prop (document with comment).
+#   예외1: style prop만 받는 서드파티 컴포넌트 (주석으로 사유 기재).
+# - Exception 2: dynamic computed values (e.g., width: `${percent}%`, height from data).
+#   예외2: 동적 계산 값 (예: 진행률 바의 퍼센트, 데이터 기반 높이).
+#   These cannot be expressed as static Tailwind classes. Use style={{}} with a comment.
+#   이런 값은 고정 Tailwind 클래스로 표현 불가. style={{}}을 쓰되 주석을 단다.
 
 # RULE: Mobile-first responsive design.
 # 규칙: 모바일 퍼스트 반응형 디자인.
@@ -855,17 +859,29 @@
 ## 9.4 Batch Questions Rule (CRITICAL)
 ## 9.4 질문 일괄 처리 규칙 (중요)
 
-# NEVER ask questions one at a time and wait between each.
-# 절대 질문을 하나씩 물어보고 사이사이 기다리지 않는다.
+# NEVER ask INDEPENDENT questions one at a time and wait between each.
+# 서로 관련 없는 질문을 하나씩 물어보고 사이사이 기다리지 않는다.
 #
 # WRONG PATTERN (금지 패턴):
-#   질문1 → 대표 답변 대기 → 작업1 → 질문2 → 대표 답변 대기 → 작업2 ...
+#   독립 질문1 → 대표 답변 대기 → 작업1 → 독립 질문2 → 대표 답변 대기 → 작업2 ...
 #   This wastes the founder's time. He has to keep coming back.
 #   대표의 시간을 낭비한다. 계속 돌아와서 확인해야 한다.
 #
-# CORRECT PATTERN (올바른 패턴):
+# CORRECT PATTERN for INDEPENDENT questions (관련 없는 질문):
 #   모든 질문을 한 번에 모아서 제시 → 대표가 전부 한꺼번에 답변 → 일괄 작업
 #   Collect ALL questions, present them together, get all answers, then work.
+#
+# CORRECT PATTERN for DEPENDENT questions (앞 답에 따라 뒤 질문이 달라지는 경우):
+#   질문1 → 대표 답변 → 그 답에 따라 질문2 → 답변 → 작업
+#   Ask in sequence when later questions depend on earlier answers.
+#   앞의 답변에 따라 뒤의 질문이 달라지면 순서대로 물어본다.
+#
+# HOW TO DECIDE: Before asking, check —
+# 판단 기준: 물어보기 전에 확인 —
+# "Does the answer to Q1 change what Q2 would be?" 
+# "질문1의 답이 질문2의 내용을 바꾸는가?"
+#   YES → ask sequentially (순서대로)
+#   NO  → batch together (한꺼번에)
 #
 # Format for batch questions:
 # 일괄 질문 형식:

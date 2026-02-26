@@ -13,6 +13,7 @@ export const runtime = "nodejs";
 
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "../../../../src/lib/rateLimit";
 
 function randomUUID(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -27,6 +28,12 @@ function randomUUID(): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    const rl = checkRateLimit(clientIp, RATE_LIMITS.ADMIN);
+    if (!rl.allowed) {
+      return Response.json({ ok: false, error: "rate_limit_exceeded" }, { status: 429 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const inquiryId = body?.inquiryId != null
       ? (typeof body.inquiryId === "number" ? body.inquiryId : Number(body.inquiryId))

@@ -13,6 +13,7 @@ export const runtime = "nodejs";
 import { z } from "zod";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "../../../../src/lib/rateLimit";
 
 const ALLOWED_EVENT_TYPES = [
   "step1_viewed",
@@ -33,6 +34,12 @@ const eventSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    const rl = checkRateLimit(clientIp, RATE_LIMITS.NORMALIZE);
+    if (!rl.allowed) {
+      return Response.json({ ok: false, error: "rate_limit_exceeded" }, { status: 429 });
+    }
+
     assertSupabaseEnv();
     const body = await request.json().catch(() => ({}));
 

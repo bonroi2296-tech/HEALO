@@ -21,9 +21,16 @@ export const runtime = "nodejs";
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
 import { pathAuthorized } from "../../../../src/lib/security/attachmentAuth";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "../../../../src/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    const rl = checkRateLimit(clientIp, RATE_LIMITS.INQUIRY);
+    if (!rl.allowed) {
+      return Response.json({ ok: false, error: "rate_limit_exceeded" }, { status: 429 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const inquiryId = body?.inquiryId != null ? (typeof body.inquiryId === "string" ? body.inquiryId : String(body.inquiryId)) : null;
     const path = body?.path ? String(body.path) : null;

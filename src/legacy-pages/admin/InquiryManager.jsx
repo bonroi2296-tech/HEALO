@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { RefreshCw, Paperclip, Eye, X, Loader2 } from 'lucide-react';
 import { formatDate } from "../../lib/i18n/format";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+import { useToast } from "../../components/Toast";
 
 const supabase = createSupabaseBrowserClient();
 
 export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, handleFileClick }) => {
+  const toast = useToast();
   // 🔐 상세 조회 모달 상태
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -22,7 +24,7 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, 
       const accessToken = sessionData?.session?.access_token;
       
       if (!accessToken) {
-        alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
+        toast.warning('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
         return;
       }
       
@@ -38,11 +40,11 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, 
       if (result.ok) {
         setSelectedInquiry(result.inquiry);
       } else {
-        alert(`상세 조회 실패: ${result.error}`);
+        toast.error(`상세 조회 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[InquiryManager] Detail fetch error:', error);
-      alert('상세 조회 중 오류가 발생했습니다.');
+      toast.error('상세 조회 중 오류가 발생했습니다.');
     } finally {
       setLoadingDetail(false);
     }
@@ -56,7 +58,7 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, 
   // 🔬 실험용 번역 실행
   const handleExperimentalTranslation = async () => {
     if (!selectedInquiry?.message) {
-      alert('번역할 메시지가 없습니다.');
+      toast.info('번역할 메시지가 없습니다.');
       return;
     }
     
@@ -68,7 +70,7 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, 
       const accessToken = sessionData?.session?.access_token;
       
       if (!accessToken) {
-        alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
+        toast.warning('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
         return;
       }
       
@@ -91,11 +93,11 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleStatusChange, 
       if (result.ok) {
         setTranslationResult(result.result);
       } else {
-        alert(`번역 실패: ${result.error}`);
+        toast.error(`번역 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[InquiryManager] Translation error:', error);
-      alert('번역 중 오류가 발생했습니다.');
+      toast.error('번역 중 오류가 발생했습니다.');
     } finally {
       setLoadingTranslation(false);
     }

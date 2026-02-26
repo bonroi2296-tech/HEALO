@@ -14,6 +14,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "../../../../src/components/Toast";
 
 interface Recipient {
   id: string;
@@ -28,6 +29,7 @@ interface Recipient {
 }
 
 export default function NotificationsSettingsPage() {
+  const toast = useToast();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function NotificationsSettingsPage() {
     e.preventDefault();
 
     if (!newLabel || !newPhone) {
-      alert("이름과 전화번호를 입력하세요");
+      toast.warning("이름과 전화번호를 입력하세요");
       return;
     }
 
@@ -85,17 +87,17 @@ export default function NotificationsSettingsPage() {
       const data = await res.json();
 
       if (data.ok) {
-        alert("수신자가 추가되었습니다");
+        toast.success("수신자가 추가되었습니다");
         setNewLabel("");
         setNewPhone("");
         setNewNotes("");
         setShowAddForm(false);
         fetchRecipients();
       } else {
-        alert(`추가 실패: ${data.error}`);
+        toast.error(`추가 실패: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`오류: ${err.message}`);
+      toast.error(`오류: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -117,10 +119,10 @@ export default function NotificationsSettingsPage() {
       if (data.ok) {
         fetchRecipients();
       } else {
-        alert(`토글 실패: ${data.error}`);
+        toast.error(`토글 실패: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`오류: ${err.message}`);
+      toast.error(`오류: ${err.message}`);
     }
   };
 
@@ -138,13 +140,13 @@ export default function NotificationsSettingsPage() {
       const data = await res.json();
 
       if (data.ok) {
-        alert("삭제되었습니다");
+        toast.success("삭제되었습니다");
         fetchRecipients();
       } else {
-        alert(`삭제 실패: ${data.error}`);
+        toast.error(`삭제 실패: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`오류: ${err.message}`);
+      toast.error(`오류: ${err.message}`);
     }
   };
 
@@ -323,7 +325,7 @@ export default function NotificationsSettingsPage() {
         <button
           onClick={() => {
             if (confirm("테스트 알림을 발송하시겠습니까?")) {
-              alert("테스트 알림 기능은 별도 구현이 필요합니다.");
+              toast.info("테스트 알림 기능은 별도 구현이 필요합니다.");
               // TODO: 테스트 알림 API 호출
             }
           }}

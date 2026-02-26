@@ -38,3 +38,23 @@ The app gracefully handles missing/invalid Supabase credentials at dev time by u
 - ESLint has ~33 pre-existing warnings/errors in the codebase. These are not regressions.
 - The middleware deprecation warning ("middleware" → "proxy") from Next.js 16 is expected and can be ignored.
 - No Docker, no git hooks, no pre-commit configuration, no CI/CD pipelines are set up.
+
+### TypeScript convention
+
+New files should be written in TypeScript (.ts/.tsx). Existing JavaScript files are being gradually migrated. The project currently has a mix of .js/.jsx and .ts/.tsx files:
+- API routes and lib utilities: mostly TypeScript
+- Page components and legacy code: mostly JavaScript
+- `typescript.ignoreBuildErrors` is `true` in `next.config.js` until Supabase schema types are generated
+
+### Legacy pages migration status
+
+Files in `src/legacy-pages/` are being migrated to the Next.js App Router (`app/`). Current status:
+- `HospitalDetailPage.jsx` → wrapped by `app/hospitals/[slug]/HospitalDetailClient.jsx`
+- `TreatmentDetailPage.jsx` → wrapped by `app/treatments/[slug]/TreatmentDetailClient.jsx`
+- `AuthPages.jsx` → wrapped by `app/login/page.jsx`, `app/signup/page.jsx`
+- `admin/*` → used by `src/AdminPage.jsx` (not yet migrated to App Router)
+- ESLint guardrail in `eslint.config.js` prevents new imports from `legacy-pages/`
+
+### ESLint guardrail notes
+
+The `no-restricted-imports` rule in `eslint.config.js` blocks new imports from `src/legacy-pages/`. An allowlist exists for files that still need legacy imports. As legacy components are migrated, remove entries from the allowlist to strengthen the guardrail.

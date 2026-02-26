@@ -1,4 +1,5 @@
 import InquiryWrapper from "./InquiryWrapper";
+import ErrorBoundary from "../../src/components/ErrorBoundary";
 
 export const metadata = {
   title: "Inquiry",
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function InquiryPage() {
-  return <InquiryWrapper />;
+  return (
+    <ErrorBoundary>
+      <InquiryWrapper />
+    </ErrorBoundary>
+  );
 }

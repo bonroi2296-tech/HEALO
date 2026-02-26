@@ -25,6 +25,7 @@
  */
 
 import { createSupabaseServerClient } from "../supabase/server";
+import { maskEmail } from "./maskEmail";
 
 /**
  * ✅ 환경변수에서 관리자 이메일 화이트리스트 로드
@@ -169,7 +170,7 @@ export async function checkAdminAuth(request?: any): Promise<{
     // 4-1. user_metadata.role === "admin"
     const userMetadataRole = user.user_metadata?.role;
     if (userMetadataRole === "admin") {
-      console.log(`[checkAdminAuth] ✅ Admin granted via user_metadata.role: ${userEmail} (${authMethod})`);
+      console.log(`[checkAdminAuth] ✅ Admin granted via user_metadata.role: ${maskEmail(userEmail)} (${authMethod})`);
       return {
         isAdmin: true,
         userId,
@@ -183,7 +184,7 @@ export async function checkAdminAuth(request?: any): Promise<{
     // 4-2. app_metadata.role === "admin"
     const appMetadataRole = user.app_metadata?.role;
     if (appMetadataRole === "admin") {
-      console.log(`[checkAdminAuth] ✅ Admin granted via app_metadata.role: ${userEmail} (${authMethod})`);
+      console.log(`[checkAdminAuth] ✅ Admin granted via app_metadata.role: ${maskEmail(userEmail)} (${authMethod})`);
       return {
         isAdmin: true,
         userId,
@@ -204,7 +205,7 @@ export async function checkAdminAuth(request?: any): Promise<{
     }
 
     if (userEmail && allowlist.includes(userEmail)) {
-      console.log(`[checkAdminAuth] ✅ Admin granted via allowlist: ${userEmail} (${authMethod})`);
+      console.log(`[checkAdminAuth] ✅ Admin granted via allowlist: ${maskEmail(userEmail)} (${authMethod})`);
       return {
         isAdmin: true,
         userId,
@@ -216,7 +217,7 @@ export async function checkAdminAuth(request?: any): Promise<{
     }
 
     // ❌ 관리자 권한 없음
-    console.warn(`[checkAdminAuth] ❌ Denied: ${userEmail} (no admin role, not in allowlist, method: ${authMethod})`);
+    console.warn(`[checkAdminAuth] ❌ Denied: ${maskEmail(userEmail)} (no admin role, not in allowlist, method: ${authMethod})`);
     return {
       isAdmin: false,
       userId,

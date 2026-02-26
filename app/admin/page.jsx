@@ -1,4 +1,5 @@
 import AdminWrapper from "./AdminWrapper";
+import ErrorBoundary from "../../src/components/ErrorBoundary";
 
 export const metadata = {
   title: "Admin",
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminWrapper />;
+  return (
+    <ErrorBoundary>
+      <AdminWrapper />
+    </ErrorBoundary>
+  );
 }

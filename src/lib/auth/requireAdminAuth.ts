@@ -18,6 +18,7 @@
 
 import { NextRequest } from "next/server";
 import { checkAdminAuth } from "./checkAdminAuth";
+import { maskEmail } from "./maskEmail";
 import {
   logAdminAction,
   getIpFromRequest,
@@ -87,7 +88,7 @@ export async function requireAdminAuth(
     const pathname = new URL(request.url).pathname;
     
     console.warn(
-      `[requireAdminAuth] ❌ Unauthorized access denied: ${pathname} | email: ${authResult.email || "none"} | error: ${authResult.error}`
+      `[requireAdminAuth] ❌ Unauthorized access denied: ${pathname} | email: ${maskEmail(authResult.email)} | error: ${authResult.error}`
     );
 
     // 백그라운드로 audit log 기록 (메인 로직 블로킹 방지)
@@ -127,7 +128,7 @@ export async function requireAdminAuth(
 
   // ✅ 권한 있음
   console.log(
-    `[requireAdminAuth] ✅ Admin access granted: ${authResult.email} (reason: ${authResult.reason}, method: ${authResult.authMethod})`
+    `[requireAdminAuth] ✅ Admin access granted: ${maskEmail(authResult.email)} (reason: ${authResult.reason}, method: ${authResult.authMethod})`
   );
 
   return { success: true, authResult };

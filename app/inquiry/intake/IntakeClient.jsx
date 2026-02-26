@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, UploadCloud, File, X } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';
+import { getLangCodeFromCookie, t } from '../../../src/lib/i18n';
 import { createSupabaseBrowserClient } from '../../../src/lib/supabase/browser';
 
 const supabase = createSupabaseBrowserClient();
@@ -15,6 +16,8 @@ export function InquiryIntakePage({ setView }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const toast = useToast();
+  const [langCode, setLangCode] = useState('en');
+  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
   const inquiryId = searchParams.get('inquiryId');
   const token = searchParams.get('token');
 
@@ -33,7 +36,7 @@ export function InquiryIntakePage({ setView }) {
 
   useEffect(() => {
     if (!inquiryId || !token) {
-      toast.error('Missing inquiryId or token.');
+      toast.error(t('intake.missingParams', langCode));
       router.push('/inquiry');
     }
   }, [inquiryId, token, router, toast]);
@@ -85,7 +88,7 @@ export function InquiryIntakePage({ setView }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(json?.error || 'Failed to save.');
+        toast.error(json?.error || t('intake.failedSave', langCode));
         setSubmitting(false);
         return;
       }
@@ -103,7 +106,7 @@ export function InquiryIntakePage({ setView }) {
       setDone(true);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to save.');
+      toast.error(t('intake.failedSave', langCode));
     } finally {
       setSubmitting(false);
     }
@@ -114,9 +117,9 @@ export function InquiryIntakePage({ setView }) {
   if (done) {
     return (
       <div className="max-w-lg mx-auto px-4 py-12 text-center">
-        <p className="text-lg font-bold text-teal-700 mb-4">Additional info saved.</p>
+        <p className="text-lg font-bold text-teal-700 mb-4">{t('intake.saved', langCode)}</p>
         <button onClick={() => setView?.('home') || router.push('/')} className="text-teal-600 font-bold hover:underline">
-          Return to Home
+          {t('intake.returnHome', langCode)}
         </button>
       </div>
     );
@@ -125,14 +128,14 @@ export function InquiryIntakePage({ setView }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <button onClick={() => router.back()} className="flex items-center text-sm font-bold text-gray-500 mb-6 hover:text-teal-600">
-        <ChevronLeft size={16}/> Back
+        <ChevronLeft size={16}/> {t('intake.back', langCode)}
       </button>
-      <h1 className="text-xl font-bold text-gray-900 mb-2">Additional info (optional)</h1>
-      <p className="text-sm text-gray-500 mb-6">Helps us match you with better hospital estimates.</p>
+      <h1 className="text-xl font-bold text-gray-900 mb-2">{t('intake.title', langCode)}</h1>
+      <p className="text-sm text-gray-500 mb-6">{t('intake.subtitle', langCode)}</p>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-2">Body part(s)</label>
+          <label className="block text-xs font-bold text-gray-700 mb-2">{t('intake.bodyParts', langCode)}</label>
           <div className="flex flex-wrap gap-2">
             {BODY_PARTS.map((p) => (
               <button
@@ -148,9 +151,9 @@ export function InquiryIntakePage({ setView }) {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1">Duration</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1">{t('intake.duration', langCode)}</label>
           <select value={step2.duration} onChange={(e) => setStep2({ ...step2, duration: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm">
-            <option value="">Select...</option>
+            <option value="">{t('inquiry.select', langCode)}</option>
             {DURATIONS.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
@@ -158,15 +161,15 @@ export function InquiryIntakePage({ setView }) {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1">Severity (1–10)</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1">{t('intake.severity', langCode)}</label>
           <input type="number" min={1} max={10} value={step2.severity} onChange={(e) => setStep2({ ...step2, severity: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm" placeholder="e.g. 7"/>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-2">Prior diagnosis?</label>
+          <label className="block text-xs font-bold text-gray-700 mb-2">{t('intake.priorDiagnosis', langCode)}</label>
           <label className="flex items-center gap-2 cursor-pointer mb-2">
             <input type="checkbox" checked={!!step2.diagnosis_yesno} onChange={(e) => setStep2({ ...step2, diagnosis_yesno: e.target.checked })} className="rounded accent-teal-600"/>
-            <span className="text-sm">Yes</span>
+            <span className="text-sm">{t('intake.yes', langCode)}</span>
           </label>
           {step2.diagnosis_yesno && (
             <textarea value={step2.diagnosis_text} onChange={(e) => setStep2({ ...step2, diagnosis_text: e.target.value })} rows={2} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm" placeholder="e.g. MRI: meniscus tear"/>
@@ -174,10 +177,10 @@ export function InquiryIntakePage({ setView }) {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-2">Current medications?</label>
+          <label className="block text-xs font-bold text-gray-700 mb-2">{t('intake.currentMeds', langCode)}</label>
           <label className="flex items-center gap-2 cursor-pointer mb-2">
             <input type="checkbox" checked={!!step2.medication_yesno} onChange={(e) => setStep2({ ...step2, medication_yesno: e.target.checked })} className="rounded accent-teal-600"/>
-            <span className="text-sm">Yes</span>
+            <span className="text-sm">{t('intake.yes', langCode)}</span>
           </label>
           {step2.medication_yesno && (
             <textarea value={step2.medication_text} onChange={(e) => setStep2({ ...step2, medication_text: e.target.value })} rows={2} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm" placeholder="e.g. ibuprofen"/>
@@ -188,7 +191,7 @@ export function InquiryIntakePage({ setView }) {
           <input type="file" id="step2file" className="hidden" onChange={handleFileChange}/>
           <div onClick={() => document.getElementById('step2file')?.click()} className="border border-dashed border-gray-300 rounded-xl p-3 text-center hover:bg-gray-50 cursor-pointer flex items-center justify-center gap-2">
             <UploadCloud size={18} className="text-gray-400"/>
-            <span className="text-xs text-gray-500">Upload more (optional)</span>
+            <span className="text-xs text-gray-500">{t('intake.uploadMore', langCode)}</span>
           </div>
           {files.length > 0 && (
             <div className="mt-2 space-y-1">
@@ -203,7 +206,7 @@ export function InquiryIntakePage({ setView }) {
         </div>
 
         <button onClick={handleSubmit} disabled={submitting} className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 disabled:opacity-50">
-          {submitting ? 'Saving...' : 'Save'}
+          {submitting ? t('intake.saving', langCode) : t('intake.save', langCode)}
         </button>
       </div>
     </div>

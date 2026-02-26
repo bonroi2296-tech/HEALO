@@ -288,7 +288,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       
       {mode === 'select' && (
         <>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-12">How would you like to proceed?</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-12">{t('inquiry.howProceed', langCode)}</h1>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div
                 onClick={() => {
@@ -305,16 +305,16 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             >
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-teal-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-teal-100 transition-colors"><Bot size={28} className="text-teal-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">AI Agent</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Instant answers & recommendations.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.aiAgent', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.aiAgentDesc', langCode)}</p>
                 </div>
             </div>
 
             <div onClick={() => setMode('human')} className="bg-white border border-teal-100 rounded-3xl p-6 md:p-8 hover:border-green-500 hover:shadow-xl transition-all cursor-pointer group flex flex-row md:flex-col items-center text-left md:text-center gap-4 md:gap-0">
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-green-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-green-100 transition-colors"><MessageCircle size={28} className="text-green-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Human Agent</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Chat via WhatsApp or Line.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.humanAgent', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.humanAgentDesc', langCode)}</p>
                 </div>
             </div>
 
@@ -333,8 +333,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             >
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-blue-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-blue-100 transition-colors"><ClipboardList size={28} className="text-blue-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Inquiry Form</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Get a specific quote via email.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.formTitle', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.formDesc', langCode)}</p>
                 </div>
             </div>
           </div>
@@ -342,7 +342,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
           {/* 실험용 CTA 섹션 - 기존 3개 카드와 완전히 별도 */}
           <div className="mt-12 pt-8 border-t border-gray-200">
             <div className="text-center mb-6">
-              <p className="text-sm text-gray-500 mb-4">Not sure which option to choose?</p>
+              <p className="text-sm text-gray-500 mb-4">{t('inquiry.notSure', langCode)}</p>
               <button
                 onClick={() => {
                   const startLang = getLangCodeFromCookie();
@@ -359,10 +359,10 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 }}
                 className="inline-flex items-center gap-2 px-8 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors border border-gray-300"
               >
-                Start Consultation (Beta)
+                {t('inquiry.startConsultBeta', langCode)}
               </button>
               <p className="text-xs text-gray-500 mt-3 max-w-md mx-auto">
-                Let us review your situation and guide you to the right next step.
+                {t('inquiry.consultSubtext', langCode)}
               </p>
             </div>
           </div>
@@ -372,7 +372,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {mode === 'ai' && (
         <div className="bg-white border border-gray-200 rounded-3xl shadow-xl h-[600px] flex flex-col p-4 animate-in fade-in slide-in-from-right-4">
            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
-             <strong>Important:</strong> HEALO is not a medical institution. Our AI assistant provides general information only and cannot diagnose, treat, or provide medical advice. Always consult qualified medical professionals.
+             <strong>Important:</strong> {t('inquiry.aiDisclaimer', langCode)}
            </div>
            <div className="flex-1 overflow-y-auto mb-4 bg-gray-50 rounded-2xl p-4 text-left space-y-4" ref={chatContainerRef}>
              {Array.isArray(messages) && messages.map((msg) => {
@@ -415,10 +415,10 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 <div className="w-14 h-14 md:w-16 md:h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4 text-teal-600">
                     <Headset size={28} className="md:w-8 md:h-8" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Human Agent</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('inquiry.humanTitle', langCode)}</h2>
                 <p className="text-gray-500 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
-                    Connect directly with our expert medical coordinators.<br className="hidden md:block"/>
-                    We reply within 10 mins during business hours.
+                    {t('inquiry.humanSubtitle', langCode)}<br className="hidden md:block"/>
+                    {t('inquiry.humanReply', langCode)}
                 </p>
             </div>
 
@@ -432,7 +432,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                         <p className="text-xs md:text-sm text-gray-400 md:mb-6">Global Support</p>
                     </div>
                     <div className="text-[#25D366] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
                 </button>
                 
@@ -445,7 +445,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                         <p className="text-xs md:text-sm text-gray-400 md:mb-6">Japan / Thai</p>
                     </div>
                     <div className="text-[#06C755] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
                 </button>
 
@@ -458,7 +458,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                         <p className="text-xs md:text-sm text-gray-400 md:mb-6">China Support</p>
                     </div>
                     <div className="text-[#07C160] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
                 </button>
             </div>
@@ -468,26 +468,26 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {mode === 'form' && (
         <div className="bg-white border border-gray-200 rounded-3xl shadow-xl p-5 md:p-8 text-left max-w-2xl mx-auto animate-in fade-in slide-in-from-right-4 mb-20">
             <div className="mb-6 md:mb-8 border-b border-gray-100 pb-4 md:pb-6">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Inquiry Form</h2>
-                <p className="text-gray-500 text-xs md:text-sm">Fill in the details for a personalized quote.</p>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{t('inquiry.formTitle', langCode)}</h2>
+                <p className="text-gray-500 text-xs md:text-sm">{t('inquiry.formSubtitle', langCode)}</p>
             </div>
             
             <div className="space-y-4 md:space-y-6">
                 {/* 이름 (선택) */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">First Name</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.firstName', langCode)}</label>
                         <input type="text" value={formData.firstName} onChange={(e)=>setFormData({...formData, firstName: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="John"/>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Last Name</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.lastName', langCode)}</label>
                         <input type="text" value={formData.lastName} onChange={(e)=>setFormData({...formData, lastName: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="Doe"/>
                     </div>
                 </div>
 
                 {/* 연락: 이메일 OR 메신저 (둘 중 하나 필수) */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Email <span className="text-gray-400 font-normal">(or Messenger below)</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.emailLabel', langCode)} <span className="text-gray-400 font-normal">{t('inquiry.emailOrMessenger', langCode)}</span></label>
                     <input 
                       type="email" 
                       value={formData.email} 
@@ -517,28 +517,28 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 메신저: 선택 시에만 ID 입력칸 노출 */}
                 <div>
                     <label className="block text-xs font-bold text-teal-700 mb-1 ml-1 flex gap-1 items-center">
-                        <MessageCircle size={12}/> Messenger
+                        <MessageCircle size={12}/> {t('inquiry.messenger', langCode)}
                     </label>
                     <select value={formData.contactMethod} onChange={(e)=>setFormData({...formData, contactMethod: e.target.value})} className="w-full md:w-[35%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50 text-gray-700 font-medium">
-                        <option value="">Select...</option>
+                        <option value="">{t('inquiry.select', langCode)}</option>
                         <option value="WhatsApp">WhatsApp</option>
                         <option value="LINE">LINE</option>
                         <option value="WeChat">WeChat</option>
                         <option value="KakaoTalk">KakaoTalk</option>
                     </select>
                     {formData.contactMethod && (
-                        <input type="text" value={formData.contactId} onChange={(e)=>setFormData({...formData, contactId: e.target.value})} className="mt-2 w-full md:w-[65%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-white" placeholder="ID / Phone"/>
+                        <input type="text" value={formData.contactId} onChange={(e)=>setFormData({...formData, contactId: e.target.value})} className="mt-2 w-full md:w-[65%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-white" placeholder={t('inquiry.idPhone', langCode)}/>
                     )}
                 </div>
 
                 {/* 국적 & 언어 */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nationality <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.nationality', langCode)} <span className="text-red-500">*</span></label>
                         <input type="text" value={formData.nationality} onChange={(e)=>setFormData({...formData, nationality: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="USA"/>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Spoken Language <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.spokenLanguage', langCode)} <span className="text-red-500">*</span></label>
                         <input type="text" value={formData.spokenLanguage} onChange={(e)=>setFormData({...formData, spokenLanguage: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="English"/>
                     </div>
                 </div>
@@ -546,17 +546,17 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 날짜 & Main Concern */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Preferred Date <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.preferredDate', langCode)} <span className="text-red-500">*</span></label>
                         <input type="date" value={formData.preferredDate || ''} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} disabled={!!formData.preferredDateFlex} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"/>
                         <label className="mt-2 flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={!!formData.preferredDateFlex} onChange={(e) => setFormData({ ...formData, preferredDateFlex: e.target.checked, preferredDate: e.target.checked ? '' : formData.preferredDate })} className="rounded accent-teal-600"/>
-                            <span className="text-[11px] text-gray-500">Flexible (no specific date)</span>
+                            <span className="text-[11px] text-gray-500">{t('inquiry.flexibleDate', langCode)}</span>
                         </label>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Main Concern <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.mainConcern', langCode)} <span className="text-red-500">*</span></label>
                         <select value={formData.treatmentType} onChange={(e)=>setFormData({...formData, treatmentType: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700">
-                            <option value="">Select...</option>
+                            <option value="">{t('inquiry.select', langCode)}</option>
                             <option value="chronic-fatigue-low-immunity">Chronic fatigue / low immunity</option>
                             <option value="digestive-problems">Digestive problems</option>
                             <option value="sleep-disorder-insomnia">Sleep disorder / insomnia</option>
@@ -579,7 +579,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
 
                 {/* 메시지 (선택, 권장) */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Message <span className="text-gray-400 font-normal">(optional, recommended)</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.messageLabel', langCode)} <span className="text-gray-400 font-normal">{t('inquiry.messageOptional', langCode)}</span></label>
                     {/* TODO: Main Concern별 placeholder 확장 (e.g. pain-management, vision-eye-problem 등) */}
                     <textarea
                       value={formData.message}
@@ -636,7 +636,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     ) : (
                         <div onClick={() => document.getElementById('fileInput').click()} className="border border-dashed border-gray-300 rounded-xl p-3 text-center hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-2">
                             <UploadCloud className="text-gray-400" size={18}/>
-                            <span className="text-xs text-gray-500">Upload photo or medical record (X-ray, test result, diagnosis note if available)</span>
+                            <span className="text-xs text-gray-500">{t('inquiry.uploadPhoto', langCode)}</span>
                         </div>
                     )}
                 </div>
@@ -645,16 +645,16 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 <div className="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                   <label className="flex items-start gap-2 text-sm cursor-pointer">
                     <input type="checkbox" required className="mt-1 accent-teal-600" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)} />
-                    <span>I have read and agree to the <a href="/privacy" target="_blank" className="text-teal-600 underline">Privacy Policy</a> (required)</span>
+                    <span>{t('inquiry.agreePrivacy', langCode)} <a href="/privacy" target="_blank" className="text-teal-600 underline">{t('inquiry.privacyPolicy', langCode)}</a> {t('inquiry.required', langCode)}</span>
                   </label>
                   <label className="flex items-start gap-2 text-sm cursor-pointer">
                     <input type="checkbox" required className="mt-1 accent-teal-600" checked={agreeSharing} onChange={e => setAgreeSharing(e.target.checked)} />
-                    <span>I consent to sharing my information with partner hospitals for treatment matching (required)</span>
+                    <span>{t('inquiry.agreeSharing', langCode)}</span>
                   </label>
                 </div>
 
                 <button onClick={handleFormSubmit} className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 transition transform active:scale-95 shadow-lg shadow-teal-100 mt-2">
-                    Send Inquiry
+                    {t('inquiry.submitBtn', langCode)}
                 </button>
             </div>
         </div>

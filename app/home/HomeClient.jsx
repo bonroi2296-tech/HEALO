@@ -1,246 +1,219 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { MessageSquare, Search, FileText, ChevronDown } from "lucide-react";
 import {
   HeroSection,
   CardListSection,
   PersonalConciergeCTA,
 } from "../../src/components.jsx";
-import { Leaf, ArrowRight } from "lucide-react";
-import { supabaseClient } from "../../src/lib/data/supabaseClient";
-import { mapHospitalRow, mapTreatmentRow } from "../../src/lib/mapper";
-import { getLocationColumn, getCurrentLangCode } from "../../src/lib/language";
 import { getLangCodeFromCookie, t } from "../../src/lib/i18n";
 
-export default function HomeClient() {
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [featuredTreatments, setFeaturedTreatments] = useState([]);
-  const [partnerHospitals, setPartnerHospitals] = useState([]);
-  const [otherHospitals, setOtherHospitals] = useState([]);
-  const [siteConfig, setSiteConfig] = useState({ logo: "", hero: "" });
-  const [treatmentsError, setTreatmentsError] = useState(null);
-  const [hospitalsError, setHospitalsError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const isDev = process.env.NODE_ENV !== "production";
+const useLangCode = () => {
   const [langCode, setLangCode] = useState("en");
-  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
-
   useEffect(() => {
-    const fetchFeatured = async () => {
-      // ⏱️ 성능 측정 시작
-      const perfStart = performance.now();
-      const marks = {};
-
-      try {
-        setIsLoading(true);
-        const locCol = getLocationColumn();
-
-        // ✅ 최적화 1: Promise.all로 병렬 fetch (순차 → 병렬)
-        marks.fetchStart = performance.now();
-        
-        const HOSPITAL_PUBLIC_COLS = `id,slug,name,location_en,location_kr,address_detail,description,tags,rating,reviews_count,images,thumbnail_image,gallery_images,latitude,longitude,operating_hours,doctor_profile,amenities,supported_languages,specialties,medical_equipment,certifications,insurance_accepted,insurance_details,annual_surgery_count,establishment_date,doctor_count,external_ratings,is_published,display_order,created_at,i18n,is_partner`;
-        const TREATMENT_PUBLIC_COLS = `id,slug,name,description,full_description,hospital_id,price_min,price_max,tags,images,benefits,i18n`;
-
-        const [settingsResult, treatmentsResult, hospitalsResult] = await Promise.all([
-          supabaseClient.from("site_settings").select("logo_url,hero_background_url").single(),
-          supabaseClient
-            .from("treatments")
-            .select(`${TREATMENT_PUBLIC_COLS}, hospitals(slug, name, location:${locCol}, location_kr, location_en, i18n)`)
-            .eq("is_published", true)
-            .order("display_order", { ascending: true, nullsFirst: false })
-            .order("created_at", { ascending: false })
-            .limit(4),
-          supabaseClient
-            .from("hospitals")
-            .select(`${HOSPITAL_PUBLIC_COLS}, location:${locCol}`)
-            .eq("is_published", true)
-            .order("display_order", { ascending: true, nullsFirst: false })
-            .order("created_at", { ascending: false })
-            .limit(12),
-        ]);
-
-        marks.fetchEnd = performance.now();
-
-        // Site settings
-        if (settingsResult.data) {
-          setSiteConfig({
-            logo: settingsResult.data.logo_url,
-            hero: settingsResult.data.hero_background_url,
-          });
-        }
-
-        // Treatments
-        if (treatmentsResult.error) {
-          console.error("[HomeClient] Treatments fetch error:", treatmentsResult.error);
-          setTreatmentsError(treatmentsResult.error);
-        } else {
-          setTreatmentsError(null);
-          if (treatmentsResult.data) {
-            const lang = getCurrentLangCode();
-            const mapped = treatmentsResult.data.map(r => mapTreatmentRow(r, lang)).filter(Boolean);
-            setFeaturedTreatments(mapped);
-            marks.treatmentsRendered = performance.now();
-          }
-        }
-
-        // Hospitals
-        if (hospitalsResult.error) {
-          console.error("[HomeClient] Hospitals fetch error:", hospitalsResult.error);
-          setHospitalsError(hospitalsResult.error);
-        } else {
-          setHospitalsError(null);
-          if (hospitalsResult.data) {
-            const hLang = getCurrentLangCode();
-            const mapped = hospitalsResult.data.map(r => mapHospitalRow(r, hLang)).filter(Boolean);
-            setPartnerHospitals(mapped.filter(h => h.is_partner));
-            setOtherHospitals(mapped.filter(h => !h.is_partner));
-            marks.hospitalsRendered = performance.now();
-          }
-        }
-
-        const perfEnd = performance.now();
-
-        // 📊 성능 측정 로그
-        if (isDev) {
-          console.log("🚀 [Performance] Home Page Load:");
-          console.log(`  - Total fetch time: ${(marks.fetchEnd - marks.fetchStart).toFixed(0)}ms`);
-          console.log(`  - Data to render: ${(perfEnd - marks.fetchEnd).toFixed(0)}ms`);
-          console.log(`  - Total: ${(perfEnd - perfStart).toFixed(0)}ms`);
-        }
-      } catch (error) {
-        console.error("[HomeClient] Fetch error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFeatured();
+    setLangCode(getLangCodeFromCookie());
   }, []);
+  return langCode;
+};
+
+function SocialProofSection({ langCode }) {
+  const stats = [
+    { value: "500+", labelKey: "social.consultations" },
+    { value: "50+", labelKey: "social.partnerHospitals" },
+    { value: "15+", labelKey: "social.specialties" },
+    { value: "24h", labelKey: "social.responseTime" },
+  ];
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-6">
+      <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-center text-sm text-gray-500">
+        {stats.map((s) => (
+          <div key={s.labelKey}>
+            <span className="block text-2xl font-bold text-gray-900">
+              {s.value}
+            </span>
+            {t(s.labelKey, langCode)}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HowItWorksSection({ langCode, onGetStarted }) {
+  const steps = [
+    {
+      icon: MessageSquare,
+      titleKey: "howItWorks.step1.title",
+      descKey: "howItWorks.step1.desc",
+    },
+    {
+      icon: Search,
+      titleKey: "howItWorks.step2.title",
+      descKey: "howItWorks.step2.desc",
+    },
+    {
+      icon: FileText,
+      titleKey: "howItWorks.step3.title",
+      descKey: "howItWorks.step3.desc",
+    },
+  ];
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10 md:py-16">
+      <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 text-center mb-8 md:mb-12">
+        {t("howItWorks.title", langCode)}
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+        {steps.map((step, i) => (
+          <div key={step.titleKey} className="flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-full bg-teal-50 border-2 border-teal-500 text-teal-600 flex items-center justify-center mb-4">
+              <step.icon size={24} />
+            </div>
+            <span className="text-xs font-bold text-teal-600 mb-1">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1">
+              {t(step.titleKey, langCode)}
+            </h3>
+            <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
+              {t(step.descKey, langCode)}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-8 text-center">
+        <button
+          onClick={onGetStarted}
+          className="bg-teal-600 text-white px-8 py-3.5 rounded-full font-bold text-sm md:text-base hover:bg-teal-700 transition shadow-lg"
+        >
+          {t("cta.getFreePlan", langCode)}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border-b border-gray-100">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-4 text-left"
+      >
+        <span className="text-sm md:text-base font-semibold text-gray-900">
+          {question}
+        </span>
+        <ChevronDown
+          size={18}
+          className={`text-gray-400 shrink-0 ml-4 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {open && (
+        <p className="pb-4 text-sm text-gray-600 leading-relaxed">{answer}</p>
+      )}
+    </div>
+  );
+}
+
+function FAQSection({ langCode }) {
+  const faqs = [
+    { qKey: "faq.q1", aKey: "faq.a1" },
+    { qKey: "faq.q2", aKey: "faq.a2" },
+    { qKey: "faq.q3", aKey: "faq.a3" },
+    { qKey: "faq.q4", aKey: "faq.a4" },
+  ];
+
+  return (
+    <section className="max-w-3xl mx-auto px-4 py-10 md:py-16">
+      <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">
+        {t("faq.title", langCode)}
+      </h2>
+      <div className="bg-white rounded-2xl border border-gray-100 px-4 md:px-6">
+        {faqs.map((faq) => (
+          <FAQItem
+            key={faq.qKey}
+            question={t(faq.qKey, langCode)}
+            answer={t(faq.aKey, langCode)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function HomeClient({
+  featuredTreatments = [],
+  featuredHospitals = [],
+  siteConfig = { logo: "", hero: "" },
+}) {
+  const router = useRouter();
+  const langCode = useLangCode();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const goToInquiry = () => router.push("/inquiry");
 
   return (
     <>
       <HeroSection
-        setView={() => router.push(searchTerm.trim() ? `/search?q=${encodeURIComponent(searchTerm.trim())}` : "/treatments")}
+        setView={() => router.push("/treatments")}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         siteConfig={siteConfig}
       />
 
-      {/* ✅ 최적화 2: 로딩 중 Skeleton UI */}
-      {isLoading ? (
-        <div className="max-w-6xl mx-auto px-4 space-y-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-gray-100 rounded-2xl h-56"></div>
-              ))}
-            </div>
-          </div>
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-gray-100 rounded-2xl h-56"></div>
-              ))}
-            </div>
+      <SocialProofSection langCode={langCode} />
+
+      <div className="px-4 md:px-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm py-3 md:hidden text-center">
+            <button
+              onClick={goToInquiry}
+              className="bg-teal-600 text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg hover:bg-teal-700 transition w-full max-w-xs"
+            >
+              {t("cta.getFreePlan", langCode)}
+            </button>
           </div>
         </div>
-      ) : (
-        <>
-          <div>
-            <CardListSection
-              title={t("home.signatureCollection", langCode)}
-              items={featuredTreatments}
-              onCardClick={(id) => {
-                const item = featuredTreatments.find((entry) => entry.id === id);
-                const slugOrId = item?.slug || item?.id || id;
-                router.push(`/treatments/${slugOrId}`);
-              }}
-              type="treatment"
-            />
-            {isDev && (
-              <div className="max-w-6xl mx-auto px-4 mt-2">
-                {featuredTreatments.length === 0 && !treatmentsError && (
-                  <p className="text-xs text-gray-500">No treatments loaded</p>
-                )}
-                {treatmentsError && (
-                  <p className="text-xs text-red-500">
-                    Error: {treatmentsError.message}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+      </div>
 
-          {partnerHospitals.length > 0 && (
-            <CardListSection
-              title={t("home.partnerHospitals", langCode)}
-              items={partnerHospitals}
-              onCardClick={(id) => {
-                const item = partnerHospitals.find((entry) => entry.id === id);
-                const slugOrId = item?.slug || item?.id || id;
-                router.push(`/hospitals/${slugOrId}`);
-              }}
-              type="hospital"
-              showPartnerBadge
-            />
-          )}
+      <div>
+        <CardListSection
+          title="HEALO's Signature Collection"
+          items={featuredTreatments}
+          onCardClick={(id) => {
+            const item = featuredTreatments.find((entry) => entry.id === id);
+            const slugOrId = item?.slug || item?.id || id;
+            router.push(`/treatments/${slugOrId}`);
+          }}
+          type="treatment"
+        />
+      </div>
 
-          {otherHospitals.length > 0 && (
-            <CardListSection
-              title={t("home.otherHospitals", langCode)}
-              items={otherHospitals}
-              onCardClick={(id) => {
-                const item = otherHospitals.find((entry) => entry.id === id);
-                const slugOrId = item?.slug || item?.id || id;
-                router.push(`/hospitals/${slugOrId}`);
-              }}
-              type="hospital"
-            />
-          )}
-          {isDev && (
-            <div className="max-w-6xl mx-auto px-4 mt-2">
-              {partnerHospitals.length === 0 && otherHospitals.length === 0 && !hospitalsError && (
-                <p className="text-xs text-gray-500">No hospitals loaded</p>
-              )}
-              {hospitalsError && (
-                <p className="text-xs text-red-500">
-                  Error: {hospitalsError.message}
-                </p>
-              )}
-            </div>
-          )}
+      <CardListSection
+        title="Official Medical Partners"
+        items={featuredHospitals}
+        onCardClick={(id) => {
+          const item = featuredHospitals.find((entry) => entry.id === id);
+          const slugOrId = item?.slug || item?.id || id;
+          router.push(`/hospitals/${slugOrId}`);
+        }}
+        type="hospital"
+      />
 
-          {/* Korean Traditional Medicine Banner */}
-          <section className="max-w-6xl mx-auto px-4 mt-8 md:mt-12">
-            <div
-              onClick={() => router.push("/specialties/korean-medicine")}
-              className="rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 p-5 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 cursor-pointer hover:shadow-xl transition group"
-            >
-              <div className="flex items-center gap-4 text-white">
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                  <Leaf size={24} className="text-emerald-200" />
-                </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-extrabold">{t("home.koreanMedicine", langCode)}</h3>
-                  <p className="text-white/70 text-sm mt-0.5">{t("home.koreanMedicineDesc", langCode)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-white font-bold text-sm bg-white/15 px-5 py-2.5 rounded-full group-hover:bg-white/25 transition shrink-0">
-                {t("km.viewAll", langCode)} <ArrowRight size={16} />
-              </div>
-            </div>
-          </section>
+      <HowItWorksSection langCode={langCode} onGetStarted={goToInquiry} />
 
-          <div className="mt-4 md:mt-10">
-            <PersonalConciergeCTA onClick={() => router.push("/inquiry")} />
-          </div>
-        </>
-      )}
+      <div className="mt-4 md:mt-10">
+        <PersonalConciergeCTA onClick={goToInquiry} />
+      </div>
+
+      <FAQSection langCode={langCode} />
     </>
   );
 }

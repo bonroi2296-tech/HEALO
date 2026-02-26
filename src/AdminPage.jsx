@@ -1,7 +1,7 @@
 "use client";
 
 // src/AdminPage.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from './lib/supabase/browser';
 
 // ✅ SSR-safe browser client (쿠키 기반 세션)
@@ -15,99 +15,14 @@ import {
 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { AddressInput } from './components/AddressInput';
+import { DynamicListInput } from './components/DynamicListInput';
+import { ImageUploader } from './components/ImageUploader';
 import { AnalyticsTab } from './legacy-pages/admin/AnalyticsTab';
 import { InquiryManager } from './legacy-pages/admin/InquiryManager';
 import { HospitalManager } from './legacy-pages/admin/HospitalManager';
 import { TreatmentManager } from './legacy-pages/admin/TreatmentManager';
 import { SiteSettings as SiteSettingsTab } from './legacy-pages/admin/SiteSettings';
 import { AdminAuditPage } from './legacy-pages/AdminAuditPage';
-
-// ==========================================
-// 1. 텍스트 입력용 동적 리스트
-// ==========================================
-const DynamicListInput = ({ items, onAdd, onRemove, placeholder, icon: Icon }) => {
-    const [newItem, setNewItem] = useState('');
-    const handleAdd = () => {
-        if (newItem.trim()) {
-            onAdd(newItem.trim());
-            setNewItem('');
-        }
-    };
-    return (
-        <div className="space-y-2">
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    {Icon && <Icon size={16} className="absolute left-3 top-3 text-gray-400"/>}
-                    <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())} className={`w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition ${Icon ? 'pl-10' : ''}`} placeholder={placeholder} />
-                </div>
-                <button type="button" onClick={handleAdd} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 rounded-lg font-bold text-sm transition">추가</button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-                {Array.isArray(items) && items.map((item, idx) => (
-                    <span key={idx} className="bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 border border-teal-100">
-                        {item} <button type="button" onClick={() => onRemove(idx)} className="hover:text-red-500"><X size={12}/></button>
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// ==========================================
-// 2. 이미지 파일 업로더
-// ==========================================
-const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
-    const fileInputRef = useRef(null);
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        await onUpload(file);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    <input 
-                        type="file" 
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        disabled={uploading}
-                        className="hidden" 
-                        id="file-upload-input"
-                    />
-                    <label 
-                        onClick={() => fileInputRef.current.click()}
-                        className={`w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 cursor-pointer hover:bg-gray-50 hover:border-teal-500 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {uploading ? <Loader2 size={18} className="animate-spin"/> : <UploadCloud size={18}/>}
-                        {uploading ? "업로드 중..." : "클릭하여 이미지 업로드 (JPG, PNG)"}
-                    </label>
-                </div>
-            </div>
-            
-            {images.length > 0 && (
-                <div className="grid grid-cols-4 gap-2">
-                    {Array.isArray(images) && images.map((url, idx) => (
-                        <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                            <img src={url} alt={`Uploaded image ${idx + 1}`} className="w-full h-full object-cover" />
-                            <button 
-                                onClick={() => onRemove(idx)} 
-                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition shadow-sm"
-                            >
-                                <X size={12} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
 
 export const AdminPage = ({ setView }) => {
   const toast = useToast(); // Toast 사용 준비

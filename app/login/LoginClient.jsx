@@ -31,8 +31,7 @@ export const LoginPage = ({ setView }) => {
             toast.error("Login failed. Please check your email and password.");
             setLoading(false);
         } else {
-            console.log("Logged in:", data.user.email);
-            toast.success(`Welcome, ${data.user.email}!`);
+            toast.success(`Welcome back!`);
             
             try {
                 const whoamiResponse = await fetch('/api/admin/whoami', {
@@ -42,27 +41,15 @@ export const LoginPage = ({ setView }) => {
                 if (whoamiResponse.ok) {
                     const whoamiResult = await whoamiResponse.json();
                     
-                    console.log('[LoginPage] whoami result:', {
-                        isAdmin: whoamiResult.isAdmin,
-                        email: whoamiResult.email,
-                        reason: whoamiResult.reason,
-                        error: whoamiResult.error,
-                        debug: whoamiResult.debug
-                    });
-                    
                     if (whoamiResult.isAdmin) {
-                        console.log('[LoginPage] ✅ Admin detected, redirecting to /admin');
                         router.push('/admin');
                     } else {
-                        console.log('[LoginPage] Non-admin user, redirecting to home');
                         router.push('/');
                     }
                 } else {
-                    console.warn('[LoginPage] whoami check failed, redirecting to home');
                     router.push('/');
                 }
-            } catch (checkError) {
-                console.error('[LoginPage] Admin check error:', checkError);
+            } catch {
                 router.push('/');
             } finally {
                 setLoading(false);
@@ -137,15 +124,9 @@ export const LoginPage = ({ setView }) => {
                     <div className="mt-6">
                         <button
                             onClick={async () => {
-                                console.log('[LoginPage] 🔵 Google button clicked!');
-                                console.log('[LoginPage] window.location.origin:', window.location.origin);
-                                
                                 setOauthLoading(true);
                                 try {
                                     const redirectUrl = `${window.location.origin}/auth/callback`;
-                                    console.log('[LoginPage] redirectTo:', redirectUrl);
-                                    
-                                    console.log('[LoginPage] Calling signInWithOAuth...');
                                     const { data, error } = await supabase.auth.signInWithOAuth({
                                         provider: 'google',
                                         options: {
@@ -153,17 +134,11 @@ export const LoginPage = ({ setView }) => {
                                         },
                                     });
                                     
-                                    console.log('[LoginPage] signInWithOAuth result:', { data, error });
-                                    
                                     if (error) {
-                                        console.error('[LoginPage] ❌ OAuth error:', error);
                                         toast.error('Google login failed. Please try again.');
                                         setOauthLoading(false);
-                                    } else {
-                                        console.log('[LoginPage] ✅ OAuth initiated, redirecting to Google...');
                                     }
-                                } catch (err) {
-                                    console.error('[LoginPage] ❌ Google OAuth exception:', err);
+                                } catch {
                                     toast.error('An error occurred. Please try again.');
                                     setOauthLoading(false);
                                 }

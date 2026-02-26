@@ -8,8 +8,13 @@
 export const runtime = "nodejs";
 
 import { ingestSources } from "../../../../src/lib/rag/ingest";
+import { requireAdminAuth } from "../../../../src/lib/auth/requireAdminAuth";
+import { NextRequest } from "next/server";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) return auth.response;
+
   try {
     const body = await request.json().catch(() => ({}));
     const sourceTypes = Array.isArray(body?.sourceTypes)

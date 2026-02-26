@@ -8,8 +8,12 @@
 export const runtime = "nodejs";
 
 import { supabaseAdmin } from "../../../../src/lib/rag/supabaseAdmin";
+import { requireAdminAuth } from "../../../../src/lib/auth/requireAdminAuth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminAuth(request);
+  if (!auth.success) return auth.response;
   try {
     const { data, error } = await supabaseAdmin
       .from("inquiries")

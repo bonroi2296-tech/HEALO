@@ -20,9 +20,9 @@ const useLangCode = () => {
 
 function SocialProofSection({ langCode }) {
   const stats = [
-    { value: "500+", labelKey: "social.consultations" },
-    { value: "50+", labelKey: "social.partnerHospitals" },
-    { value: "15+", labelKey: "social.specialties" },
+    { value: "AI", labelKey: "social.consultations" },
+    { value: "1:1", labelKey: "social.partnerHospitals" },
+    { value: "24/7", labelKey: "social.specialties" },
     { value: "24h", labelKey: "social.responseTime" },
   ];
 

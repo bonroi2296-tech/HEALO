@@ -662,6 +662,21 @@
 # | Storing plaintext PII                | `encryptString(pii)` before storage          |
 # | `supabaseAdmin` in client code       | Server components or API routes only         |
 # | New imports from `legacy-pages/`     | Write new code or use existing App Router    |
+# | Fake metrics ("500+", "50+ hospitals")| Use real data or feature descriptions only   |
+#   허위 지표 ("500+", "50개 병원")        실제 데이터 또는 기능 설명만 사용
+#
+# RULE: No fake metrics or vanity numbers. EVER.
+# 규칙: 허위 지표나 허수 절대 금지.
+# - NEVER display fabricated statistics (e.g., "500+ consultations", "50+ hospitals")
+#   만들어낸 통계를 절대 표시하지 않는다 (예: "500+ 상담", "50+ 병원")
+# - Only display REAL data from the database, or describe FEATURES instead.
+#   DB의 실제 데이터만 표시하거나, 숫자 대신 기능을 설명한다.
+# - OK: "AI Concierge", "1:1 Matching", "24/7 Available"
+#   허용: "AI 컨시어지", "1:1 매칭", "24시간 이용 가능"
+# - NOT OK: "500+ consultations", "50+ hospitals" (if not real)
+#   금지: "500+ 상담", "50+ 병원" (실제가 아니면)
+# - This is not just a UX issue — it's FRAUD and destroys trust.
+#   이것은 UX 문제가 아니라 사기이며 신뢰를 파괴한다.
 #
 # Korean medical advertising prohibited expressions (의료광고 금지 표현):
 # 한국어 의료광고 금지 표현:

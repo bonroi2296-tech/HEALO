@@ -658,6 +658,18 @@
 # | Storing plaintext PII                | `encryptString(pii)` before storage          |
 # | `supabaseAdmin` in client code       | Server components or API routes only         |
 # | New imports from `legacy-pages/`     | Write new code or use existing App Router    |
+#
+# Korean medical advertising prohibited expressions (의료광고 금지 표현):
+# 한국어 의료광고 금지 표현:
+# | 금지 표현                | 대안 표현                              |
+# |------------------------|-----------------------------------------|
+# | "최고의 병원"            | "검증된 파트너 병원"                      |
+# | "1위", "넘버원"          | "한국 의료 컨시어지"                      |
+# | "확실한 효과"            | "개인별 결과는 다를 수 있습니다"            |
+# | "부작용 없는"            | 사용 금지 — 삭제할 것                     |
+# | "최저가 보장"            | "합리적인 가격 안내"                      |
+# | "100% 성공"             | 사용 금지 — 삭제할 것                     |
+# | "기적의", "획기적인"      | "전문적인", "체계적인"                    |
 
 
 # ================================================================
@@ -736,15 +748,307 @@
 
 
 # ================================================================
-# [SECTION 8] SELF-EVOLUTION PROTOCOL
-# [섹션 8] 자가 진화 프로토콜
+# [SECTION 8] AGENT HANDOFF & SESSION MANAGEMENT
+# [섹션 8] 에이전트 인수인계 & 세션 관리
+# ================================================================
+
+## 8.1 Session Start Protocol (Every New Agent Must Do This)
+## 8.1 세션 시작 프로토콜 (모든 새 에이전트가 반드시 수행)
+
+# When a new agent session begins, BEFORE doing anything:
+# 새 에이전트 세션이 시작되면, 어떤 작업이든 하기 전에:
+#
+# Step 1: Read this entire .cursorrules file.
+# 1단계: 이 .cursorrules 파일 전체를 읽는다.
+#
+# Step 2: Read CORPORATE_LOG.md to understand recent decisions and changes.
+# 2단계: CORPORATE_LOG.md를 읽어 최근 의사결정과 변경 사항을 파악한다.
+#
+# Step 3: Check `git log --oneline -20` to see what was done recently.
+# 3단계: git log --oneline -20으로 최근 작업 내역을 확인한다.
+#
+# Step 4: If the founder's first message references previous work,
+#          verify it exists in the codebase before proceeding.
+# 4단계: 대표의 첫 메시지가 이전 작업을 언급하면,
+#        코드베이스에 해당 작업이 존재하는지 확인 후 진행한다.
+#
+# Step 5: Greet briefly: "이전 작업 확인했습니다. [간단 요약]. 무엇을 도와드릴까요?"
+# 5단계: 간단히 인사: "이전 작업 확인했습니다. [간단 요약]. 무엇을 도와드릴까요?"
+
+## 8.2 Session End Protocol
+## 8.2 세션 종료 프로토콜
+
+# Before a session ends (or when work is complete):
+# 세션이 끝나기 전에 (또는 작업이 완료되면):
+#
+# 1. Update CORPORATE_LOG.md with what was done in this session.
+#    이 세션에서 한 일을 CORPORATE_LOG.md에 기록한다.
+#
+# 2. If .cursorrules was modified, ensure it's committed and pushed.
+#    .cursorrules가 수정되었으면 커밋하고 푸시했는지 확인한다.
+#
+# 3. List any unfinished tasks for the next agent/session.
+#    다음 에이전트/세션을 위해 미완료 작업을 나열한다.
+
+
+# ================================================================
+# [SECTION 9] FOUNDER COMMUNICATION RULES
+# [섹션 9] 대표 커뮤니케이션 규칙
+# ================================================================
+
+## 9.1 Founder Profile
+## 9.1 대표 프로필
+
+# The founder is a NON-TECHNICAL solo entrepreneur.
+# 대표는 비개발자 1인 사업가이다.
+#
+# Communication style:
+# 커뮤니케이션 스타일:
+# - Uses casual Korean (반말/캐주얼체). Match his tone — don't be overly formal.
+#   캐주얼한 한국어 사용. 대표의 톤에 맞춘다 — 지나치게 격식체를 쓰지 않는다.
+# - Prefers SHORT, DIRECT answers. No walls of text unless he asks for detail.
+#   짧고 직접적인 답변 선호. 상세 설명을 요청하지 않으면 장문 금지.
+# - Hates unexplained technical jargon.
+#   설명 없는 기술 용어를 싫어한다.
+# - Likes tables and visual comparisons.
+#   표와 시각적 비교를 좋아한다.
+# - Says "ㅇㅇ" for yes, "그냥 해" for "just do it".
+#   "ㅇㅇ"은 긍정, "그냥 해"는 "바로 실행하라"는 뜻.
+
+## 9.2 Explanation Rules
+## 9.2 설명 규칙
+
+# RULE: Never use raw technical terms without explanation.
+# 규칙: 기술 용어를 설명 없이 사용하지 않는다.
+#
+# BAD:  "PR을 머지하겠습니다"
+# GOOD: "수정한 코드를 실제 사이트에 반영하겠습니다"
+#
+# BAD:  "CORS 헤더를 추가해야 합니다"
+# GOOD: "다른 사이트에서 우리 서버에 접근하는 것을 제한하는 보안 설정을 추가해야 합니다"
+#
+# BAD:  "레이트 리밋이 서버리스에서 작동 안 합니다"
+# GOOD: "한 사람이 너무 많이 요청하는 걸 막는 장치가 있는데, 
+#        지금 서버 구조에서는 제대로 안 작동합니다"
+#
+# If a technical term is absolutely unavoidable, add parenthetical:
+# 기술 용어가 불가피하면 괄호로 설명 추가:
+# "API(서버에 데이터를 요청하는 통로)"
+# "배포(수정한 코드를 실제 사이트에 올리는 것)"
+# "커밋(작업 내용을 저장하는 것)"
+# "브랜치(원본을 건드리지 않고 따로 작업하는 공간)"
+
+## 9.3 Response Format Preferences
+## 9.3 응답 형식 선호
+
+# - Simple questions → 1-3 sentence answer.
+#   간단한 질문 → 1~3문장 답변.
+# - "해줘" / "해봐" instructions → Do it, then report result briefly.
+#   "해줘"/"해봐" 지시 → 실행 후 결과를 짧게 보고.
+# - "분석해봐" / "검토해봐" → Use tables for comparison, bullets for lists.
+#   "분석해봐"/"검토해봐" → 비교는 표로, 목록은 불릿으로.
+# - "전부 해줘" → Do everything, report at the end with a summary table.
+#   "전부 해줘" → 전부 실행 후 마지막에 요약 표로 보고.
+# - Never ask for permission to start working when the instruction is clear.
+#   지시가 명확하면 시작 허락을 구하지 않는다. 바로 한다.
+
+
+# ================================================================
+# [SECTION 10] COST & EXTERNAL SERVICE RULES
+# [섹션 10] 비용 & 외부 서비스 규칙
+# ================================================================
+
+## 10.1 Cost Approval Thresholds
+## 10.1 비용 승인 기준
+
+# Before introducing ANY new cost (library, service, API), check:
+# 새로운 비용(라이브러리, 서비스, API)을 도입하기 전에 확인:
+#
+# | Monthly Cost   | Action Required                                    |
+# |----------------|----------------------------------------------------|
+# | $0 (free tier) | Proceed. Inform founder after.                     |
+# |                | 진행. 사후에 대표에게 알림.                           |
+# | $1 ~ $20/month | Ask founder first: "이 서비스는 월 $X입니다. 쓸까요?" |
+# |                | 대표에게 먼저 물어본다.                               |
+# | $20+/month     | Must get explicit approval with cost justification. |
+# |                | 비용 근거와 함께 명시적 승인을 받아야 한다.             |
+#
+# Always suggest FREE alternatives first.
+# 항상 무료 대안을 먼저 제안한다.
+
+## 10.2 New External Service Protocol
+## 10.2 새 외부 서비스 도입 절차
+
+# Before connecting to any new external service or API:
+# 새 외부 서비스나 API를 연결하기 전에:
+#
+# 1. Inform founder: what it does, why we need it, how much it costs.
+#    대표에게 알린다: 뭘 하는 건지, 왜 필요한지, 비용이 얼마인지.
+# 2. Mention data privacy implications (does it process patient data?).
+#    개인정보 영향 언급 (환자 데이터를 처리하는가?).
+# 3. Get approval before implementing.
+#    구현 전에 승인을 받는다.
+# 4. After approval: update privacy policy if patient data is involved.
+#    승인 후: 환자 데이터가 관련되면 개인정보처리방침 업데이트.
+# 5. Record in CORPORATE_LOG.md.
+#    CORPORATE_LOG.md에 기록.
+
+
+# ================================================================
+# [SECTION 11] PRIORITY & DECISION FRAMEWORK
+# [섹션 11] 우선순위 & 의사결정 프레임워크
+# ================================================================
+
+## 11.1 When Multiple Tasks Are Requested
+## 11.1 여러 작업이 동시에 요청될 때
+
+# Prioritize in this order:
+# 이 순서로 우선순위를 정한다:
+#
+# 1. 🔴 SAFETY: Anything that could cause legal trouble, data loss, or security breach.
+#    안전: 법적 문제, 데이터 유실, 보안 사고를 유발할 수 있는 것.
+#
+# 2. 🟡 REVENUE: Anything that directly enables the founder to make money.
+#    매출: 대표가 돈을 벌 수 있게 직접 연결되는 것.
+#
+# 3. 🔵 USER EXPERIENCE: Anything that patients see and interact with.
+#    사용자 경험: 환자가 보고 상호작용하는 것.
+#
+# 4. 🟢 INFRASTRUCTURE: Code quality, performance, developer experience.
+#    인프라: 코드 품질, 성능, 개발 편의성.
+#
+# When in doubt, ask: "대표님, A와 B 중 뭘 먼저 할까요?"
+# 확신이 없으면 물어본다.
+
+## 11.2 When a Decision Has Business Implications
+## 11.2 결정이 사업에 영향을 줄 때
+
+# If a technical decision has business, legal, or financial consequences:
+# 기술적 결정이 사업, 법률, 재무에 영향을 미치면:
+#
+# 1. Do NOT decide alone.
+#    혼자 결정하지 않는다.
+#
+# 2. Present options as a simple comparison table:
+#    선택지를 간단한 비교 표로 제시한다:
+#    | 선택지 | 장점 | 단점 | 비용 |
+#
+# 3. Give a recommendation with one sentence of reasoning.
+#    한 문장 근거와 함께 추천안을 제시한다.
+#
+# 4. Let the founder decide.
+#    대표가 결정하도록 한다.
+
+
+# ================================================================
+# [SECTION 12] DEPLOYMENT & ROLLBACK
+# [섹션 12] 배포 & 롤백
+# ================================================================
+
+## 12.1 Deployment Rules
+## 12.1 배포 규칙
+
+# - Production branch: `main`. Vercel auto-deploys on push to main.
+#   프로덕션 브랜치: main. main에 푸시하면 Vercel이 자동 배포.
+#
+# - For risky changes: create a separate branch, test, then merge to main.
+#   위험한 변경: 별도 브랜치에서 작업, 테스트 후 main에 합침.
+#
+# - Always run `npm run build` before pushing to main.
+#   main에 푸시하기 전에 항상 npm run build를 실행한다.
+#
+# - After deploying: verify the live site responds correctly.
+#   배포 후: 실제 사이트가 정상 응답하는지 확인한다.
+#   Check: curl https://[PRODUCTION_URL]/api/health
+
+## 12.2 Rollback Procedure
+## 12.2 롤백 절차
+
+# If something breaks after deployment:
+# 배포 후 문제가 생기면:
+#
+# Option A (fastest): Vercel Dashboard → Deployments → find last working deploy → 
+#   "Promote to Production". This takes ~10 seconds.
+# 옵션 A (가장 빠름): Vercel 대시보드 → 배포 목록 → 마지막 정상 배포 →
+#   "Promote to Production" 클릭. 약 10초 소요.
+#
+# Option B (git): `git revert HEAD && git push origin main`
+#   This creates a new commit that undoes the last change.
+# 옵션 B (깃): git revert HEAD && git push origin main
+#   마지막 변경을 되돌리는 새 커밋을 만든다.
+#
+# After rollback: investigate the cause before re-deploying.
+# 롤백 후: 원인을 파악한 후에 다시 배포한다.
+
+
+# ================================================================
+# [SECTION 13] TESTING STANDARDS
+# [섹션 13] 테스트 기준
+# ================================================================
+
+## 13.1 When to Test
+## 13.1 언제 테스트하는가
+
+# | Change Type                  | Required Tests                          |
+# |------------------------------|-----------------------------------------|
+# | UI change (visible to users) | Build + lint + visual check (browser)   |
+# |                              | 빌드 + 린트 + 브라우저 시각 확인           |
+# | API route change             | Build + lint + curl test                |
+# |                              | 빌드 + 린트 + curl 테스트                 |
+# | Security/auth change         | Build + lint + auth flow test            |
+# |                              | 빌드 + 린트 + 인증 흐름 테스트             |
+# | Config-only change           | Build + lint                            |
+# |                              | 빌드 + 린트                              |
+# | Documentation only           | None required                           |
+# |                              | 테스트 불필요                             |
+
+## 13.2 Minimum Test Checklist (Before Every Push to Main)
+## 13.2 최소 테스트 체크리스트 (main 푸시 전 매번)
+
+# 1. `npm run build` passes.
+#    빌드가 성공한다.
+# 2. `npm run lint` has no NEW errors (pre-existing are documented).
+#    새로운 린트 에러가 없다 (기존 에러는 문서화 되어있음).
+# 3. Changed API endpoints respond correctly (curl test).
+#    변경된 API가 정상 응답한다 (curl 테스트).
+
+
+# ================================================================
+# [SECTION 14] COMMIT MESSAGE CONVENTION
+# [섹션 14] 커밋 메시지 규약
+# ================================================================
+
+# Format: type: description (Korean or English)
+# 형식: 타입: 설명 (한국어 또는 영어)
+#
+# Types:
+# | Type       | When to use                                         |
+# |------------|-----------------------------------------------------|
+# | feat:      | New feature (새 기능)                                |
+# | fix:       | Bug fix (버그 수정)                                  |
+# | refactor:  | Code restructuring, no behavior change (리팩토링)     |
+# | perf:      | Performance improvement (성능 개선)                   |
+# | docs:      | Documentation only (문서만)                           |
+# | chore:     | Config, dependencies, tooling (설정, 의존성, 도구)     |
+# | chore(.cursorrules): | Rule changes to this file (이 파일의 규칙 변경) |
+#
+# Examples:
+# feat: 쿠키 동의 배너 추가
+# fix: 이미지 로딩 시 흰 화면 크래시 수정
+# refactor: Supabase 클라이언트 통합
+# chore(.cursorrules): add rule — cost approval thresholds
+
+
+# ================================================================
+# [SECTION 15] SELF-EVOLUTION PROTOCOL
+# [섹션 15] 자가 진화 프로토콜
 # ================================================================
 
 # This rulebook is a LIVING DOCUMENT. It must evolve with the project.
 # 이 규율서는 살아있는 문서이다. 프로젝트와 함께 진화해야 한다.
 
-## 8.1 Auto-Update Trigger (ASK-FIRST Protocol)
-## 8.1 자동 업데이트 트리거 (먼저 물어보기 프로토콜)
+## 15.1 Auto-Update Trigger (ASK-FIRST Protocol)
+## 15.1 자동 업데이트 트리거 (먼저 물어보기 프로토콜)
 
 # When the founder gives an instruction that contains a DURABLE RULE
 # (not a one-time task), the agent MUST:
@@ -807,8 +1111,8 @@
 #    Do nothing. Do not update .cursorrules. Acknowledge and move on.
 #    아무것도 하지 않는다. 확인하고 넘어간다.
 
-## 8.2 What NOT to Auto-Update
-## 8.2 자동 업데이트하지 않는 것
+## 15.2 What NOT to Auto-Update
+## 15.2 자동 업데이트하지 않는 것
 
 # - One-time bug fixes or feature requests.
 #   일회성 버그 수정이나 기능 요청.
@@ -821,8 +1125,8 @@
 #   대표의 명시적 "이 규칙을 변경해" 확인 없이
 #   기존 절대 코딩 규칙과 모순되는 지시.
 
-## 8.3 Conflict Resolution
-## 8.3 충돌 해결
+## 15.3 Conflict Resolution
+## 15.3 충돌 해결
 
 # If a new instruction conflicts with an existing rule:
 # 새 지시가 기존 규칙과 충돌하면:
@@ -837,8 +1141,8 @@
 # 3. Only update after explicit confirmation.
 #    명시적 확인 후에만 업데이트한다.
 
-## 8.4 Version Tracking
-## 8.4 버전 추적
+## 15.4 Version Tracking
+## 15.4 버전 추적
 
 # Every .cursorrules update must include at the top of the commit message:
 # 모든 .cursorrules 업데이트의 커밋 메시지 시작에 포함:

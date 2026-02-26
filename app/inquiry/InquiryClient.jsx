@@ -287,12 +287,12 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 md:py-16 text-center animate-in fade-in slide-in-from-bottom-4">
       <button onClick={handleBack} className="flex items-center text-sm font-bold text-gray-500 mb-6 md:mb-8 hover:text-teal-600">
-          <ChevronLeft size={16}/> {mode === 'select' ? 'Back' : 'Back to Options'}
+          <ChevronLeft size={16}/> {mode === 'select' ? t('inquiry.back', langCode) : t('inquiry.backToOptions', langCode)}
       </button>
       
       {mode === 'select' && (
         <>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-12">How would you like to proceed?</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-12">{t('inquiry.howToProceed', langCode)}</h1>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
             <div
                 onClick={() => {
@@ -309,16 +309,16 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             >
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-teal-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-teal-100 transition-colors"><Bot size={28} className="text-teal-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">AI Agent</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Instant answers & recommendations.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.aiAgent', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.aiAgentDesc', langCode)}</p>
                 </div>
             </div>
 
             <div onClick={() => setMode('human')} className="bg-white border border-teal-100 rounded-3xl p-6 md:p-8 hover:border-green-500 hover:shadow-xl transition-all cursor-pointer group flex flex-row md:flex-col items-center text-left md:text-center gap-4 md:gap-0">
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-green-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-green-100 transition-colors"><MessageCircle size={28} className="text-green-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Human Agent</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Chat via WhatsApp or Line.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.humanAgent', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.humanAgentDesc', langCode)}</p>
                 </div>
             </div>
 
@@ -337,8 +337,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             >
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-blue-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-blue-100 transition-colors"><ClipboardList size={28} className="text-blue-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Inquiry Form</h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Get a specific quote via email.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.inquiryForm', langCode)}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.inquiryFormDesc', langCode)}</p>
                 </div>
             </div>
 
@@ -358,8 +358,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             >
                 <div className="w-14 h-14 md:w-20 md:h-20 bg-purple-50 rounded-full flex items-center justify-center md:mb-6 shrink-0 group-hover:bg-purple-100 transition-colors"><ClipboardList size={28} className="text-purple-600 md:w-10 md:h-10" /></div>
                 <div>
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">Guided Form <span className="text-xs font-normal text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">B</span></h3>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">Step-by-step guided inquiry.</p>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">{t('inquiry.guidedForm', langCode)} <span className="text-xs font-normal text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">B</span></h3>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t('inquiry.guidedFormDesc', langCode)}</p>
                 </div>
             </div>
           </div>
@@ -367,7 +367,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
           {/* 실험용 CTA 섹션 - 기존 3개 카드와 완전히 별도 */}
           <div className="mt-12 pt-8 border-t border-gray-200">
             <div className="text-center mb-6">
-              <p className="text-sm text-gray-500 mb-4">Not sure which option to choose?</p>
+              <p className="text-sm text-gray-500 mb-4">{t('inquiry.notSure', langCode)}</p>
               <button
                 onClick={() => {
                   const startLang = getLangCodeFromCookie();
@@ -384,10 +384,10 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 }}
                 className="inline-flex items-center gap-2 px-8 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors border border-gray-300"
               >
-                Start Consultation (Beta)
+                {t('inquiry.startConsultBeta', langCode)}
               </button>
               <p className="text-xs text-gray-500 mt-3 max-w-md mx-auto">
-                Let us review your situation and guide you to the best next step.
+                {t('inquiry.startConsultDesc', langCode)}
               </p>
             </div>
           </div>
@@ -404,52 +404,52 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 <div className="w-14 h-14 md:w-16 md:h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4 text-teal-600">
                     <Headset size={28} className="md:w-8 md:h-8" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Human Agent</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('inquiry.humanAgent', langCode)}</h2>
                 <p className="text-gray-500 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
-                    Connect directly with our expert medical coordinators.<br className="hidden md:block"/>
-                    We reply within 10 mins during business hours.
+                    {t('inquiry.humanAgentConnect', langCode)}<br className="hidden md:block"/>
+                    {t('inquiry.humanAgentReply', langCode)}
                 </p>
             </div>
 
             <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-6 max-w-md md:max-w-none mx-auto">
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#25D366] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#25D366] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#25D366]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#25D366]"/>
                     </div>
                     <div className="flex-1">
                         <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">WhatsApp</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">Global Support</p>
+                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.globalSupport', langCode)}</p>
                     </div>
                     <div className="text-[#25D366] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
                 
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#06C755] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#06C755] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#06C755]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#06C755]"/>
                     </div>
                     <div className="flex-1">
                         <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">LINE</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">Japan / Thai</p>
+                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.japanThai', langCode)}</p>
                     </div>
                     <div className="text-[#06C755] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
 
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#07C160] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#07C160] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#07C160]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#07C160]"/>
                     </div>
                     <div className="flex-1">
                         <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">WeChat</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">China Support</p>
+                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.chinaSupport', langCode)}</p>
                     </div>
                     <div className="text-[#07C160] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
+                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
             </div>
         </div>
       )}
@@ -457,26 +457,26 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {mode === 'form' && (
         <div className="bg-white border border-gray-200 rounded-3xl shadow-xl p-5 md:p-8 text-left max-w-2xl mx-auto animate-in fade-in slide-in-from-right-4 mb-20">
             <div className="mb-6 md:mb-8 border-b border-gray-100 pb-4 md:pb-6">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Inquiry Form</h2>
-                <p className="text-gray-500 text-xs md:text-sm">Fill in the details for a personalized quote.</p>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{t('inquiry.inquiryForm', langCode)}</h2>
+                <p className="text-gray-500 text-xs md:text-sm">{t('inquiry.fillDetails', langCode)}</p>
             </div>
             
             <div className="space-y-4 md:space-y-6">
                 {/* 이름 (선택) */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">First Name</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.firstName', langCode)}</label>
                         <input type="text" value={formData.firstName} onChange={(e)=>setFormData({...formData, firstName: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="John"/>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Last Name</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.lastName', langCode)}</label>
                         <input type="text" value={formData.lastName} onChange={(e)=>setFormData({...formData, lastName: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50/50" placeholder="Doe"/>
                     </div>
                 </div>
 
                 {/* 연락: 이메일 OR 메신저 (둘 중 하나 필수) */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Email <span className="text-gray-400 font-normal">(or Messenger below)</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.email', langCode)} <span className="text-gray-400 font-normal">({t('inquiry.orMessenger', langCode)})</span></label>
                     <input 
                       type="email" 
                       value={formData.email} 
@@ -505,7 +505,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 메신저: 선택 시에만 ID 입력칸 노출 */}
                 <div>
                     <label className="block text-xs font-bold text-teal-700 mb-1 ml-1 flex gap-1 items-center">
-                        <MessageCircle size={12}/> Messenger
+                        <MessageCircle size={12}/> {t('inquiry.messenger', langCode)}
                     </label>
                     <select value={formData.contactMethod} onChange={(e)=>setFormData({...formData, contactMethod: e.target.value})} className="w-full md:w-[35%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none transition text-sm bg-gray-50 text-gray-700 font-medium">
                         <option value="">Select...</option>
@@ -523,12 +523,12 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 국적 & 언어 */}
                 <div className="grid grid-cols-2 gap-3">
 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nationality <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.nationality', langCode)} <span className="text-red-500">*</span></label>
                     <input type="text" value={formData.nationality} onChange={(e)=>{ setFormData({...formData, nationality: e.target.value}); clearFieldError('nationality'); }} className={`w-full p-3 rounded-xl border ${formErrors.nationality ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-sm bg-gray-50/50`} placeholder="USA"/>
                     {formErrors.nationality && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.nationality}</p>}
                     </div>
                     <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Spoken Language <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.spokenLanguage', langCode)} <span className="text-red-500">*</span></label>
                     <input type="text" value={formData.spokenLanguage} onChange={(e)=>{ setFormData({...formData, spokenLanguage: e.target.value}); clearFieldError('spokenLanguage'); }} className={`w-full p-3 rounded-xl border ${formErrors.spokenLanguage ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-sm bg-gray-50/50`} placeholder="English"/>
                     {formErrors.spokenLanguage && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.spokenLanguage}</p>}
                     </div>
@@ -537,16 +537,16 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                 {/* 날짜 & Main Concern */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Preferred Date <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.preferredDate', langCode)} <span className="text-red-500">*</span></label>
                         <input type="date" value={formData.preferredDate || ''} onChange={(e) => { setFormData({ ...formData, preferredDate: e.target.value }); clearFieldError('preferred'); }} disabled={!!formData.preferredDateFlex} className={`w-full p-3 rounded-xl border ${formErrors.preferred ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}/>
                         <label className="mt-2 flex items-center gap-2 cursor-pointer" onClick={() => clearFieldError('preferred')}>
                             <input type="checkbox" checked={!!formData.preferredDateFlex} onChange={(e) => setFormData({ ...formData, preferredDateFlex: e.target.checked, preferredDate: e.target.checked ? '' : formData.preferredDate })} className="rounded accent-teal-600"/>
-                            <span className="text-[11px] text-gray-500">Flexible (no specific date)</span>
+                            <span className="text-[11px] text-gray-500">{t('inquiry.flexible', langCode)}</span>
                         </label>
                         {formErrors.preferred && <p className="text-xs text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle size={12} />{formErrors.preferred}</p>}
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Main Concern <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.mainConcern', langCode)} <span className="text-red-500">*</span></label>
                         <select value={formData.treatmentType} onChange={(e)=>{ setFormData({...formData, treatmentType: e.target.value}); clearFieldError('treatmentType'); }} className={`w-full p-3 rounded-xl border ${formErrors.treatmentType ? 'border-red-400' : 'border-gray-200'} focus:border-teal-500 outline-none transition text-xs md:text-sm bg-white text-gray-700`}>
                             <option value="">Select...</option>
                             <option value="chronic-fatigue-low-immunity">Chronic fatigue / low immunity</option>
@@ -572,7 +572,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
 
                 {/* 메시지 (선택, 권장) */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Message <span className="text-gray-400 font-normal">(optional, recommended)</span></label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t('inquiry.message', langCode)} <span className="text-gray-400 font-normal">({t('inquiry.optionalRecommended', langCode)})</span></label>
                     {/* TODO: Main Concern별 placeholder 확장 (e.g. pain-management, vision-eye-problem 등) */}
                     <textarea
                       value={formData.message}

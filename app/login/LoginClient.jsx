@@ -93,7 +93,7 @@ export const LoginPage = ({ setView }) => {
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="block text-sm font-bold text-gray-700">Password</label>
-                            <button type="button" onClick={() => toast.info("Coming soon!")} className="text-xs font-bold text-teal-600 hover:underline">Forgot?</button>
+                            <button type="button" onClick={() => toast.info("Please contact contact@healo.com to reset your password.")} className="text-xs font-bold text-teal-600 hover:underline">Forgot?</button>
                         </div>
                         <div className="relative">
                             <Lock className="absolute left-4 top-3.5 text-gray-400" size={20}/>

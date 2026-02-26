@@ -7,6 +7,7 @@ import { LogOut, ExternalLink } from "lucide-react";
 import { supabaseClient } from "../src/lib/data/supabaseClient";
 import { SITE_INFO } from "../src/lib/siteSettings";
 import { getLangCodeFromCookie, t } from "../src/lib/i18n";
+import { LangProvider, useLang } from "../src/lib/i18n/LangContext";
 import {
   Header,
   MobileBottomNav,
@@ -26,8 +27,6 @@ export default function ClientShell({ children }) {
   const [isHospitalUser, setIsHospitalUser] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState({ logo: "", hero: "" });
-  const [langCode, setLangCode] = useState('en');
-  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
 
   useEffect(() => {
     console.log("[ClientShell] 🔍 Mounting, checking session...");
@@ -126,7 +125,7 @@ export default function ClientShell({ children }) {
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
-    toast.success("Logged out successfully!");
+    toast.success(t("auth.logoutSuccess", getLangCodeFromCookie()));
     router.push("/");
   };
 
@@ -178,14 +177,14 @@ export default function ClientShell({ children }) {
         clearInterval(timer);
         events.forEach((e) => window.removeEventListener(e, resetActivity));
         supabaseClient.auth.signOut().then(() => {
-          toast.error("보안을 위해 자동 로그아웃되었습니다.");
+          toast.error(t("auth.autoLogoutSecurity", getLangCodeFromCookie()));
           router.push("/login");
         });
         return;
       }
       if (idle >= WARNING_MS && !warningShownRef.current) {
         warningShownRef.current = true;
-        toast.warning("1분 후 자동 로그아웃됩니다. 활동을 계속하세요.");
+        toast.warning(t("auth.autoLogoutWarning", getLangCodeFromCookie()));
       }
     }, CHECK_INTERVAL_MS);
 
@@ -196,9 +195,47 @@ export default function ClientShell({ children }) {
   }, [isPortalPage, session, resetActivity, router, toast]);
 
   return (
+    <LangProvider>
+      <ClientShellContent
+        isPortalPage={isPortalPage}
+        session={session}
+        siteConfig={siteConfig}
+        getCurrentView={getCurrentView}
+        handleSetView={handleSetView}
+        handleLogout={handleLogout}
+        handleGlobalInquiry={handleGlobalInquiry}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        handleNavClick={handleNavClick}
+        isHospitalUser={isHospitalUser}
+        hideBottomNav={hideBottomNav}
+      >
+        {children}
+      </ClientShellContent>
+    </LangProvider>
+  );
+}
+
+function ClientShellContent({
+  isPortalPage,
+  session,
+  siteConfig,
+  getCurrentView,
+  handleSetView,
+  handleLogout,
+  handleGlobalInquiry,
+  isMobileMenuOpen,
+  setIsMobileMenuOpen,
+  handleNavClick,
+  isHospitalUser,
+  hideBottomNav,
+  children,
+}) {
+  const langCode = useLang();
+  return (
     <div className="font-sans text-gray-800 bg-gray-50 min-h-screen min-h-screen-safe relative">
       {isPortalPage ? (
-        <PortalTopBar session={session} onLogout={handleLogout} siteConfig={siteConfig} />
+        <PortalTopBar session={session} onLogout={handleLogout} siteConfig={siteConfig} langCode={langCode} />
       ) : (
         <Header
           setView={handleSetView}
@@ -304,7 +341,7 @@ export default function ClientShell({ children }) {
 /* ──────────────────────────────────────────────
    Portal Top Bar — slim header for admin/hospital pages
    ────────────────────────────────────────────── */
-function PortalTopBar({ session, onLogout, siteConfig }) {
+function PortalTopBar({ session, onLogout, siteConfig, langCode }) {
   return (
     <header className="fixed top-0 left-0 right-0 h-12 z-50 bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-4 pt-safe-area">
       <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -321,7 +358,7 @@ function PortalTopBar({ session, onLogout, siteConfig }) {
           className="hidden sm:flex items-center gap-1 text-gray-500 hover:text-teal-600 transition-colors"
         >
           <ExternalLink size={14} />
-          <span>메인 사이트</span>
+          <span>{t("auth.mainSite", langCode)}</span>
         </Link>
 
         {session?.user?.email && (
@@ -335,7 +372,7 @@ function PortalTopBar({ session, onLogout, siteConfig }) {
           className="flex items-center gap-1 text-gray-500 hover:text-red-600 transition-colors ml-1"
         >
           <LogOut size={15} />
-          <span className="hidden sm:inline">로그아웃</span>
+          <span className="hidden sm:inline">{t("auth.logout", langCode)}</span>
         </button>
       </div>
     </header>

@@ -7,10 +7,11 @@ import {
   Heart, Brain, Bone, Eye, Smile, Pill, Activity, Stethoscope,
   Sun, Sparkles, Search, Zap, Scale
 } from "lucide-react";
-import { PRIVACY_CONTENT } from "../../src/lib/policyContent";
+import { getPrivacyPolicyText, getTermsPolicyText } from "../../src/lib/policies";
 import { PolicyModal } from "../../src/components/Modals";
 import { useToast } from "../../src/components/Toast";
-import { getLangCodeFromCookie } from "../../src/lib/i18n";
+import { getLangCodeFromCookie, t } from "../../src/lib/i18n";
+import { useLang } from "../../src/lib/i18n/LangContext";
 import { event } from "../../src/lib/ga";
 
 const CONCERNS = [
@@ -70,6 +71,7 @@ const MESSAGE_GUIDES = {
 
 export function InquiryFormB({ setView, treatments }) {
   const toast = useToast();
+  const langCode = useLang();
   const [step, setStep] = useState(1);
   const [activeModal, setActiveModal] = useState(null);
 
@@ -108,12 +110,12 @@ export function InquiryFormB({ setView, treatments }) {
   const handleSubmit = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (form.email && !emailRegex.test(form.email)) {
-      toast.error("Please enter a valid email address.");
-      setEmailError("Invalid email format");
+      toast.error(t("inquiry.errorEmail", langCode));
+      setEmailError(t("inquiry.errorEmailShort", langCode));
       return;
     }
     if (!canSubmit) {
-      toast.error("Please fill in all required fields.");
+      toast.error(t("inquiry.errorRequired", langCode));
       return;
     }
 
@@ -126,7 +128,7 @@ export function InquiryFormB({ setView, treatments }) {
         uploadForm.append("file", form.file);
         const uploadRes = await fetch("/api/attachments/upload", { method: "POST", body: uploadForm });
         const uploadResult = await uploadRes.json();
-        if (!uploadResult.ok) throw new Error(uploadResult.error || "Upload failed");
+        if (!uploadResult.ok) throw new Error(uploadResult.error || t("inquiry.uploadFailed", langCode));
         attachmentPath = uploadResult.path;
         attachmentsList = [{ path: uploadResult.path, name: uploadResult.name, type: uploadResult.type || null }];
       }
@@ -194,7 +196,7 @@ export function InquiryFormB({ setView, treatments }) {
 
       setView("success");
     } catch (error) {
-      toast.error(error.message || "Failed to submit. Please try again.");
+      toast.error(error.message || t("inquiry.failedSubmit", langCode));
     } finally {
       setSubmitting(false);
     }
@@ -209,9 +211,9 @@ export function InquiryFormB({ setView, treatments }) {
             onClick={() => step > 1 ? setStep(step - 1) : setView("select")}
             className="flex items-center text-sm font-bold text-gray-500 hover:text-teal-600 transition"
           >
-            <ChevronLeft size={16} /> Back
+            <ChevronLeft size={16} /> {t("inquiry.back", langCode)}
           </button>
-          <span className="text-xs text-gray-400">Step {step} of 3</span>
+          <span className="text-xs text-gray-400">{t("inquiry.step", langCode)} {step} / 3</span>
         </div>
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -225,8 +227,8 @@ export function InquiryFormB({ setView, treatments }) {
       {step === 1 && (
         <div className="animate-in fade-in slide-in-from-right-4">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">What brings you here?</h2>
-            <p className="text-gray-500 text-sm">Select your primary concern</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("inquiry.step1Heading", langCode)}</h2>
+            <p className="text-gray-500 text-sm">{t("inquiry.step1Subline", langCode)}</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-6">
@@ -262,7 +264,7 @@ export function InquiryFormB({ setView, treatments }) {
           {/* Urgency */}
           {form.concern && (
             <div className="mb-6">
-              <label className="block text-xs font-bold text-gray-700 mb-2">How soon do you need care?</label>
+              <label className="block text-xs font-bold text-gray-700 mb-2">{t("inquiry.howSoon", langCode)}</label>
               <div className="grid grid-cols-2 gap-2">
                 {URGENCY_OPTIONS.map((u) => (
                   <button
@@ -289,7 +291,7 @@ export function InquiryFormB({ setView, treatments }) {
             disabled={!canProceedStep1}
             className="w-full py-3.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
           >
-            Continue <ChevronRight size={18} />
+            {t("inquiry.continue", langCode)} <ChevronRight size={18} />
           </button>
         </div>
       )}
@@ -298,13 +300,13 @@ export function InquiryFormB({ setView, treatments }) {
       {step === 2 && (
         <div className="animate-in fade-in slide-in-from-right-4">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Tell us more</h2>
-            <p className="text-gray-500 text-sm">The more detail, the better we can help</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("inquiry.step2Heading", langCode)}</h2>
+            <p className="text-gray-500 text-sm">{t("inquiry.step2Subline", langCode)}</p>
           </div>
 
           {/* Guide prompts */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
-            <p className="text-xs font-bold text-blue-700 mb-2">Consider mentioning:</p>
+            <p className="text-xs font-bold text-blue-700 mb-2">{t("inquiry.considerMentioning", langCode)}</p>
             <ul className="space-y-1">
               {guides.map((g, i) => (
                 <li key={i} className="text-xs text-blue-600 flex items-start gap-2">
@@ -319,7 +321,7 @@ export function InquiryFormB({ setView, treatments }) {
             onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
             className="w-full border border-gray-200 p-4 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition text-sm bg-white resize-y min-h-[140px]"
             rows="6"
-            placeholder="Describe your situation in your own words..."
+            placeholder={t("inquiry.messagePlaceholder", langCode)}
             autoFocus
           />
 
@@ -340,7 +342,7 @@ export function InquiryFormB({ setView, treatments }) {
                 className="border border-dashed border-gray-300 rounded-xl p-3 text-center hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-2"
               >
                 <UploadCloud className="text-gray-400" size={18} />
-                <span className="text-xs text-gray-500">Upload photo, X-ray, or test result (optional)</span>
+                <span className="text-xs text-gray-500">{t("inquiry.uploadOptional", langCode)}</span>
               </div>
             )}
           </div>
@@ -350,14 +352,14 @@ export function InquiryFormB({ setView, treatments }) {
             disabled={!canProceedStep2}
             className="w-full mt-6 py-3.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
           >
-            Continue <ChevronRight size={18} />
+            {t("inquiry.continue", langCode)} <ChevronRight size={18} />
           </button>
 
           <button
             onClick={() => setStep(3)}
             className="w-full mt-2 py-2 text-gray-400 text-sm hover:text-gray-600 transition"
           >
-            Skip for now
+            {t("inquiry.skipForNow", langCode)}
           </button>
         </div>
       )}
@@ -366,15 +368,15 @@ export function InquiryFormB({ setView, treatments }) {
       {step === 3 && (
         <div className="animate-in fade-in slide-in-from-right-4">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">How can we reach you?</h2>
-            <p className="text-gray-500 text-sm">We'll send your personalized quote within 24 hours</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("inquiry.step3Heading", langCode)}</h2>
+            <p className="text-gray-500 text-sm">{t("inquiry.step3Subline", langCode)}</p>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
             {/* Name */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">First Name</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">{t("inquiry.firstName", langCode)}</label>
                 <input
                   type="text" value={form.firstName}
                   onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
@@ -383,7 +385,7 @@ export function InquiryFormB({ setView, treatments }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Last Name</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">{t("inquiry.lastName", langCode)}</label>
                 <input
                   type="text" value={form.lastName}
                   onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
@@ -396,14 +398,14 @@ export function InquiryFormB({ setView, treatments }) {
             {/* Email */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Email <span className="text-red-500">*</span>
+                {t("inquiry.email", langCode)} <span className="text-red-500">*</span>
               </label>
               <input
                 type="email" value={form.email}
                 onChange={(e) => {
                   setForm((p) => ({ ...p, email: e.target.value }));
                   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                  setEmailError(e.target.value && !emailRegex.test(e.target.value) ? "Invalid email" : "");
+                  setEmailError(e.target.value && !emailRegex.test(e.target.value) ? t("inquiry.errorEmailShort", langCode) : "");
                 }}
                 className={`w-full p-3 rounded-xl border ${emailError ? "border-red-400" : "border-gray-200"} focus:border-teal-500 outline-none text-sm bg-gray-50/50`}
                 placeholder="your@email.com"
@@ -414,7 +416,7 @@ export function InquiryFormB({ setView, treatments }) {
             {/* Messenger */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                <MessageCircle size={12} /> Messenger <span className="text-gray-400 font-normal">(optional)</span>
+                <MessageCircle size={12} /> {t("inquiry.messengerOptional", langCode)}
               </label>
               <div className="flex gap-2">
                 <select
@@ -422,7 +424,7 @@ export function InquiryFormB({ setView, treatments }) {
                   onChange={(e) => setForm((p) => ({ ...p, contactMethod: e.target.value }))}
                   className="w-[40%] p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm bg-gray-50"
                 >
-                  <option value="">Select...</option>
+                  <option value="">{t("inquiry.select", langCode)}</option>
                   <option value="WhatsApp">WhatsApp</option>
                   <option value="LINE">LINE</option>
                   <option value="WeChat">WeChat</option>
@@ -433,7 +435,7 @@ export function InquiryFormB({ setView, treatments }) {
                     type="text" value={form.contactId}
                     onChange={(e) => setForm((p) => ({ ...p, contactId: e.target.value }))}
                     className="flex-1 p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm"
-                    placeholder="ID or Phone"
+                    placeholder={t("inquiry.idOrPhone", langCode)}
                   />
                 )}
               </div>
@@ -442,24 +444,24 @@ export function InquiryFormB({ setView, treatments }) {
             {/* Nationality & Language */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Nationality <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">{t("inquiry.nationality", langCode)} <span className="text-red-500">*</span></label>
                 <select
                   value={form.nationality}
                   onChange={(e) => setForm((p) => ({ ...p, nationality: e.target.value }))}
                   className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm bg-gray-50"
                 >
-                  <option value="">Select...</option>
+                  <option value="">{t("inquiry.select", langCode)}</option>
                   {NATIONALITIES.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Language <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">{t("inquiry.spokenLanguage", langCode)} <span className="text-red-500">*</span></label>
                 <select
                   value={form.spokenLanguage}
                   onChange={(e) => setForm((p) => ({ ...p, spokenLanguage: e.target.value }))}
                   className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 outline-none text-sm bg-gray-50"
                 >
-                  <option value="">Select...</option>
+                  <option value="">{t("inquiry.select", langCode)}</option>
                   {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
@@ -473,18 +475,18 @@ export function InquiryFormB({ setView, treatments }) {
                 className="mt-0.5 h-4 w-4 cursor-pointer accent-teal-600"
               />
               <label htmlFor="privacyB" className="text-[11px] text-gray-500 cursor-pointer select-none leading-snug">
-                I agree to the{" "}
+                {t("inquiry.agreePrivacyAndTerms", langCode)}{" "}
                 <span onClick={(e) => { e.preventDefault(); setActiveModal("privacy"); }} className="text-teal-600 font-bold hover:underline">
-                  Privacy Policy
-                </span>. <span className="text-red-500">*</span>
+                  {t("policy.privacyTitle", langCode)}
+                </span> {t("inquiry.and", langCode)} <span onClick={(e) => { e.preventDefault(); setActiveModal("terms"); }} className="text-teal-600 font-bold hover:underline">{t("policy.termsTitle", langCode)}</span>. <span className="text-red-500">*</span>
               </label>
             </div>
           </div>
 
           {/* Trust signals */}
           <div className="flex items-center justify-center gap-6 mt-4 text-[11px] text-gray-400">
-            <span className="flex items-center gap-1"><Shield size={12} /> Encrypted & Secure</span>
-            <span className="flex items-center gap-1"><Clock size={12} /> Reply within 24h</span>
+            <span className="flex items-center gap-1"><Shield size={12} /> {t("inquiry.encryptedSecure", langCode)}</span>
+            <span className="flex items-center gap-1"><Clock size={12} /> {t("inquiry.reply24h", langCode)}</span>
           </div>
 
           <button
@@ -492,14 +494,15 @@ export function InquiryFormB({ setView, treatments }) {
             disabled={!canSubmit || submitting}
             className="w-full mt-5 py-4 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg shadow-teal-100 flex items-center justify-center gap-2"
           >
-            {submitting ? "Submitting..." : (
-              <>Submit Inquiry <ArrowRight size={18} /></>
+            {submitting ? t("inquiry.submitting", langCode) : (
+              <>{t("inquiry.submitInquiry", langCode)} <ArrowRight size={18} /></>
             )}
           </button>
         </div>
       )}
 
-      <PolicyModal isOpen={activeModal === "privacy"} onClose={() => setActiveModal(null)} title="Privacy Policy" content={PRIVACY_CONTENT} />
+      <PolicyModal isOpen={activeModal === "privacy"} onClose={() => setActiveModal(null)} title={t("policy.privacyTitle", langCode)} content={getPrivacyPolicyText(langCode)} closeLabel={t("policy.close", langCode)} />
+      <PolicyModal isOpen={activeModal === "terms"} onClose={() => setActiveModal(null)} title={t("policy.termsTitle", langCode)} content={getTermsPolicyText(langCode)} closeLabel={t("policy.close", langCode)} />
     </div>
   );
 }

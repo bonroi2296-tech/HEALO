@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Clock, FileText, Sparkles, Check, MessageCircle } from 'lucide-react';
+import { useLang } from '../../src/lib/i18n/LangContext';
+import { t } from '../../src/lib/i18n';
 
 export const SuccessPage = ({ setView }) => {
     const router = useRouter();
+    const langCode = useLang();
     const [ticketId] = useState(() => "REQ-" + Math.floor(100000 + Math.random() * 900000));
     const [inquirySuccess, setInquirySuccess] = useState(null);
 
@@ -44,9 +47,9 @@ export const SuccessPage = ({ setView }) => {
                     </div>
 
                     <div className="text-center mb-8">
-                        <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Inquiry Received!</h2>
+                        <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{t('success.receivedTitle', langCode)}</h2>
                         <p className="text-gray-500 text-sm">
-                            Thank you for choosing HEALO. <br/>We've securely received your request.
+                            {t('success.thankYou', langCode)}
                         </p>
                     </div>
 
@@ -58,56 +61,52 @@ export const SuccessPage = ({ setView }) => {
                         </div>
 
                         <div className="flex justify-between items-center text-sm relative z-10">
-                            <span className="text-gray-500 font-medium">Reference ID</span>
+                            <span className="text-gray-500 font-medium">{t('success.referenceId', langCode)}</span>
                             <span className="font-mono font-bold text-teal-800 bg-teal-100/50 px-2 py-0.5 rounded border border-teal-100">
                                 {ticketId || "—"}
                             </span>
                         </div>
                         <div className="flex justify-between items-center text-sm relative z-10">
-                            <span className="text-gray-500 font-medium">Est. Response</span>
+                            <span className="text-gray-500 font-medium">{t('success.estResponse', langCode)}</span>
                             <span className="font-bold text-gray-900 flex items-center gap-1.5">
-                                <Clock size={14} className="text-teal-500"/> Within 24 Hours
+                                <Clock size={14} className="text-teal-500"/> {t('success.within24h', langCode)}
                             </span>
                         </div>
                     </div>
 
                     {/* 3. 진행 상황 타임라인 (What's Next) */}
                     <div className="text-left mb-8 px-2">
-                        <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-4 ml-1">What happens next?</p>
+                        <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-4 ml-1">{t('success.whatNext', langCode)}</p>
                         <div className="space-y-0 relative pl-2">
-                            {/* 연결선 */}
                             <div className="absolute left-[11px] top-2 bottom-6 w-0.5 bg-gray-100"></div>
 
-                            {/* Step 1 (완료) */}
                             <div className="relative flex gap-4 pb-6">
                                 <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm">
                                     <Check size={12} className="text-white" strokeWidth={3}/>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-900 leading-none mb-1">Inquiry Submitted</p>
-                                    <p className="text-xs text-gray-500">Your details are sent to our medical team.</p>
+                                    <p className="text-sm font-bold text-gray-900 leading-none mb-1">{t('success.step1Title', langCode)}</p>
+                                    <p className="text-xs text-gray-500">{t('success.step1Desc', langCode)}</p>
                                 </div>
                             </div>
                             
-                            {/* Step 2 (진행중 - 애니메이션) */}
                             <div className="relative flex gap-4 pb-6">
                                 <div className="w-6 h-6 rounded-full bg-white border-2 border-teal-500 flex items-center justify-center shrink-0 z-10 ring-4 ring-white">
                                     <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-teal-600 leading-none mb-1">Medical Review</p>
-                                    <p className="text-xs text-gray-500">Coordinator is matching the best hospital.</p>
+                                    <p className="text-sm font-bold text-teal-600 leading-none mb-1">{t('success.step2Title', langCode)}</p>
+                                    <p className="text-xs text-gray-500">{t('success.step2Desc', langCode)}</p>
                                 </div>
                             </div>
 
-                            {/* Step 3 (예정) */}
                             <div className="relative flex gap-4">
                                 <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0 z-10 ring-4 ring-white">
                                     <MessageCircle size={12} className="text-gray-400"/>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-400 leading-none mb-1">Personalized Quote</p>
-                                    <p className="text-xs text-gray-400">You'll receive a quote via your contact method.</p>
+                                    <p className="text-sm font-bold text-gray-400 leading-none mb-1">{t('success.step3Title', langCode)}</p>
+                                    <p className="text-xs text-gray-400">{t('success.step3Desc', langCode)}</p>
                                 </div>
                             </div>
                         </div>
@@ -129,14 +128,14 @@ export const SuccessPage = ({ setView }) => {
                                 }}
                                 className="w-full bg-teal-50 border-2 border-teal-500 text-teal-700 font-bold py-4 rounded-xl hover:bg-teal-100 transition shadow-sm transform active:scale-[0.98]"
                             >
-                                추가 정보 제공(선택) — 더 정확한 병원/견적 매칭에 도움
+                                {t('success.addInfoCta', langCode)}
                             </button>
                         )}
                         <button 
                             onClick={() => setView('home')} 
                             className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-100 transform active:scale-[0.98] flex items-center justify-center gap-2"
                         >
-                            Return to Home
+                            {t('success.returnHome', langCode)}
                         </button>
                     </div>
                 </div>

@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Bot, MessageCircle, ClipboardList, ArrowRight, AlertCircle, Headset, UploadCloud, File, X, Check } from 'lucide-react';
-import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
-
+import { getPrivacyPolicyText, getTermsPolicyText } from '../../src/lib/policies';
 import { PolicyModal } from '../../src/components/Modals';
 import { useToast } from '../../src/components/Toast';
-import { getLangCodeFromCookie } from '../../src/lib/i18n';
+import { getLangCodeFromCookie, t } from '../../src/lib/i18n';
+import { useLang } from '../../src/lib/i18n/LangContext';
 import { event } from '../../src/lib/ga';
 import { useChat } from 'ai/react';
 import { InquiryFormB } from './InquiryFormB';
@@ -14,11 +14,10 @@ import { ThreadChat } from './ThreadChat';
 
 // ✅ [수정 1] props에 treatments 추가 (App.jsx에서 받아옴)
 export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => {
-  const toast = useToast(); // Toast 사용 준비
-  
-  // ✅ DB 데이터만 사용
+  const toast = useToast();
+  const langCode = useLang();
   const allTreatments = Array.isArray(treatments) ? treatments : [];
-  
+
   const {
     messages,
     input,
@@ -32,8 +31,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       {
         id: 'intro',
         role: 'assistant',
-        content:
-          "Hello! I'm HEALO AI Agent. Ask me about treatments (e.g., 'anti-aging', 'cancer care').",
+        content: t('chat.intro', langCode),
       },
     ],
   });
@@ -81,7 +79,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       { role: 'user', content: trimmed },
       { body: { lang, session_id: sessionId, page, utm } }
     ).catch(() => {
-      toast.error("AI response failed. Please try again.");
+      toast.error(t('chat.error', langCode));
     });
     setInput('');
   };
@@ -93,8 +91,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
     }
     if (lastChatErrorRef.current === chatError) return;
     lastChatErrorRef.current = chatError;
-    toast.error("AI response failed. Please try again.");
-  }, [chatError, toast]);
+    toast.error(t('chat.error', langCode));
+  }, [chatError, toast, langCode]);
 
   useEffect(() => {
     if (chatContainerRef.current)
@@ -641,7 +639,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     <div className="flex items-start gap-3">
                       <input type="checkbox" id="privacyForm" checked={formData.privacyAgreed} onChange={(e) => { setFormData({...formData, privacyAgreed: e.target.checked}); clearFieldError('privacy'); }} className="mt-0.5 h-4 w-4 cursor-pointer accent-teal-600"/>
                       <label htmlFor="privacyForm" className="text-[11px] text-gray-500 cursor-pointer select-none leading-snug">
-                        I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">Privacy Policy</span>. <span className="text-red-500">*</span>
+                        {t('inquiry.agreePrivacyAndTerms', langCode)}{' '}
+                        <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">{t('policy.privacyTitle', langCode)}</span> {t('inquiry.and', langCode)}{' '}
+                        <span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="text-teal-600 font-bold hover:underline">{t('policy.termsTitle', langCode)}</span>. <span className="text-red-500">*</span>
                       </label>
                     </div>
                     {formErrors.privacy && <p className="text-xs text-red-500 mt-1 ml-7 flex items-center gap-1"><AlertCircle size={12} />{formErrors.privacy}</p>}
@@ -653,7 +653,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     disabled={isSubmitting}
                     className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-700 transition transform active:scale-95 shadow-lg shadow-teal-100 mt-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
                 >
-                    {isSubmitting ? "Sending..." : "Send Inquiry"}
+                    {isSubmitting ? t('inquiry.submitting', langCode) : t('inquiry.submitInquiry', langCode)}
                 </button>
             </div>
         </div>
@@ -667,7 +667,8 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
       )}
 
       {/* 약관 팝업 */}
-      <PolicyModal isOpen={activeModal === 'privacy'} onClose={() => setActiveModal(null)} title="Privacy Policy" content={PRIVACY_CONTENT} />
+      <PolicyModal isOpen={activeModal === 'privacy'} onClose={() => setActiveModal(null)} title={t('policy.privacyTitle', langCode)} content={getPrivacyPolicyText(langCode)} closeLabel={t('policy.close', langCode)} />
+      <PolicyModal isOpen={activeModal === 'terms'} onClose={() => setActiveModal(null)} title={t('policy.termsTitle', langCode)} content={getTermsPolicyText(langCode)} closeLabel={t('policy.close', langCode)} />
     </div>
   );
 };

@@ -3,8 +3,9 @@ import React from 'react';
 import { X, Star, ThumbsUp } from 'lucide-react';
 
 // --- [공통] 약관 팝업 ---
-export const PolicyModal = ({ isOpen, onClose, title, content }) => {
+export const PolicyModal = ({ isOpen, onClose, title, content, closeLabel }) => {
     if (!isOpen) return null;
+    const label = closeLabel ?? "Close";
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-left">
             <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -16,7 +17,7 @@ export const PolicyModal = ({ isOpen, onClose, title, content }) => {
                     {content}
                 </div>
                 <div className="p-5 border-t border-gray-100 sticky bottom-0 bg-white rounded-b-2xl">
-                    <button onClick={onClose} className="w-full bg-teal-600 text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition">I Understand</button>
+                    <button onClick={onClose} className="w-full bg-teal-600 text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition">{label}</button>
                 </div>
             </div>
         </div>

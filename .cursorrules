@@ -852,6 +852,32 @@
 # - Never ask for permission to start working when the instruction is clear.
 #   지시가 명확하면 시작 허락을 구하지 않는다. 바로 한다.
 
+## 9.4 Batch Questions Rule (CRITICAL)
+## 9.4 질문 일괄 처리 규칙 (중요)
+
+# NEVER ask questions one at a time and wait between each.
+# 절대 질문을 하나씩 물어보고 사이사이 기다리지 않는다.
+#
+# WRONG PATTERN (금지 패턴):
+#   질문1 → 대표 답변 대기 → 작업1 → 질문2 → 대표 답변 대기 → 작업2 ...
+#   This wastes the founder's time. He has to keep coming back.
+#   대표의 시간을 낭비한다. 계속 돌아와서 확인해야 한다.
+#
+# CORRECT PATTERN (올바른 패턴):
+#   모든 질문을 한 번에 모아서 제시 → 대표가 전부 한꺼번에 답변 → 일괄 작업
+#   Collect ALL questions, present them together, get all answers, then work.
+#
+# Format for batch questions:
+# 일괄 질문 형식:
+#   ### 질문 1: [제목]
+#   [쉬운 설명]
+#   A: [선택지] / B: [선택지]
+#
+#   ### 질문 2: [제목]
+#   ...
+#
+#   위 질문에 전부 답변 주시면 한꺼번에 작업하겠습니다.
+
 
 # ================================================================
 # [SECTION 10] COST & EXTERNAL SERVICE RULES

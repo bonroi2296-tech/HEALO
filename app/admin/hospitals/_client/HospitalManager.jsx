@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Loader2, Save, Globe, Coffee, Trophy, Info, User, X, ChevronLeft, Shield, Activity, Building, Star, Stethoscope, Calendar, HelpCircle, Search, Eye, EyeOff, ArrowUpDown, ChevronDown, MapPin, MessageCircle, Sparkles, Database, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { TranslationPanel } from '../../_shared/TranslationPanel';
 import { HospitalOffersPreviewModal } from './HospitalOffersPreview';
+import { AdminLoadingSkeleton } from '../../_components/AdminLoadingSkeleton';
 
 const SORT_OPTIONS = [
   { value: 'name_asc', label: '이름 (A→Z)' },
@@ -80,6 +81,7 @@ function HospitalListItem({ h, isActive, onClick }) {
 
 export const HospitalManager = ({
   hospitalsList,
+  hospitalsListLoading = false,
   hospitalsError,
   handleEditHospital,
   editingHospitalId,
@@ -91,6 +93,8 @@ export const HospitalManager = ({
   handleSaveHospital,
   handleDelete,
   fetchHospitals,
+  patchHospitalOffersFlags,
+  offersFailureLogEnabled,
   uploadToSupabase,
   DynamicListInput,
   ImageUploader,
@@ -105,6 +109,10 @@ export const HospitalManager = ({
   const [offersModalOpen, setOffersModalOpen] = useState(false);
   const [offersPayload, setOffersPayload] = useState(null);
   const [offersLoading, setOffersLoading] = useState(false);
+  const [usePlaywright, setUsePlaywright] = useState(false);
+
+  const POLL_INTERVAL_MS = 1000;
+  const POLL_MAX_COUNT = 20;
 
   const requestOffersPreview = useCallback(async () => {
     if (!editingHospitalId) return;
@@ -115,24 +123,152 @@ export const HospitalManager = ({
       const res = await fetch(`/api/admin/hospitals/${editingHospitalId}/offers/preview`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usePlaywright }),
       });
       const j = await res.json();
-      if (j.ok) {
-        setOffersPayload({
-          hospital_id: j.hospital_id,
-          captured_at: j.captured_at,
-          sources: j.sources || [],
-          offers: j.offers || [],
-        });
-      } else {
-        toast?.error?.(j.detail || j.error || '미리보기 생성 실패');
+      if (!j.ok) {
+        toast?.error?.(j.message || j.detail || j.error || '미리보기 생성 실패');
+        setOffersLoading(false);
+        return;
       }
+      if (j.hint === 'no_website') {
+        setOffersPayload({
+          hospital_id: editingHospitalId,
+          captured_at: new Date().toISOString(),
+          sources: [],
+          offers: [],
+          hint: 'no_website',
+          message: j.message || '병원에 웹사이트 URL이 등록되어 있지 않습니다.',
+        });
+        setOffersLoading(false);
+        return;
+      }
+      const jobId = j.job_id;
+      if (!jobId) {
+        setOffersLoading(false);
+        return;
+      }
+      let pollCount = 0;
+      const poll = async () => {
+        const r = await fetch(
+          `/api/admin/hospitals/${editingHospitalId}/offers/preview?job_id=${encodeURIComponent(jobId)}`,
+          { credentials: 'include' }
+        );
+        const data = await r.json();
+        pollCount += 1;
+        if (!data.ok) {
+          setOffersPayload({
+            hospital_id: editingHospitalId,
+            captured_at: new Date().toISOString(),
+            sources: [],
+            offers: [],
+            hint: 'job_error',
+            message: data.error || '작업 조회 실패',
+          });
+          setOffersLoading(false);
+          return;
+        }
+        if (data.status === 'done') {
+          const offers = data.result_offers?.offers ?? [];
+          const sources = (data.debug?.selected_pages ?? []).map((p) => ({ url: p.url, title: p.url }));
+          setOffersPayload({
+            hospital_id: editingHospitalId,
+            captured_at: data.updated_at || new Date().toISOString(),
+            sources,
+            offers,
+            crawl_metadata: data.debug ? { pages_fetched: data.debug.chunks_count, text_length: data.debug.total_chars } : undefined,
+            debug: data.debug,
+          });
+          if (offers.length > 0) {
+            setHospitalForm((prev) => ({
+              ...prev,
+              offers_auto_failed_at: null,
+              offers_auto_fail_reason: null,
+              offers_auto_skip: false,
+            }));
+          }
+          setOffersLoading(false);
+          return;
+        }
+        if (data.status === 'error') {
+          setOffersPayload({
+            hospital_id: editingHospitalId,
+            captured_at: new Date().toISOString(),
+            sources: [],
+            offers: [],
+            hint: 'job_error',
+            message: data.error || '생성 중 오류가 발생했습니다.',
+            debug: data.debug,
+          });
+          setOffersLoading(false);
+          return;
+        }
+        if (pollCount >= POLL_MAX_COUNT) {
+          setOffersPayload({
+            hospital_id: editingHospitalId,
+            job_id: jobId,
+            timeout: true,
+            message: '백그라운드 생성 중입니다. 잠시 후 다시 열어주세요.',
+            sources: [],
+            offers: [],
+          });
+          setOffersLoading(false);
+          return;
+        }
+        setTimeout(poll, POLL_INTERVAL_MS);
+      };
+      poll();
     } catch (e) {
       toast?.error?.('미리보기 요청 실패: ' + e?.message);
-    } finally {
       setOffersLoading(false);
     }
-  }, [editingHospitalId, toast]);
+  }, [editingHospitalId, usePlaywright, toast]);
+
+  const retryOffersPoll = useCallback((jobId) => {
+    if (!editingHospitalId || !jobId) return;
+    setOffersLoading(true);
+    let pollCount = 0;
+    const poll = async () => {
+      const r = await fetch(
+        `/api/admin/hospitals/${editingHospitalId}/offers/preview?job_id=${encodeURIComponent(jobId)}`,
+        { credentials: 'include' }
+      );
+      const data = await r.json();
+      pollCount += 1;
+      if (!data.ok || data.status === 'error') {
+        setOffersPayload((prev) => ({
+          ...prev,
+          hint: 'job_error',
+          message: data.error || '작업 조회 실패',
+          timeout: false,
+        }));
+        setOffersLoading(false);
+        return;
+      }
+      if (data.status === 'done') {
+        const offers = data.result_offers?.offers ?? [];
+        const sources = (data.debug?.selected_pages ?? []).map((p) => ({ url: p.url, title: p.url }));
+        setOffersPayload({
+          hospital_id: editingHospitalId,
+          captured_at: data.updated_at || new Date().toISOString(),
+          sources,
+          offers,
+          crawl_metadata: data.debug ? { pages_fetched: data.debug.chunks_count, text_length: data.debug.total_chars } : undefined,
+          debug: data.debug,
+        });
+        setOffersLoading(false);
+        return;
+      }
+      if (pollCount >= POLL_MAX_COUNT) {
+        setOffersPayload((prev) => ({ ...prev, timeout: true }));
+        setOffersLoading(false);
+        return;
+      }
+      setTimeout(poll, POLL_INTERVAL_MS);
+    };
+    poll();
+  }, [editingHospitalId]);
 
   const filtered = useFilteredHospitals(hospitalsList, search, statusFilter, sortBy);
 
@@ -260,7 +396,11 @@ export const HospitalManager = ({
             <p className="text-xs text-red-500 px-4 pt-2">Hospitals error: {hospitalsError.message}</p>
           )}
           <div className="overflow-y-auto flex-1">
-            {filtered.length === 0 ? (
+            {hospitalsListLoading ? (
+              <div className="p-4">
+                <AdminLoadingSkeleton rows={6} />
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="p-8 text-center text-sm text-gray-400">
                 {search ? '검색 결과가 없습니다' : '등록된 병원이 없습니다'}
               </div>
@@ -288,11 +428,24 @@ export const HospitalManager = ({
             handleSaveHospital={handleSaveHospital}
             handleDelete={handleDelete}
             fetchHospitals={fetchHospitals}
+            handleEditHospital={handleEditHospital}
+            hospitalsList={hospitalsList}
             uploadToSupabase={uploadToSupabase}
+            patchHospitalOffersFlags={patchHospitalOffersFlags}
+            offersFailureLogEnabled={offersFailureLogEnabled}
             DynamicListInput={DynamicListInput}
             ImageUploader={ImageUploader}
             AddressInput={AddressInput}
             toast={toast}
+            offersModalOpen={offersModalOpen}
+            offersPayload={offersPayload}
+            offersLoading={offersLoading}
+            usePlaywright={usePlaywright}
+            setUsePlaywright={setUsePlaywright}
+            onRequestOffersPreview={requestOffersPreview}
+            onRetryOffersPoll={retryOffersPoll}
+            onCloseOffersModal={() => setOffersModalOpen(false)}
+            onOffersApplyComplete={() => { setOffersModalOpen(false); setOffersPayload(null); fetchHospitals?.(); }}
           />
         </div>
       </div>
@@ -314,7 +467,9 @@ export const HospitalManager = ({
               <p className="text-xs text-red-500 mb-2">Hospitals error: {hospitalsError.message}</p>
             )}
             <div className="space-y-2">
-              {filtered.length === 0 ? (
+              {hospitalsListLoading ? (
+                <AdminLoadingSkeleton rows={5} />
+              ) : filtered.length === 0 ? (
                 <div className="p-8 text-center text-sm text-gray-400">
                   {search ? '검색 결과가 없습니다' : '등록된 병원이 없습니다'}
                 </div>
@@ -357,6 +512,7 @@ export const HospitalManager = ({
               handleEditHospital={handleEditHospital}
               hospitalsList={hospitalsList}
               uploadToSupabase={uploadToSupabase}
+              patchHospitalOffersFlags={patchHospitalOffersFlags}
               DynamicListInput={DynamicListInput}
               ImageUploader={ImageUploader}
               AddressInput={AddressInput}
@@ -365,8 +521,10 @@ export const HospitalManager = ({
               offersPayload={offersPayload}
               offersLoading={offersLoading}
               onRequestOffersPreview={requestOffersPreview}
+              onRetryOffersPoll={retryOffersPoll}
               onCloseOffersModal={() => setOffersModalOpen(false)}
               onOffersApplyComplete={() => { setOffersModalOpen(false); setOffersPayload(null); fetchHospitals?.(); }}
+              offersFailureLogEnabled={offersFailureLogEnabled}
             />
           </div>
         )}
@@ -523,34 +681,110 @@ function EnrichmentPanel({ editingHospitalId, enrichmentLog, onComplete, toast }
   );
 }
 
-function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, handleEditHospital, hospitalsList, uploadToSupabase, DynamicListInput, ImageUploader, AddressInput, toast, offersModalOpen, offersPayload, offersLoading, onRequestOffersPreview, onCloseOffersModal, onOffersApplyComplete }) {
+const REASON_MAX_COLLAPSED = 120;
+
+function OffersFailureBanner({ hospitalForm, patchHospitalOffersFlags, onRequestOffersPreview }) {
+  const [reasonExpanded, setReasonExpanded] = useState(false);
+  const reason = hospitalForm.offers_auto_fail_reason || '알 수 없음';
+  const isLong = reason.length > REASON_MAX_COLLAPSED;
+  const showReason = reasonExpanded || !isLong ? reason : reason.slice(0, REASON_MAX_COLLAPSED) + '…';
+
+  return (
+    <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+      {hospitalForm.offers_auto_skip && (
+        <p className="font-medium">시술 자동생성 건너뜀으로 표시됨</p>
+      )}
+      {hospitalForm.offers_auto_failed_at && (
+        <p className="mt-1">
+          실패 ({hospitalForm.offers_auto_failed_at ? new Date(hospitalForm.offers_auto_failed_at).toLocaleString() : ''}): {showReason}
+          {isLong && (
+            <button type="button" onClick={() => setReasonExpanded((e) => !e)} className="ml-1 text-amber-600 hover:underline font-medium">
+              {reasonExpanded ? '접기' : '더 보기'}
+            </button>
+          )}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={!!hospitalForm.offers_auto_skip}
+            onChange={async (e) => {
+              const skip = e.target.checked;
+              if (patchHospitalOffersFlags) await patchHospitalOffersFlags({ offers_auto_skip: skip });
+            }}
+            className="rounded border-amber-300"
+          />
+          <span>다음에 시도하지 않음 (건너뛰기)</span>
+        </label>
+        {hospitalForm.offers_auto_skip && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (patchHospitalOffersFlags) await patchHospitalOffersFlags({ offers_auto_skip: false });
+              onRequestOffersPreview?.();
+            }}
+            className="px-2 py-1 text-sm font-medium text-teal-700 bg-teal-100 hover:bg-teal-200 border border-teal-200 rounded"
+          >
+            다시 시도
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FormContent({ editingHospitalId, hospitalForm, setHospitalForm, uploading, loading, handleSaveHospital, handleDelete, fetchHospitals, handleEditHospital, hospitalsList, uploadToSupabase, patchHospitalOffersFlags, offersFailureLogEnabled, DynamicListInput, ImageUploader, AddressInput, toast, offersModalOpen, offersPayload, offersLoading, usePlaywright, setUsePlaywright, onRequestOffersPreview, onRetryOffersPoll, onCloseOffersModal, onOffersApplyComplete }) {
 
   return (
     <div className="relative">
+      {editingHospitalId && offersFailureLogEnabled === false && (
+        <div className="mb-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm">
+          <p className="font-medium">시술 실패 로그 저장을 사용하려면</p>
+          <p className="mt-1">Supabase SQL Editor에서 <code className="bg-blue-100 px-1 rounded">migrations/20260226_offers_auto_fail_log.sql</code> 파일 내용을 실행해 주세요. 적용 전에도 시술 자동생성은 동작합니다.</p>
+        </div>
+      )}
       <HospitalOffersPreviewModal
         open={offersModalOpen}
         onClose={onCloseOffersModal}
         payload={offersPayload}
         loading={offersLoading}
         onConfirmSave={onOffersApplyComplete}
+        onRetryPoll={onRetryOffersPoll}
         hospitalId={editingHospitalId}
         toast={toast}
       />
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex flex-wrap items-center justify-between gap-y-2 shadow-sm">
+        {(editingHospitalId && (hospitalForm.offers_auto_failed_at || hospitalForm.offers_auto_skip)) && (
+          <OffersFailureBanner
+            hospitalForm={hospitalForm}
+            patchHospitalOffersFlags={patchHospitalOffersFlags}
+            onRequestOffersPreview={onRequestOffersPreview}
+          />
+        )}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 lg:p-4 mb-4 rounded-t-2xl flex flex-wrap items-center justify-between gap-y-2 shadow-sm">
         <h2 className="text-base lg:text-xl font-bold shrink-0">{editingHospitalId?'병원 정보 수정':'신규 병원 등록'}</h2>
         <div className="flex items-center gap-2 lg:gap-3 flex-wrap justify-end min-w-0">
           {editingHospitalId && (
+            <>
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer shrink-0" title="체크 시 처음부터 Playwright 사용 (수집 부족 시 자동 재시도하므로 선택).">
+              <input type="checkbox" checked={!!usePlaywright} onChange={e=>setUsePlaywright?.(e.target.checked)} className="rounded" />
+              처음부터 Playwright (선택)
+            </label>
             <button
               type="button"
-              onClick={onRequestOffersPreview}
+              onClick={async () => {
+                if (hospitalForm.offers_auto_skip && patchHospitalOffersFlags) await patchHospitalOffersFlags({ offers_auto_skip: false });
+                onRequestOffersPreview?.();
+              }}
               disabled={offersLoading}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition disabled:opacity-50 shrink-0"
               title="병원 웹사이트에서 대표 시술 최대 3개 자동 수집·미리보기"
             >
               {offersLoading ? <Loader2 size={14} className="animate-spin"/> : <Stethoscope size={14}/>}
-              <span className="hidden sm:inline">대표 시술 3개 자동 생성 (OCR 포함)</span>
-              <span className="sm:hidden">시술 자동생성</span>
+              <span className="hidden sm:inline">{hospitalForm.offers_auto_skip ? '다시 시도' : '대표 시술 3개 자동 생성 (OCR 포함)'}</span>
+              <span className="sm:hidden">{hospitalForm.offers_auto_skip ? '다시 시도' : '시술 자동생성'}</span>
             </button>
+            </>
           )}
           <EnrichmentPanel
             editingHospitalId={editingHospitalId}

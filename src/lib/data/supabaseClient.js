@@ -23,7 +23,24 @@ function initSupabaseClient() {
   }
 
   // ✅ 쿠키 기반 클라이언트로 변경 (OAuth callback과 동일한 세션 저장소)
-  supabaseClientInstance = createBrowserClient(supabaseUrl, supabaseKey);
+  const client = createBrowserClient(supabaseUrl, supabaseKey);
+
+  // ✅ 리프레시 토큰 무효 시 콘솔 에러 방지: 로그아웃 처리 후 null 세션 반환
+  const originalGetSession = client.auth.getSession.bind(client.auth);
+  client.auth.getSession = async function () {
+    try {
+      return await originalGetSession();
+    } catch (e) {
+      const msg = e?.message || String(e);
+      if ((e?.name === "AuthApiError" || e?.message?.includes?.("Refresh Token")) && /Refresh Token.*Not Found|invalid.*refresh/i.test(msg)) {
+        await client.auth.signOut({ scope: "local" }).catch(() => {});
+        return { data: { session: null }, error: e };
+      }
+      throw e;
+    }
+  };
+
+  supabaseClientInstance = client;
   return supabaseClientInstance;
 }
 

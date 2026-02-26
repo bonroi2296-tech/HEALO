@@ -146,8 +146,11 @@ export const InquiryManager = ({ inquiries, fetchInquiries, handleFileClick }) =
 
   const StatusBadge = ({ status }) => (
     <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+      status === 'pending' ? 'bg-amber-100 text-amber-700' :
       status === 'received' ? 'bg-blue-100 text-blue-700' :
-      status === 'normalized' ? 'bg-green-100 text-green-700' :
+      status === 'completed' ? 'bg-green-100 text-green-700' :
+      status === 'normalized' ? 'bg-emerald-100 text-emerald-700' :
+      status === 'blocked' ? 'bg-orange-100 text-orange-700' :
       status === 'error' ? 'bg-red-100 text-red-700' :
       'bg-gray-100 text-gray-700'
     }`}>

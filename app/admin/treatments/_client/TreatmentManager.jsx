@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Trash2, Loader2, Save, Info, ChevronLeft, Shield, Activity, Clock, AlertTriangle, Image, DollarSign, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Loader2, Save, Info, ChevronLeft, Shield, Activity, Clock, AlertTriangle, Image, DollarSign, X, ExternalLink } from 'lucide-react';
 import { TranslationPanel } from '../../_shared/TranslationPanel';
 
 export const TreatmentManager = ({
@@ -24,6 +24,27 @@ export const TreatmentManager = ({
   ImageUploader,
 }) => {
   const [showForm, setShowForm] = useState(false);
+  const [treatmentSources, setTreatmentSources] = useState([]);
+  const [showEvidenceUrls, setShowEvidenceUrls] = useState(false);
+
+  useEffect(() => {
+    if (!editingTreatmentId) {
+      setTreatmentSources([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/treatments/${editingTreatmentId}/sources`, { credentials: 'include' });
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.sources)) setTreatmentSources(data.sources);
+        else if (!cancelled) setTreatmentSources([]);
+      } catch {
+        if (!cancelled) setTreatmentSources([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editingTreatmentId]);
 
   const handleSelectTreatment = (t) => {
     handleEditTreatment(t);
@@ -108,6 +129,34 @@ export const TreatmentManager = ({
           </div>
           
           <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-8 lg:h-[calc(100vh-180px)] overflow-y-auto">
+            {treatmentSources.length > 0 && (
+              <div className="mb-4 p-3 rounded-lg bg-teal-50 border border-teal-200">
+                <button
+                  type="button"
+                  onClick={() => setShowEvidenceUrls((v) => !v)}
+                  className="text-xs font-bold text-teal-800 uppercase flex items-center gap-1 hover:underline"
+                >
+                  <ExternalLink size={12} /> 근거 보기 {showEvidenceUrls ? '접기' : '펼치기'}
+                </button>
+                {showEvidenceUrls && (
+                  <ul className="mt-2 space-y-1">
+                    {treatmentSources.flatMap((ts) => (ts.sources || []).map((s, i) => (
+                      <li key={`${ts.id}-${i}`}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-teal-600 hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink size={10} />
+                          {s.title || s.url}
+                        </a>
+                      </li>
+                    ))).slice(0, 2)}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="space-y-4">
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-gray-400">기본 정보</h3>

@@ -19,7 +19,17 @@ export const HospitalCreateSchema = z.object({
   location_kr: z.string().max(100).optional().nullable(),
   location_en: z.string().max(100).optional().nullable(),
   address_detail: z.string().max(500).optional().nullable(),
-  website: z.string().max(500).optional().nullable(),
+  website: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .refine(
+      (v) =>
+        !v ||
+        (typeof v === "string" && (v.trim() === "" || /^https?:\/\/[^\s]+$/i.test(v.trim()))),
+      { message: "웹사이트는 http:// 또는 https:// 로 시작하는 URL 형식이어야 합니다" }
+    ),
   description: z.string().optional().nullable(),
   latitude: z.number().min(-90).max(90).optional().nullable(),
   longitude: z.number().min(-180).max(180).optional().nullable(),
@@ -74,6 +84,9 @@ export const HospitalCreateSchema = z.object({
   specialties_kr: z.array(z.string()).optional().default([]),
   i18n: z.record(z.any()).optional().default({}),
   is_partner: z.boolean().optional().default(false),
+  offers_auto_failed_at: z.string().datetime().optional().nullable(),
+  offers_auto_fail_reason: z.string().max(2000).optional().nullable(),
+  offers_auto_skip: z.boolean().optional().default(false),
 });
 
 export const HospitalUpdateSchema = HospitalCreateSchema.partial();

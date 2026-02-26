@@ -116,9 +116,11 @@ export async function ssrfSafeFetch(
     if (e?.name === "AbortError") {
       return { ok: false, error: "timeout" };
     }
+    const cause = e?.cause?.message ?? e?.cause ?? "";
+    const detail = cause ? ` (${String(cause).slice(0, 200)})` : "";
     return {
       ok: false,
-      error: e?.message ?? "fetch_failed",
+      error: (e?.message ?? "fetch_failed") + detail,
     };
   }
 }

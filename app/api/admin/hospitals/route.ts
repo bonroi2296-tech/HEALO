@@ -416,6 +416,9 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.faq !== undefined) payload.faq = validatedData.faq ?? [];
     if (validatedData.i18n !== undefined) payload.i18n = validatedData.i18n ?? {};
     if (validatedData.is_partner !== undefined) payload.is_partner = validatedData.is_partner;
+    if (validatedData.offers_auto_failed_at !== undefined) payload.offers_auto_failed_at = validatedData.offers_auto_failed_at;
+    if (validatedData.offers_auto_fail_reason !== undefined) payload.offers_auto_fail_reason = validatedData.offers_auto_fail_reason;
+    if (validatedData.offers_auto_skip !== undefined) payload.offers_auto_skip = validatedData.offers_auto_skip;
 
     const krFields = extractKrFields(payload);
     Object.assign(payload, krFields);

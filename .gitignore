@@ -71,3 +71,4 @@ tmp/
 
 # Local output / crawl/import data
 output/
+.vercel

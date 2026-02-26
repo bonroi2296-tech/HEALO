@@ -36,16 +36,43 @@ export function createSupabaseBrowserClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  // 빌드/SSR 시 env 없으면 더미 반환 (빌드 실패 방지). 브라우저에서는 없으면 throw.
+  const isServer = typeof window === 'undefined'
   if (!supabaseUrl || !supabaseAnonKey) {
+    if (isServer) {
+      browserClient = createBrowserClient(
+        'https://build-placeholder.supabase.co',
+        'build-placeholder-anon-key'
+      )
+      return browserClient
+    }
     throw new Error(
       '[supabase/browser] NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required'
     )
   }
 
   // @supabase/ssr의 createBrowserClient 사용
-  // 이 클라이언트는 쿠키를 자동으로 관리합니다
-  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  const client = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
+  // ✅ 리프레시 토큰 무효 시 콘솔 에러 방지: 로그아웃 처리 후 null 세션 반환
+  const originalGetSession = client.auth.getSession.bind(client.auth)
+  client.auth.getSession = async function () {
+    try {
+      return await originalGetSession()
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message ?? String(e)
+      if (
+        ((e as { name?: string })?.name === "AuthApiError" || (e as { message?: string })?.message?.includes?.("Refresh Token")) &&
+        /Refresh Token.*Not Found|invalid.*refresh/i.test(msg)
+      ) {
+        await client.auth.signOut({ scope: "local" }).catch(() => {})
+        return { data: { session: null }, error: e }
+      }
+      throw e
+    }
+  }
+
+  browserClient = client
   return browserClient
 }
 

@@ -37,6 +37,11 @@ Your goal is to build a secure, user-friendly, and high-performance platform for
 - **PII Protection:** Never log sensitive patient data to the console in production.
 - **Env Vars:** Access secrets strictly via `import.meta.env`. Never hardcode keys.
 
+### 5. Internationalization (i18n) — All Public Content
+- **No hardcoded user-facing text:** All public-facing pages (about, contact, treatments, hospitals, inquiry, etc.) MUST use `t(key, langCode)` from `src/lib/i18n/index.js`.
+- **Client components for translated content:** If a page shows translatable text, use a client component with `getLangCodeFromCookie()` and `t(key, langCode)` — language change triggers page reload, so initial langCode is correct.
+- **Add keys to DICTIONARY:** When adding new translatable strings, add entries for `en`, `ko`, `zh`, `ja` in `src/lib/i18n/index.js`.
+
 ---
 
 # 🧠 Behavior Guidelines for Cursor

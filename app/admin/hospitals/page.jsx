@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { HospitalManager } from "./_client/HospitalManager";
 import { HospitalAccountManager } from "./_client/HospitalAccountManager";
 import { AdminGuideModal } from "../_components/AdminGuideModal";
+import { AdminLoadingSkeleton } from "../_components/AdminLoadingSkeleton";
 import { createSupabaseBrowserClient } from "../../../src/lib/supabase/browser";
 import { useToast } from "../../../src/components/Toast";
 import { AddressInput } from "../../../src/components/AddressInput";
@@ -161,9 +162,29 @@ export default function HospitalsPage() {
     i18n: {}
   };
   const [hospitalForm, setHospitalForm] = useState(emptyHospitalForm);
+  const [offersFailureLogEnabled, setOffersFailureLogEnabled] = useState(null); // null=미확인, true/false
+  const [hospitalsListLoading, setHospitalsListLoading] = useState(true); // 목록 최초 로딩
+
+  // ✅ 시술 실패 로그용 DB 컬럼 존재 여부 (마이그레이션 미적용 시 안내용)
+  const fetchOffersSchemaCheck = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch("/api/admin/hospitals/offers-schema", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.ok) setOffersFailureLogEnabled(!!data.offersFailureLogEnabled);
+    } catch {
+      setOffersFailureLogEnabled(false);
+    }
+  };
 
   // ✅ Admin API를 통한 병원 목록 조회
   const fetchHospitals = async () => {
+    setHospitalsListLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -197,6 +218,8 @@ export default function HospitalsPage() {
       console.error('[Hospitals] ❌ Fetch exception:', error);
       setHospitalsError(error);
       setHospitalsList([]);
+    } finally {
+      setHospitalsListLoading(false);
     }
   };
 
@@ -302,6 +325,9 @@ export default function HospitalsPage() {
       faq: Array.isArray(h.faq) ? h.faq : [],
       i18n: h.i18n || {},
       _enrichmentLog: h.enrichment_log || {},
+      offers_auto_failed_at: h.offers_auto_failed_at || null,
+      offers_auto_fail_reason: h.offers_auto_fail_reason || null,
+      offers_auto_skip: h.offers_auto_skip ?? false,
     });
   };
 
@@ -416,6 +442,40 @@ export default function HospitalsPage() {
     }
   };
 
+  // ✅ 시술 자동생성 실패/건너뛰기 플래그만 PATCH (다시 시도·건너뛰기 체크 시)
+  const patchHospitalOffersFlags = async (body) => {
+    if (!editingHospitalId) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("세션이 만료되었습니다.");
+        return;
+      }
+      const response = await fetch(`/api/admin/hospitals?id=${editingHospitalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const result = await response.json();
+      if (result.ok) {
+        await fetchHospitals();
+        if (body.offers_auto_skip !== undefined)
+          setHospitalForm((prev) => ({ ...prev, offers_auto_skip: body.offers_auto_skip }));
+        if (body.offers_auto_failed_at !== undefined)
+          setHospitalForm((prev) => ({ ...prev, offers_auto_failed_at: body.offers_auto_failed_at }));
+        if (body.offers_auto_fail_reason !== undefined)
+          setHospitalForm((prev) => ({ ...prev, offers_auto_fail_reason: body.offers_auto_fail_reason }));
+      } else {
+        toast.error("반영 실패: " + (result.detail || result.error));
+      }
+    } catch (err) {
+      console.error("[Hospitals] patchOffersFlags exception:", err);
+      toast.error("반영 실패: " + err.message);
+    }
+  };
+
   // ✅ Admin API를 통한 병원 삭제
   const handleDelete = async (table, id, cb) => {
     if (!confirm("정말 삭제하시겠습니까? 복구할 수 없습니다.")) return;
@@ -454,6 +514,10 @@ export default function HospitalsPage() {
   useEffect(() => {
     fetchHospitals();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "hospitals") fetchOffersSchemaCheck();
+  }, [activeTab]);
 
   return (
     <div className="space-y-4">
@@ -516,6 +580,7 @@ export default function HospitalsPage() {
       {activeTab === "hospitals" ? (
         <HospitalManager
           hospitalsList={hospitalsList}
+          hospitalsListLoading={hospitalsListLoading}
           hospitalsError={hospitalsError}
           handleEditHospital={handleEditHospital}
           editingHospitalId={editingHospitalId}
@@ -527,6 +592,8 @@ export default function HospitalsPage() {
           handleSaveHospital={handleSaveHospital}
           handleDelete={handleDelete}
           fetchHospitals={fetchHospitals}
+          patchHospitalOffersFlags={patchHospitalOffersFlags}
+          offersFailureLogEnabled={offersFailureLogEnabled}
           uploadToSupabase={uploadToSupabase}
           DynamicListInput={DynamicListInput}
           ImageUploader={ImageUploader}

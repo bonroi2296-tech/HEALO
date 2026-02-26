@@ -27,19 +27,25 @@ export async function POST(
   if (!auth.success) return auth.response;
   const { id: hospitalId } = await params;
   if (!hospitalId) {
-    return Response.json({ ok: false, error: "missing_hospital_id" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "missing_hospital_id", detail: "병원 ID가 없습니다." },
+      { status: 400 }
+    );
   }
 
   let body: OffersPreviewPayload;
   try {
     body = await request.json();
   } catch {
-    return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+    return Response.json(
+      { ok: false, error: "invalid_json", detail: "요청 데이터 형식이 올바르지 않습니다." },
+      { status: 400 }
+    );
   }
 
   if (body.hospital_id !== hospitalId) {
     return Response.json(
-      { ok: false, error: "hospital_id_mismatch" },
+      { ok: false, error: "hospital_id_mismatch", detail: "병원 정보가 일치하지 않습니다. 페이지를 새로고침 후 다시 시도하세요." },
       { status: 400 }
     );
   }
@@ -51,7 +57,10 @@ export async function POST(
     .single();
 
   if (!hospital) {
-    return Response.json({ ok: false, error: "hospital_not_found" }, { status: 404 });
+    return Response.json(
+      { ok: false, error: "hospital_not_found", detail: "병원을 찾을 수 없습니다." },
+      { status: 404 }
+    );
   }
 
   const offers: OfferItem[] = Array.isArray(body.offers) ? body.offers : [];
@@ -78,6 +87,7 @@ export async function POST(
   const treatmentIds: string[] = [];
   let created = 0;
   let updated = 0;
+  const intended = offers.slice(0, 3).filter((o) => o?.treatment?.name?.trim()).length;
 
   for (const offer of offers.slice(0, 3)) {
     const t = offer.treatment;
@@ -87,7 +97,7 @@ export async function POST(
       t.slug && t.slug.trim() ? t.slug.trim() : generateSlug(t.name);
     const slug = ensureUniqueSlug(baseSlug);
 
-    const payload: Record<string, unknown> = {
+    const basePayload: Record<string, unknown> = {
       hospital_id: hospitalId,
       name: t.name.trim(),
       slug,
@@ -101,7 +111,6 @@ export async function POST(
       thumbnail_image: (t.images && t.images[0]) ?? null,
       gallery_images: t.images ?? [],
       display_order: null,
-      is_published: true,
       recovery_time_min: t.recovery_time_min ?? null,
       recovery_time_max: t.recovery_time_max ?? null,
       side_effects: t.side_effects ?? [],
@@ -120,6 +129,10 @@ export async function POST(
     };
 
     const existing = (existingTreatments || []).find((e) => e.slug === slug);
+    const payload =
+      existing
+        ? basePayload
+        : { ...basePayload, is_published: false }; // 신규 자동생성 시술만 기본 숨김, 업데이트 시 기존 노출 유지
     let treatmentId: string;
 
     if (existing) {
@@ -163,6 +176,8 @@ export async function POST(
   }
 
   const { authResult } = auth;
+  const partialFailure = intended > 0 && created + updated < intended;
+
   logAdminAction({
     adminEmail: authResult.email || "unknown",
     adminUserId: authResult.userId,
@@ -173,6 +188,7 @@ export async function POST(
       hospital_id: hospitalId,
       created,
       updated,
+      intended,
       treatment_ids: treatmentIds,
     },
   }).catch((err) => console.error("[offers/apply] audit log failed:", err.message));
@@ -182,5 +198,9 @@ export async function POST(
     created,
     updated,
     treatment_ids: treatmentIds,
+    ...(partialFailure && {
+      partial_failure: true,
+      message: "일부 시술만 저장되었습니다. 서버 로그를 확인해 주세요.",
+    }),
   });
 }

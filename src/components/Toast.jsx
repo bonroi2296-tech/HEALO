@@ -9,44 +9,76 @@ import { CheckCircle2, XCircle, Info, AlertCircle, X } from 'lucide-react';
 
 // Toast 타입: success(성공), error(에러), info(정보), warning(경고)
 const ToastContext = createContext(null);
+const MAX_TOASTS = 5;
+
+function safeMessage(msg) {
+  if (msg == null) return "";
+  if (typeof msg === "string") return msg;
+  if (typeof msg === "object" && msg.message) return String(msg.message);
+  try {
+    return String(msg);
+  } catch {
+    return "알 수 없는 메시지";
+  }
+}
 
 // Toast Provider - 앱 전체에서 Toast를 사용할 수 있게 해주는 컴포넌트
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback((message, type = 'info', duration = 3000) => {
-    const id = Date.now() + Math.random();
-    const persistent = type === 'error';
-    const newToast = { id, message, type };
-    
-    setToasts(prev => [...prev, newToast]);
+  const addToast = useCallback((message, type = "info", duration = 3000) => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    const persistent = type === "error";
+    const newToast = { id, message: safeMessage(message), type };
+
+    setToasts((prev) => {
+      const next = [...prev, newToast];
+      return next.slice(-MAX_TOASTS);
+    });
 
     if (!persistent) {
       setTimeout(() => {
-        setToasts(prev => prev.filter(toast => toast.id !== id));
+        setToasts((prev) => prev.filter((t) => t.id !== id));
       }, duration);
     }
   }, []);
 
   const toast = {
-    success: (message) => addToast(message, 'success'),
-    error: (message) => addToast(message, 'error'),
-    info: (message) => addToast(message, 'info'),
-    warning: (message) => addToast(message, 'warning', 5000),
+    success: (message) => addToast(message, "success"),
+    error: (message) => addToast(message, "error"),
+    info: (message) => addToast(message, "info"),
+    warning: (message) => addToast(message, "warning", 5000),
   };
 
-  // Toast 제거 함수
   const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const removeAllToasts = useCallback(() => {
+    setToasts([]);
   }, []);
 
   return (
-    <ToastContext.Provider value={{ toast, removeToast }}>
+    <ToastContext.Provider value={{ toast, removeToast, removeAllToasts }}>
       {children}
-      {/* Toast 메시지들을 화면에 표시하는 영역 */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] space-y-2 pointer-events-none">
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
+      <div
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] space-y-2 pointer-events-none"
+        aria-live="polite"
+        aria-label="알림"
+      >
+        {toasts.length > 2 && (
+          <div className="pointer-events-auto flex justify-end">
+            <button
+              type="button"
+              onClick={removeAllToasts}
+              className="text-xs text-gray-500 hover:text-gray-700 bg-white/90 px-2 py-1 rounded border border-gray-200"
+            >
+              모두 닫기
+            </button>
+          </div>
+        )}
+        {toasts.map((t) => (
+          <ToastItem key={t.id} toast={t} onRemove={removeToast} />
         ))}
       </div>
     </ToastContext.Provider>
@@ -87,8 +119,12 @@ const ToastItem = ({ toast, onRemove }) => {
 
   const style = styles[type] || styles.info;
 
+  const text = safeMessage(message);
+
   return (
     <div
+      role="alert"
+      aria-live="polite"
       className={`
         ${style.bg} ${style.border} ${style.text}
         border rounded-xl shadow-lg p-4 min-w-[300px] max-w-[400px]
@@ -96,10 +132,16 @@ const ToastItem = ({ toast, onRemove }) => {
         pointer-events-auto
       `}
     >
-      <div className="shrink-0 mt-0.5">{style.icon}</div>
-      <div className="flex-1 text-sm font-medium whitespace-pre-line">{message}</div>
+      <div className="shrink-0 mt-0.5" aria-hidden="true">{style.icon}</div>
+      <div className="flex-1 text-sm font-medium whitespace-pre-line">{text}</div>
       <button
-        onClick={() => onRemove(toast.id)}
+        type="button"
+        aria-label="닫기"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onRemove(toast.id);
+        }}
         className="shrink-0 p-1 hover:bg-black/5 rounded transition"
       >
         <X size={16} className={style.text} />

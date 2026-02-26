@@ -1,5 +1,44 @@
 # BONROI CORPORATE LOG
 
+## [2026-02-26 Night Session] Autonomous Improvement Round
+## [2026-02-26 야간 세션] 자율 개선 작업
+
+### Approved by founder: "니 알아서 다 개선해봐. 내 승인 받을 필요 없어."
+
+### Changes applied to `main` branch:
+
+| # | Change | Files | Status |
+|---|---|---|---|
+| 1 | import.meta.env → process.env (Vite removal) | GoogleMap.jsx | ✅ |
+| 2 | PII masked in console.log | ClientShell.jsx | ✅ |
+| 3 | Medical ad claims fixed (en + ko) | i18n/index.js | ✅ |
+| 4 | alert() → Toast in admin (17 locations) | notifications/page.tsx, InquiryManager.jsx | ✅ |
+| 5 | Rate limiting on 3 more APIs | attachments/sign, rotate-token, event | ✅ |
+| 6 | i18n: login page | LoginClient.jsx + dictionary | ✅ |
+| 7 | i18n: signup page | SignupClient.jsx + dictionary | ✅ |
+| 8 | i18n: list/loading | PaginatedListClient.jsx, intake/page.jsx | ✅ |
+| 9 | i18n: success page | SuccessClient.jsx + dictionary (48 keys) | ✅ |
+| 10 | i18n: consult page | ConsultWrapper.jsx + dictionary | ✅ |
+| 11 | Third-party services in privacy policy | policies.js (en + ko) | ✅ |
+| 12 | Review disclaimer added | TreatmentDetailPage.jsx, HospitalDetailPage.jsx | ✅ |
+| 13 | Admin RAG try-catch | admin/rag/page.tsx (3 handlers) | ✅ |
+| 14 | .cursorrules: batch questions rule | Section 9.4 | ✅ |
+| 15 | .cursorrules: dynamic style exception | Section 3.2 | ✅ |
+
+### Previously completed (earlier in same day):
+- Security headers (5 types)
+- Cookie consent banner (GDPR)
+- Cookie policy page (/cookies)
+- Health check API (/api/health)
+- COO operations documents (6 folders)
+- Sentry error tracking integration
+- Email confirmation system (Resend)
+- Data deletion API
+- Data retention periods in privacy policy
+- Korean policies content
+
+---
+
 > 모든 감사(Audit) 결과 및 의사결정 영구 기록
 
 ---

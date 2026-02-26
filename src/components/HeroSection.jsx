@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Search } from 'lucide-react';
 import { getLangCodeFromCookie, t } from "../lib/i18n";
 
@@ -19,14 +20,15 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
       <div className="relative pt-12 pb-16 md:pt-24 md:pb-20 text-center overflow-hidden bg-teal-900">
         <div className="absolute inset-0 z-0">
           {siteConfig?.hero && (
-            <img 
-              src={siteConfig.hero} 
-              alt="HEALO medical concierge hero" 
-              className="w-full h-full object-cover opacity-60" 
-              loading="eager"
-              fetchPriority="high"
-              decoding="sync"
-            />
+            <div className="relative w-full h-full">
+              <Image 
+                src={siteConfig.hero} 
+                alt="HEALO medical concierge hero" 
+                fill
+                className="object-cover opacity-60" 
+                priority
+              />
+            </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-teal-950/80 via-teal-900/60 to-teal-800/90 mix-blend-multiply"></div>
         </div>

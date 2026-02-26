@@ -2,6 +2,7 @@
 
 // src/pages/HospitalDetailPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   ChevronLeft, MapPin, Star, Shield, Info, FileText, Globe, Stethoscope, Sparkles,
   GraduationCap, Award, ShieldCheck, Check, Building2, Image as ImageIcon, ArrowRight,
@@ -243,7 +244,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
               key={index}
               className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentSlide ? "opacity-100" : "opacity-0"}`}
             >
-              <img src={img} className="w-full h-full object-cover" alt={`Slide ${index + 1}`} />
+              <Image src={img || '/placeholder.png'} fill className="object-cover" alt={`Slide ${index + 1}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
             </div>
           ))}
@@ -263,7 +264,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
         {/* Desktop grid */}
         <div className="hidden md:flex flex-row gap-2 h-[500px]">
           <div className="w-1/2 h-full relative group cursor-pointer overflow-hidden rounded-xl">
-            <img src={galleryImages[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Main" />
+            <Image src={galleryImages[0] || '/placeholder.png'} fill className="object-cover transition-transform duration-700 group-hover:scale-105" alt="Main" />
             <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-10">
               <ImageIcon size={12} /> View All Photos
             </div>
@@ -271,7 +272,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
           <div className="w-1/2 h-full grid grid-cols-2 grid-rows-2 gap-2">
             {galleryImages.slice(1, 5).map((img, idx) => (
               <div key={idx} className="relative overflow-hidden cursor-pointer group rounded-xl">
-                <img src={img} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" alt={`Detail ${idx}`} />
+                <Image src={img || '/placeholder.png'} fill className="object-cover group-hover:scale-105 transition duration-700" alt={`Detail ${idx}`} />
               </div>
             ))}
           </div>
@@ -328,7 +329,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
               <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col md:flex-row gap-6 relative overflow-hidden group hover:shadow-md transition">
                 <div className="w-full md:w-40 md:h-40 shrink-0">
                   <div className="w-32 h-32 mx-auto md:w-40 md:h-40 rounded-full p-1 border-2 border-teal-100 relative">
-                    <img src={doctor.image} className="w-full h-full object-cover rounded-full" alt="Doctor" />
+                    <Image src={doctor.image || '/placeholder.png'} alt="Doctor" width={160} height={160} className="w-full h-full object-cover rounded-full" />
                     <div className="absolute bottom-1 right-1 bg-teal-600 text-white p-1.5 rounded-full border-2 border-white shadow-sm" title="Verified">
                       <Check size={12} strokeWidth={4} />
                     </div>
@@ -390,7 +391,7 @@ export const HospitalDetailPage = ({ selectedId, setView, onTreatmentClick }) =>
                         className="flex bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-teal-200 transition cursor-pointer group"
                       >
                         <div className="w-32 h-24 bg-gray-200 shrink-0 relative">
-                          <img src={thumb} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="img" />
+                          <Image src={thumb || '/placeholder.png'} fill className="object-cover group-hover:scale-110 transition duration-500" alt={item.title || item.name || "Treatment"} />
                         </div>
                         <div className="p-4 flex flex-col justify-center flex-1">
                           <h4 className="font-bold text-gray-900 text-sm group-hover:text-teal-600 line-clamp-2 mb-1">

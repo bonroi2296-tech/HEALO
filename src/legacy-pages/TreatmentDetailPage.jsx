@@ -2,6 +2,7 @@
 
 // src/pages/TreatmentDetailPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   ChevronLeft,
   MapPin,
@@ -430,7 +431,7 @@ export const TreatmentDetailPage = ({
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Mobile slider */}
         <div className="md:hidden w-full aspect-[4/3] relative group overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
-          <img src={galleryImages[currentSlide]} className="w-full h-full object-cover" alt="Main" />
+          <Image src={galleryImages[currentSlide] || '/placeholder.png'} fill className="object-cover" alt="Main" />
           <button
             onClick={prevSlide}
             className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white p-1.5 rounded-full backdrop-blur-sm transition z-20"
@@ -453,9 +454,10 @@ export const TreatmentDetailPage = ({
         {/* Desktop grid (5장 유지) */}
         <div className="hidden md:flex flex-row gap-2 h-[500px]">
           <div className="w-1/2 h-full relative group cursor-pointer overflow-hidden rounded-xl">
-            <img
-              src={galleryImages[0]}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            <Image
+              src={galleryImages[0] || '/placeholder.png'}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
               alt="Main"
             />
             <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-10">
@@ -465,9 +467,10 @@ export const TreatmentDetailPage = ({
           <div className="w-1/2 h-full grid grid-cols-2 grid-rows-2 gap-2">
             {galleryImages.slice(1, 5).map((img, idx) => (
               <div key={idx} className="relative overflow-hidden cursor-pointer group rounded-xl">
-                <img
-                  src={img}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                <Image
+                  src={img || '/placeholder.png'}
+                  fill
+                  className="object-cover group-hover:scale-105 transition duration-700"
                   alt={`Detail ${idx + 1}`}
                 />
                 {idx === 3 && (
@@ -721,10 +724,11 @@ export const TreatmentDetailPage = ({
                         className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition cursor-pointer group flex flex-col"
                       >
                         <div className="aspect-[4/3] bg-gray-200 overflow-hidden relative">
-                          <img
-                            src={thumb}
-                            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                            alt={item.name}
+                          <Image
+                            src={thumb || '/placeholder.png'}
+                            fill
+                            className="object-cover group-hover:scale-110 transition duration-500"
+                            alt={item.name || "Treatment"}
                           />
                         </div>
                         <div className="p-4 flex flex-col flex-1">

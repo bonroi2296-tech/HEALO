@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import {
   Globe, Menu, Zap, ChevronDown, CheckCircle,
   X, ArrowRight, Settings, LogOut
@@ -134,7 +135,7 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
           
           <div className="flex items-center cursor-pointer gap-3 z-20" onClick={() => onNavClick('home')}>
             {siteConfig?.logo ? (
-                <img src={siteConfig.logo} alt="HEALO" className="h-8 md:h-10 object-contain" />
+                <Image src={siteConfig.logo} alt="HEALO" width={120} height={40} className="h-8 md:h-10 object-contain" />
             ) : (
                 <span className="text-xl md:text-2xl font-extrabold tracking-tight notranslate">HEALO</span>
             )}

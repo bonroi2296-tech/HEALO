@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { MapPin, Star } from 'lucide-react';
 import { getLangCodeFromCookie, t } from "../lib/i18n";
 
@@ -26,13 +27,11 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
             className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer group flex flex-row min-h-[140px] md:h-56"
           >
           <div className="w-40 md:w-auto md:h-full md:aspect-square relative bg-gray-200 overflow-hidden shrink-0">
-            <img
-              src={type === 'hospital' ? item.images?.[0] : item.images?.[0]} 
-              onError={(e) => e.target.src = `https://placehold.co/600x600?text=${type}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+            <Image
+              src={item.images?.[0] || `https://placehold.co/600x600?text=${type}`}
               alt={item.name || item.title || "Treatment photo"}
-              loading="lazy"
-              decoding="async"
+              fill
+              className="object-cover group-hover:scale-105 transition duration-500"
             />
           </div>
           <div className="flex-1 p-3 md:p-5 flex flex-col justify-between min-w-0">

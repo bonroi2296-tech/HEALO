@@ -24,6 +24,7 @@ import { encryptString, encryptStringNullable } from "../../../../src/lib/securi
 import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../../src/lib/rateLimit";
 import { logInquiryReceived } from "../../../../src/lib/operationalLog";
 import { trackFunnelEvent } from "../../../../src/lib/events/funnelTracking";
+import { sendConfirmationEmail } from "../../../../src/lib/email/sendConfirmation";
 
 export async function POST(request: NextRequest) {
   // ✅ 환경변수 검증
@@ -159,6 +160,19 @@ export async function POST(request: NextRequest) {
       });
       
       console.log(`[${apiPath}] ✅ Inquiry created: ${inquiryId}`);
+      
+      // ========================================
+      // 4.5 확인 이메일 발송 (fire-and-forget)
+      // ========================================
+      if (body.email) {
+        sendConfirmationEmail({
+          to: body.email,
+          firstName: body.firstName,
+          inquiryId,
+          treatmentType: body.treatmentType,
+          language: body.spokenLanguage,
+        }).catch(err => console.error("[inquiries/create] confirmation email failed:", err));
+      }
       
       // ========================================
       // 5. 응답 반환

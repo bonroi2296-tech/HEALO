@@ -11,6 +11,7 @@
  */
 export const runtime = "nodejs";
 
+import { z } from "zod";
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
@@ -37,6 +38,17 @@ import {
 import { encryptText, assertEncryptionKey } from "../../../src/lib/security/encryption";
 
 type ChatMessage = { role: string; content: string };
+
+const chatSchema = z.object({
+  messages: z.array(z.object({
+    role: z.string(),
+    content: z.string(),
+  })).default([]),
+  lang: z.string().optional().default("en"),
+  session_id: z.string().optional().nullable(),
+  page: z.string().optional().nullable(),
+  utm: z.record(z.unknown()).optional().nullable(),
+});
 
 const isProd = process.env.NODE_ENV === "production";
 const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai").toLowerCase();
@@ -202,20 +214,20 @@ export async function POST(request: Request) {
     return jsonError(500, "encryption_key_missing", error?.message || "encryption_key_missing");
   }
 
-  let body: any = {};
+  let rawBody: any = {};
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch (error: any) {
     console.error("[api/chat] invalid json:", error);
     return jsonError(400, "invalid_json", error?.message || "invalid_json");
   }
-  const messages: ChatMessage[] = Array.isArray(body?.messages)
-    ? body.messages
-    : [];
-  const lang = body?.lang ? String(body.lang) : "en";
-  const sessionId = body?.session_id ? String(body.session_id) : null;
-  const page = body?.page ? String(body.page) : null;
-  const utm = body?.utm && typeof body.utm === "object" ? body.utm : null;
+
+  const parsed = chatSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return jsonError(400, "invalid_input", parsed.error.issues[0]?.message);
+  }
+
+  const { messages, lang, session_id: sessionId, page, utm } = parsed.data;
   const lastUser = getLastUserMessage(messages);
   const query = String(lastUser?.content || "").trim();
 

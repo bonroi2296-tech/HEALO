@@ -10,6 +10,7 @@
  */
 export const runtime = "nodejs";
 
+import { z } from "zod";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
 import { NextRequest } from "next/server";
 
@@ -24,24 +25,33 @@ type EventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
 const REQUIRES_INQUIRY_ID: EventType[] = ["step1_submitted", "step2_viewed", "step2_submitted"];
 
+const eventSchema = z.object({
+  eventType: z.enum(["step1_viewed", "step1_submitted", "step2_viewed", "step2_submitted"]),
+  inquiryId: z.number().optional().nullable(),
+  meta: z.record(z.unknown()).optional().default({}),
+});
+
 export async function POST(request: NextRequest) {
   try {
     assertSupabaseEnv();
     const body = await request.json().catch(() => ({}));
-    const eventType = body?.eventType ? String(body.eventType) : null;
-    const inquiryId = body?.inquiryId != null
-      ? (typeof body.inquiryId === "number" ? body.inquiryId : Number(body.inquiryId))
-      : null;
-    const meta = body?.meta && typeof body.meta === "object" && !Array.isArray(body.meta)
-      ? body.meta
-      : {};
 
-    if (!eventType || !ALLOWED_EVENT_TYPES.includes(eventType as EventType)) {
+    const parsed = eventSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      if (firstIssue?.path?.[0] === "eventType") {
+        return Response.json(
+          { ok: false, error: "invalid_event_type", allowed: ALLOWED_EVENT_TYPES },
+          { status: 400 }
+        );
+      }
       return Response.json(
         { ok: false, error: "invalid_event_type", allowed: ALLOWED_EVENT_TYPES },
         { status: 400 }
       );
     }
+
+    const { eventType, inquiryId, meta } = parsed.data;
 
     if (REQUIRES_INQUIRY_ID.includes(eventType as EventType)) {
       if (inquiryId == null || isNaN(inquiryId)) {

@@ -7,25 +7,31 @@
  */
 export const runtime = "nodejs";
 
+import { z } from "zod";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../../src/lib/rag/supabaseAdmin";
+
+const searchSchema = z.object({
+  query: z.string().min(1, "query_required"),
+  limit: z.number().optional().default(10),
+  lang: z.string().optional().nullable(),
+  sourceTypes: z.array(z.string()).optional().nullable(),
+});
 
 export async function POST(request: Request) {
   try {
     assertSupabaseEnv();
     const body = await request.json();
-    const query = String(body?.query || "").trim();
-    const limit = Number(body?.limit || 10);
-    const lang = body?.lang ? String(body.lang) : null;
-    const sourceTypes = Array.isArray(body?.sourceTypes)
-      ? body.sourceTypes
-      : null;
 
-    if (!query) {
+    const parsed = searchSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
       return Response.json(
-        { ok: false, error: "query_required" },
+        { ok: false, error: firstIssue?.message || "query_required" },
         { status: 400 }
       );
     }
+
+    const { query, limit, lang, sourceTypes } = parsed.data;
 
     const tokens = query
       .toLowerCase()

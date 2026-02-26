@@ -298,7 +298,7 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
           {siteConfig?.hero && (
             <img 
               src={siteConfig.hero} 
-              alt="Hero Background" 
+              alt="HEALO medical concierge hero" 
               className="w-full h-full object-cover opacity-60" 
               loading="eager"
               fetchPriority="high"
@@ -362,7 +362,7 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
               src={type === 'hospital' ? item.images?.[0] : item.images?.[0]} 
               onError={(e) => e.target.src = `https://placehold.co/600x600?text=${type}`}
               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-              alt="img"
+              alt={item.name || item.title || "Treatment photo"}
               loading="lazy"
               decoding="async"
             />

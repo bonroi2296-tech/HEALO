@@ -93,7 +93,7 @@ const ImageUploader = ({ images, onUpload, onRemove, uploading }) => {
                 <div className="grid grid-cols-4 gap-2">
                     {Array.isArray(images) && images.map((url, idx) => (
                         <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                            <img src={url} alt="upload" className="w-full h-full object-cover" />
+                            <img src={url} alt={`Uploaded image ${idx + 1}`} className="w-full h-full object-cover" />
                             <button 
                                 onClick={() => onRemove(idx)} 
                                 className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition shadow-sm"
@@ -970,7 +970,7 @@ export const AdminPage = ({ setView }) => {
                                         <img 
                                             src={selectedFile} 
                                             className="w-full h-auto" 
-                                            alt="preview"
+                                            alt="Attachment file preview"
                                             style={{ maxWidth: '100%' }}
                                             onError={() => {
                                                 console.warn('[AdminPage] Image preview failed:', selectedFile);

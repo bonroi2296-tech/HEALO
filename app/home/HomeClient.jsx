@@ -19,6 +19,7 @@ export default function HomeClient() {
   const [siteConfig, setSiteConfig] = useState({ logo: "", hero: "" });
   const [treatmentsError, setTreatmentsError] = useState(null);
   const [hospitalsError, setHospitalsError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const isDev = process.env.NODE_ENV !== "production";
 
   useEffect(() => {
@@ -84,8 +85,21 @@ export default function HomeClient() {
         setHospitalsError(err);
       }
     };
-    fetchFeatured();
+    fetchFeatured().finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="animate-pulse space-y-4 p-4">
+        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

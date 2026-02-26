@@ -8,13 +8,15 @@ import { createSupabaseBrowserClient } from '../../src/lib/supabase/browser';
 const supabase = createSupabaseBrowserClient();
 import { PolicyModal } from '../../src/components/Modals';
 import { useToast } from '../../src/components/Toast';
-import { getLangCodeFromCookie } from '../../src/lib/i18n';
+import { getLangCodeFromCookie, t } from '../../src/lib/i18n';
 import { event } from '../../src/lib/ga';
 import { useChat } from 'ai/react';
 
 // ✅ [수정 1] props에 treatments 추가 (App.jsx에서 받아옴)
 export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => {
   const toast = useToast(); // Toast 사용 준비
+  const [langCode, setLangCode] = useState('en');
+  useEffect(() => { setLangCode(getLangCodeFromCookie()); }, []);
   
   // ✅ DB 데이터만 사용
   const allTreatments = Array.isArray(treatments) ? treatments : [];
@@ -281,7 +283,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 md:py-16 text-center animate-in fade-in slide-in-from-bottom-4">
       <button onClick={handleBack} className="flex items-center text-sm font-bold text-gray-500 mb-6 md:mb-8 hover:text-teal-600">
-          <ChevronLeft size={16}/> {mode === 'select' ? 'Back' : 'Back to Options'}
+          <ChevronLeft size={16}/> {mode === 'select' ? t('inquiry.back', langCode) : t('inquiry.backToOptions', langCode)}
       </button>
       
       {mode === 'select' && (
@@ -421,7 +423,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             </div>
 
             <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-6 max-w-md md:max-w-none mx-auto">
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#25D366] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button onClick={() => toast.info("Coming soon! Please use the Inquiry Form for now.")} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#25D366] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center w-full">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#25D366]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#25D366]"/>
                     </div>
@@ -432,9 +434,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     <div className="text-[#25D366] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                         <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
                 
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#06C755] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button onClick={() => toast.info("Coming soon! Please use the Inquiry Form for now.")} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#06C755] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center w-full">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#06C755]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#06C755]"/>
                     </div>
@@ -445,9 +447,9 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     <div className="text-[#06C755] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                         <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
 
-                <a href="#" className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#07C160] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
+                <button onClick={() => toast.info("Coming soon! Please use the Inquiry Form for now.")} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#07C160] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center w-full">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-[#07C160]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#07C160]"/>
                     </div>
@@ -458,7 +460,7 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
                     <div className="text-[#07C160] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                         <span className="hidden md:inline">Chat Now</span> <ArrowRight size={20}/>
                     </div>
-                </a>
+                </button>
             </div>
         </div>
       )}

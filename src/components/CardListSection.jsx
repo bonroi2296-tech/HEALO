@@ -19,8 +19,17 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
     <section className="max-w-6xl mx-auto px-4 py-4 md:py-8">
       <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 mb-4 md:mb-6">{title}</h2>
 
+      {(!Array.isArray(items) || items.length === 0) ? (
+        <div className="text-center py-8 text-gray-400">
+          <p className="text-sm">
+            {type === 'treatment'
+              ? 'Treatments are being prepared. Check back soon!'
+              : 'Partner hospitals are being onboarded. Check back soon!'}
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-        {Array.isArray(items) && items.map((item) => (
+        {items.map((item) => (
           <div
             key={item.id}
             onClick={() => onCardClick(item.id)}
@@ -90,6 +99,7 @@ export const CardListSection = ({ title, items, onCardClick, type }) => {
         </div>
         ))}
       </div>
+      )}
     </section>
   );
 };

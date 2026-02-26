@@ -35,7 +35,7 @@ The app gracefully handles missing/invalid Supabase credentials at dev time by u
 - The `.env.local.example` file is **incomplete** — it only lists 3 of the ~6 required env vars. Refer to the list above.
 - The README is a **generic Vite template README** and does not describe this project (the project migrated from Vite to Next.js).
 - `typescript.ignoreBuildErrors` is `true` in `next.config.js` because Supabase schema types (`database.types.ts`) have not been generated yet. This means `npm run build` succeeds even with TS errors.
-- ESLint has ~33 pre-existing warnings/errors in the codebase. These are not regressions.
+- ESLint has ~65 pre-existing warnings/errors in the codebase. These are not regressions.
 - The middleware deprecation warning ("middleware" → "proxy") from Next.js 16 is expected and can be ignored.
 - No Docker, no git hooks, no pre-commit configuration, no CI/CD pipelines are set up.
 

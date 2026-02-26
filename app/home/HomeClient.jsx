@@ -23,50 +23,65 @@ export default function HomeClient() {
 
   useEffect(() => {
     const fetchFeatured = async () => {
-      const { data: settingsData } = await supabaseClient
-        .from("site_settings")
-        .select("*")
-        .single();
-      if (settingsData) {
-        setSiteConfig({
-          logo: settingsData.logo_url,
-          hero: settingsData.hero_background_url,
-        });
+      try {
+        const { data: settingsData } = await supabaseClient
+          .from("site_settings")
+          .select("*")
+          .single();
+        if (settingsData) {
+          setSiteConfig({
+            logo: settingsData.logo_url,
+            hero: settingsData.hero_background_url,
+          });
+        }
+      } catch (err) {
+        console.error("[HomeClient] Site settings fetch error:", err);
       }
+
       const locCol = getLocationColumn();
 
-      const { data: tData, error: tError } = await supabaseClient
-        .from("treatments")
-        .select(`*, hospitals(slug, name, location:${locCol})`)
-        .eq("is_published", true)
-        .order("display_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(4);
+      try {
+        const { data: tData, error: tError } = await supabaseClient
+          .from("treatments")
+          .select(`*, hospitals(slug, name, location:${locCol})`)
+          .eq("is_published", true)
+          .order("display_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(4);
 
-      if (tError) {
-        console.error("[HomeClient] Treatments fetch error:", tError);
-        setTreatmentsError(tError);
-      } else {
-        setTreatmentsError(null);
-        if (tData)
-          setFeaturedTreatments(tData.map(mapTreatmentRow).filter(Boolean));
+        if (tError) {
+          console.error("[HomeClient] Treatments fetch error:", tError);
+          setTreatmentsError(tError);
+        } else {
+          setTreatmentsError(null);
+          if (tData)
+            setFeaturedTreatments(tData.map(mapTreatmentRow).filter(Boolean));
+        }
+      } catch (err) {
+        console.error("[HomeClient] Treatments fetch exception:", err);
+        setTreatmentsError(err);
       }
 
-      const { data: hData, error: hError } = await supabaseClient
-        .from("hospitals")
-        .select(`*, location:${locCol}`)
-        .eq("is_published", true)
-        .order("display_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(4);
+      try {
+        const { data: hData, error: hError } = await supabaseClient
+          .from("hospitals")
+          .select(`*, location:${locCol}`)
+          .eq("is_published", true)
+          .order("display_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(4);
 
-      if (hError) {
-        console.error("[HomeClient] Hospitals fetch error:", hError);
-        setHospitalsError(hError);
-      } else {
-        setHospitalsError(null);
-        if (hData)
-          setFeaturedHospitals(hData.map(mapHospitalRow).filter(Boolean));
+        if (hError) {
+          console.error("[HomeClient] Hospitals fetch error:", hError);
+          setHospitalsError(hError);
+        } else {
+          setHospitalsError(null);
+          if (hData)
+            setFeaturedHospitals(hData.map(mapHospitalRow).filter(Boolean));
+        }
+      } catch (err) {
+        console.error("[HomeClient] Hospitals fetch exception:", err);
+        setHospitalsError(err);
       }
     };
     fetchFeatured();

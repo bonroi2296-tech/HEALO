@@ -39,6 +39,9 @@ export default function ClientShell({ children }) {
           console.log("[ClientShell] ✅ Initial session:", session?.user?.email || "none");
           setSession(session);
         }
+      })
+      .catch((err) => {
+        console.error("[ClientShell] getSession error:", err);
       });
       
     const { data } = supabaseClient.auth.onAuthStateChange(
@@ -58,6 +61,9 @@ export default function ClientShell({ children }) {
         if (mounted && data) {
           setSiteConfig({ logo: data.logo_url, hero: data.hero_background_url });
         }
+      })
+      .catch((err) => {
+        console.error("[ClientShell] site_settings fetch error:", err);
       });
       
     return () => {

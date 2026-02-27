@@ -110,6 +110,25 @@
 #   사용성을 떨어뜨리는 화려한 애니메이션이나 기능을 제안하지 않는다.
 #   명확성, 속도, 신뢰성을 우선한다.
 
+## 1.7 Page Philosophy (Founder's Intent)
+## 1.7 페이지 철학 (대표의 의도)
+
+# RULE: Homepage shows DATA only — treatments, partner hospitals, general hospitals.
+# 규칙: 메인 페이지에는 데이터만 — 시술 카드, 파트너 병원 카드, 일반 병원 카드.
+#
+# - NO service introduction content on the homepage (no "how it works", no FAQ,
+#   no trust badges, no social proof, no process steps).
+#   메인 페이지에 서비스 소개 콘텐츠를 넣지 않는다 (이용 방법, FAQ, 신뢰 지표, 프로세스 설명 등 금지).
+#
+# - Service introduction, features, company info → goes to /about page.
+#   서비스 소개, 특징, 회사 정보 → /about 페이지에 넣는다.
+#
+# - The homepage is a CATALOG, not a brochure.
+#   메인 페이지는 카탈로그이지, 브로셔가 아니다.
+#
+# - If you want to add promotional/explanatory content, put it on /about, NOT homepage.
+#   홍보/설명 콘텐츠를 추가하고 싶으면 /about에 넣는다. 메인 페이지에 넣지 않는다.
+
 
 # ================================================================
 # [SECTION 2] TECH STACK & ARCHITECTURE

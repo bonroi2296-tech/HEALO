@@ -363,13 +363,13 @@ export const HeroSection = ({ setView, searchTerm, setSearchTerm, siteConfig }) 
           <div className="absolute inset-0 bg-gradient-to-b from-teal-950/80 via-teal-900/60 to-teal-800/90 mix-blend-multiply"></div>
         </div>
         <div className="relative z-10 max-w-5xl mx-auto px-4 flex flex-col items-center">
-            <h1 className="text-[26px] sm:text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 leading-[1.2] drop-shadow-lg tracking-tight">
-              <span className="inline-block">{t("hero.title.line1", langCode)}</span>
-              <span className="text-teal-200"> {t("hero.title.highlight", langCode)}</span>
+            <h1 className="text-[26px] sm:text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 leading-[1.15] drop-shadow-lg tracking-tight text-balance">
+              {t("hero.title.line1", langCode)}{" "}
+              <span className="text-teal-200 whitespace-nowrap">{t("hero.title.highlight", langCode)}</span>
             </h1>
-            <p className="text-teal-50 text-xs sm:text-sm md:text-lg max-w-2xl mx-auto font-medium opacity-90 drop-shadow-md leading-relaxed">
+            <p className="text-teal-50 text-xs sm:text-sm md:text-lg max-w-2xl mx-auto font-medium opacity-90 drop-shadow-md leading-relaxed text-balance">
               {t("hero.subtitle.line1", langCode)}
-              <br className="hidden sm:block"/>
+              {" "}
               {t("hero.subtitle.line2", langCode)}
             </p>
         </div>
@@ -529,11 +529,11 @@ export const PersonalConciergeCTA = ({ onClick, className = "" }) => {
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-100">✨</span>
             <span>{t("cta.badge", langCode)}</span>
           </div>
-          <h3 className="mt-2 md:mt-3 text-xl md:text-3xl font-extrabold text-gray-900 leading-tight">
-            <span className="inline-block">{t("cta.title", langCode)}</span>
+          <h3 className="mt-2 md:mt-3 text-xl md:text-3xl font-extrabold text-gray-900 leading-tight text-balance">
+            {t("cta.title", langCode)}
           </h3>
           <p className="mt-1.5 md:mt-2 text-gray-700 text-xs md:text-base text-balance leading-relaxed">
-            <span className="inline-block">{t("cta.subtitle", langCode)}</span>
+            {t("cta.subtitle", langCode)}
           </p>
         </div>
         <div className="shrink-0 mt-2 md:mt-0">

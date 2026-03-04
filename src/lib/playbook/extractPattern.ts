@@ -145,8 +145,7 @@ async function llmEnhance(
   ctx: PatternContext
 ): Promise<ExtractedPattern> {
   const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!googleKey && !openaiKey) return base;
+  if (!googleKey) return base;
 
   const transcript = messages
     .filter((m) => !m.message_text.includes("[INTERNAL]"))
@@ -201,25 +200,6 @@ Rules:
       if (res.ok) {
         const data = await res.json();
         text = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-      }
-    } else if (openaiKey) {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 2000,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        text = data?.choices?.[0]?.message?.content || null;
       }
     }
 

@@ -7,11 +7,8 @@
 
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-import { openai } from "@ai-sdk/openai";
 
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "google").toLowerCase();
-const TRANSLATE_MODEL_GOOGLE = "gemini-2.5-flash";
-const TRANSLATE_MODEL_OPENAI = "gpt-4o-mini";
+const TRANSLATE_MODEL = "gemini-2.5-flash";
 
 export const SUPPORTED_LANGS = ["ko", "en", "zh", "ja"] as const;
 export type LangCode = (typeof SUPPORTED_LANGS)[number];
@@ -85,11 +82,8 @@ Only include fields that were provided in the input. Omit empty fields.`;
 // ============================================================
 
 function getModel() {
-  if (LLM_PROVIDER === "google" && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return google(TRANSLATE_MODEL_GOOGLE) as any;
-  }
-  if (process.env.OPENAI_API_KEY) {
-    return openai(TRANSLATE_MODEL_OPENAI) as any;
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return google(TRANSLATE_MODEL) as any;
   }
   return null;
 }

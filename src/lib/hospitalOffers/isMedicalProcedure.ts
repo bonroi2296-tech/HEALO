@@ -191,5 +191,5 @@ export async function filterCandidatesByMedicalProcedure<T extends { name: strin
 }
 
 export function isMedicalProcedureAvailable(): boolean {
-  return typeof process !== "undefined" && !!process.env.OPENAI_API_KEY;
+  return typeof process !== "undefined" && !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 }

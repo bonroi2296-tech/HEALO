@@ -1,21 +1,27 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { createSupabaseBrowserClient } from '../../src/lib/supabase/browser';
 import { useToast } from '../../src/components/Toast';
+import { getLangCodeFromCookie, t } from '../../src/lib/i18n';
 
 const supabase = createSupabaseBrowserClient();
 
 export const LoginPage = ({ setView }) => {
     const toast = useToast();
     const router = useRouter();
+    const [langCode, setLangCode] = useState('en');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [oauthLoading, setOauthLoading] = useState(false);
+
+    useEffect(() => {
+        setLangCode(getLangCodeFromCookie());
+    }, []);
 
     const handleLogin = async (e) => {
         if(e) e.preventDefault();
@@ -28,11 +34,11 @@ export const LoginPage = ({ setView }) => {
         });
 
         if (error) {
-            toast.error("Login failed. Please check your email and password.");
+            toast.error(t("login.error", langCode));
             setLoading(false);
         } else {
             console.log("Logged in:", data.user.email);
-            toast.success(`Welcome, ${data.user.email}!`);
+            toast.success(t("login.successPrefix", langCode) + data.user.email + "!");
             
             try {
                 const { data: sessionData } = await supabase.auth.getSession();
@@ -70,20 +76,20 @@ export const LoginPage = ({ setView }) => {
         <div className="min-h-[calc(100vh-64px)] min-h-screen-safe flex items-center justify-center bg-white px-4 py-8 pb-safe-area animate-in fade-in slide-in-from-bottom-4">
             <div className="max-w-sm w-full">
                 <div className="text-center mb-10">
-                    <h2 className="text-3xl font-extrabold text-gray-900">Welcome to HEALO</h2>
-                    <p className="text-gray-500 mt-2">Start Your Journey</p>
+                    <h2 className="text-3xl font-extrabold text-gray-900">{t("login.welcome", langCode)}</h2>
+                    <p className="text-gray-500 mt-2">{t("login.subtitle", langCode)}</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">{t("login.email", langCode)}</label>
                         <div className="relative">
                             <Mail className="absolute left-4 top-3.5 text-gray-400" size={20}/>
                             <input 
                                 type="email" 
                                 required
                                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all bg-gray-50"
-                                placeholder="name@example.com"
+                                placeholder={t("login.emailPlaceholder", langCode)}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
@@ -92,8 +98,8 @@ export const LoginPage = ({ setView }) => {
 
                     <div>
                         <div className="flex justify-between items-center mb-1">
-                            <label className="block text-sm font-bold text-gray-700">Password</label>
-                            <button type="button" onClick={() => toast.info("Please contact contact@healo.com to reset your password.")} className="text-xs font-bold text-teal-600 hover:underline">Forgot?</button>
+                            <label className="block text-sm font-bold text-gray-700">{t("login.password", langCode)}</label>
+                            <button type="button" onClick={() => toast.info(t("login.forgotHint", langCode))} className="text-xs font-bold text-teal-600 hover:underline">{t("login.forgot", langCode)}</button>
                         </div>
                         <div className="relative">
                             <Lock className="absolute left-4 top-3.5 text-gray-400" size={20}/>
@@ -120,14 +126,14 @@ export const LoginPage = ({ setView }) => {
                         disabled={loading}
                         className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-teal-700 transition-colors shadow-lg shadow-teal-600/20 disabled:bg-gray-400"
                     >
-                        {loading ? 'Logging in...' : 'Log In'}
+                        {loading ? t("login.loggingIn", langCode) : t("auth.login", langCode)}
                     </button>
                 </form>
 
                 <div className="mt-8">
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                        <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">Or continue with</span></div>
+                        <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">{t("login.orContinueWith", langCode)}</span></div>
                     </div>
 
                     <div className="mt-6">
@@ -153,14 +159,14 @@ export const LoginPage = ({ setView }) => {
                                     
                                     if (error) {
                                         console.error('[LoginPage] ❌ OAuth error:', error);
-                                        toast.error('Google login failed. Please try again.');
+                                        toast.error(t("login.googleError", langCode));
                                         setOauthLoading(false);
                                     } else {
                                         console.log('[LoginPage] ✅ OAuth initiated, redirecting to Google...');
                                     }
                                 } catch (err) {
                                     console.error('[LoginPage] ❌ Google OAuth exception:', err);
-                                    toast.error('An error occurred. Please try again.');
+                                    toast.error(t("login.errorOccurred", langCode));
                                     setOauthLoading(false);
                                 }
                             }}
@@ -175,16 +181,16 @@ export const LoginPage = ({ setView }) => {
                             </svg>
                             
                             <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
-                                {oauthLoading ? 'Connecting to Google...' : 'Continue with Google'}
+                                {oauthLoading ? t("login.googleConnecting", langCode) : t("login.googleContinue", langCode)}
                             </span>
                         </button>
                     </div>
                 </div>
 
                 <p className="mt-8 text-center text-gray-500">
-                    Don't have an account?{' '}
+                    {t("login.noAccount", langCode)}{' '}
                     <button onClick={() => setView('signup')} className="text-teal-600 font-bold hover:underline">
-                        Sign Up
+                        {t("auth.signup", langCode)}
                     </button>
                 </p>
             </div>

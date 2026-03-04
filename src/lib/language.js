@@ -1,43 +1,30 @@
 // src/lib/language.js
-// Language utility for multilingual content resolution
+// Language utility for multilingual content resolution (DB 콘텐츠 로케일)
+// UI 언어와 동일 소스 사용: healo_lang 쿠키 → getLangCodeFromCookie (i18n)
+
+import { getLangCodeFromCookie } from "./i18n";
 
 export const SUPPORTED_LANGS = ["ko", "en", "zh", "ja"];
 
+/** @deprecated UI는 i18n/LANG_OPTIONS 사용. DB 로케일은 getCurrentLangCode() 사용 */
 export const getCurrentLanguage = () => {
-  if (typeof document === 'undefined') return 'ENG';
-  
-  const cookies = document.cookie.split(';');
-  const langCookie = cookies.find(row => row.trim().startsWith('googtrans='));
-  
-  if (langCookie) {
-    const langCode = langCookie.split('=')[1].split('/').pop();
-    if (langCode === 'ko') return 'KR';
-    if (langCode === 'zh-CN') return 'ZH';
-    if (langCode === 'ja') return 'JA';
-  }
-  
+  const code = getCurrentLangCode();
+  if (code === 'ko') return 'KR';
+  if (code === 'zh') return 'ZH';
+  if (code === 'ja') return 'JPN';
   return 'ENG';
 };
 
+/** DB 콘텐츠·location 컬럼 선택에 사용. healo_lang(또는 googtrans)과 동기화 */
 export const getCurrentLangCode = () => {
   if (typeof document === 'undefined') return 'en';
-  
-  const cookies = document.cookie.split(';');
-  const langCookie = cookies.find(row => row.trim().startsWith('googtrans='));
-  
-  if (langCookie) {
-    const langCode = langCookie.split('=')[1].split('/').pop();
-    if (langCode === 'ko') return 'ko';
-    if (langCode === 'zh-CN') return 'zh';
-    if (langCode === 'ja') return 'ja';
-  }
-  
-  return 'en';
+  return getLangCodeFromCookie();
 };
 
+/** location_kr / location_en 선택. getCurrentLangCode()와 동일 소스 사용 */
 export const getLocationColumn = (lang = null) => {
-  const currentLang = lang || getCurrentLanguage();
-  return currentLang === 'KR' ? 'location_kr' : 'location_en';
+  const code = lang || getCurrentLangCode();
+  return code === 'ko' ? 'location_kr' : 'location_en';
 };
 
 /**

@@ -10,14 +10,12 @@ import "server-only";
 
 import { createHash } from "crypto";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { supabaseAdmin } from "../rag/supabaseAdmin";
 import { hashQuery, logRagDisabled } from "../rag/ragQueryEvents";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai").toLowerCase();
 const EMBEDDING_MODEL = "gemini-embedding-001";
 const EMBEDDING_DIMS = 768;
 
@@ -28,16 +26,12 @@ const TIER_LABELS: Record<number, string> = {
 };
 
 export function getModel() {
-  if (LLM_PROVIDER === "google") {
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return null;
-    return google("gemini-2.5-flash") as any;
-  }
-  if (!process.env.OPENAI_API_KEY) return null;
-  return openai("gpt-4o-mini") as any;
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return null;
+  return google("gemini-2.5-flash") as any;
 }
 
 export function getModelName() {
-  return LLM_PROVIDER === "google" ? "gemini-2.5-flash" : "gpt-4o-mini";
+  return "gemini-2.5-flash";
 }
 
 export async function getEmbedding(text: string): Promise<number[] | null> {

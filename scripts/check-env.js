@@ -16,9 +16,8 @@ const REQUIRED_VARS = {
   // Encryption (필수)
   ENCRYPTION_KEY_V2: '암호화 키 (32바이트 hex)',
   
-  // AI (선택 - 기능에 따라)
-  OPENAI_API_KEY: 'OpenAI API key (챗봇용)',
-  GOOGLE_GENERATIVE_AI_API_KEY: 'Google Gemini API key (정규화용)',
+  // AI (챗봇, 번역, 시술 추출 등 전체 LLM 기능)
+  GOOGLE_GENERATIVE_AI_API_KEY: 'Google AI (Gemini) API key',
 };
 
 // 선택 환경변수 (경고만)

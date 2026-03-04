@@ -1,9 +1,6 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-import { openai } from "@ai-sdk/openai";
 import type { EnrichmentSource, EnrichmentResult, HospitalRow } from "../types";
-
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "google").toLowerCase();
 
 function tryRepairJson(raw: string): any | null {
   let s = raw.replace(/,?\s*$/, "");
@@ -27,11 +24,8 @@ function tryRepairJson(raw: string): any | null {
 }
 
 function getModel() {
-  if (LLM_PROVIDER === "google" && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return google("gemini-2.5-flash") as any;
-  }
-  if (process.env.OPENAI_API_KEY) {
-    return openai("gpt-4o-mini") as any;
   }
   return null;
 }

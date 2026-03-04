@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useToast } from '../../../src/components/Toast';
-import { getLangCodeFromCookie } from '../../../src/lib/i18n';
+import { getLangCodeFromCookie, t } from '../../../src/lib/i18n';
 import { event } from '../../../src/lib/ga';
 
 export default function ConsultWrapper() {
   const router = useRouter();
   const toast = useToast();
+  const [langCode, setLangCode] = useState('en');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
-  // 간소화된 폼 데이터
   const [formData, setFormData] = useState({
     concern: '',
     country: '',
@@ -22,22 +22,25 @@ export default function ConsultWrapper() {
     contactId: '',
   });
 
+  useEffect(() => {
+    setLangCode(getLangCodeFromCookie());
+  }, []);
+
   const handleSubmit = async () => {
-    // 유효성 검사
     if (!formData.concern?.trim()) {
-      toast.error("Please describe your concern or treatment interest.");
+      toast.error(t("consult.errorConcern", langCode));
       return;
     }
     if (!formData.country?.trim()) {
-      toast.error("Please enter your country.");
+      toast.error(t("consult.errorCountry", langCode));
       return;
     }
     if (!formData.timing) {
-      toast.error("Please select your preferred timing.");
+      toast.error(t("consult.errorTiming", langCode));
       return;
     }
     if (!formData.contactMethod || !formData.contactId?.trim()) {
-      toast.error("Please provide your contact information.");
+      toast.error(t("consult.errorContact", langCode));
       return;
     }
 
@@ -68,7 +71,7 @@ export default function ConsultWrapper() {
       const createResult = await createResponse.json();
 
       if (!createResult.ok) {
-        throw new Error(createResult.error || 'Failed to submit consultation request.');
+        throw new Error(createResult.error || t("consult.errorSubmit", langCode));
       }
 
       // Analytics 이벤트
@@ -85,7 +88,7 @@ export default function ConsultWrapper() {
       
     } catch (error) {
       console.error('Consult submission error:', error);
-      toast.error(error.message || "Failed to submit. Please try again.");
+      toast.error(error.message || t("consult.errorSubmit", langCode));
       setLoading(false);
     }
   };
@@ -110,22 +113,22 @@ export default function ConsultWrapper() {
             </div>
 
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Case Received!</h2>
+              <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{t("consult.successTitle", langCode)}</h2>
               <p className="text-gray-500 text-sm">
-                Your case is being reviewed.<br/>
-                A coordinator will contact you shortly.
+                {t("consult.successReviewing", langCode)}<br/>
+                {t("consult.successContact", langCode)}
               </p>
             </div>
 
             <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-8">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 font-medium">Status</span>
+                <span className="text-gray-500 font-medium">{t("consult.status", langCode)}</span>
                 <span className="font-bold text-teal-600 bg-teal-100/50 px-3 py-1 rounded-lg border border-teal-100">
-                  Under Review
+                  {t("consult.underReview", langCode)}
                 </span>
               </div>
               <div className="mt-3 text-xs text-gray-500">
-                We'll reach you via {formData.contactMethod} within 24 hours.
+                {t("consult.reachVia", langCode).replace(/\{method\}/g, formData.contactMethod || '')}
               </div>
             </div>
 
@@ -133,7 +136,7 @@ export default function ConsultWrapper() {
               onClick={() => router.push('/')} 
               className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-100 transform active:scale-[0.98]"
             >
-              Return to Home
+              {t("success.returnHome", langCode)}
             </button>
           </div>
         </div>
@@ -148,63 +151,58 @@ export default function ConsultWrapper() {
           onClick={() => router.back()} 
           className="flex items-center text-sm font-bold text-gray-500 mb-6 hover:text-teal-600"
         >
-          <ChevronLeft size={16}/> Back
+          <ChevronLeft size={16}/> {t("consult.back", langCode)}
         </button>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          {/* 헤더 */}
           <div className="text-center mb-8">
             <div className="inline-block bg-teal-50 text-teal-600 text-xs font-bold px-3 py-1 rounded-full mb-3">
-              Beta
+              {t("consult.beta", langCode)}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              Start Consultation
+              {t("consult.title", langCode)}
             </h1>
             <p className="text-gray-500 text-sm">
-              Tell us what you need. We'll guide you to the best next step.
+              {t("consult.subtitle", langCode)}
             </p>
           </div>
 
-          {/* 간소화된 폼 */}
           <div className="space-y-5">
-            {/* Concern / Treatment */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                What brings you to HEALO? <span className="text-red-500">*</span>
+                {t("consult.labelConcern", langCode)} <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.concern}
                 onChange={(e) => setFormData({...formData, concern: e.target.value})}
                 className="w-full border border-gray-200 p-3 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition text-sm bg-gray-50/50"
                 rows="3"
-                placeholder="e.g. Looking for cancer treatment options, Need skin procedure consultation, General health check-up..."
+                placeholder={t("consult.placeholderConcern", langCode)}
               />
             </div>
 
-            {/* Country */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                Your Country <span className="text-red-500">*</span>
+                {t("consult.labelCountry", langCode)} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.country}
                 onChange={(e) => setFormData({...formData, country: e.target.value})}
                 className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition text-sm bg-gray-50/50"
-                placeholder="e.g. USA, Japan, UAE..."
+                placeholder={t("consult.placeholderCountry", langCode)}
               />
             </div>
 
-            {/* Timing */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                When do you need this? <span className="text-red-500">*</span>
+                {t("consult.labelTiming", langCode)} <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: 'asap', label: 'ASAP' },
-                  { value: '1-3months', label: '1–3 months' },
-                  { value: 'later', label: 'Later' },
+                  { value: 'asap', labelKey: 'consult.timingAsap' },
+                  { value: '1-3months', labelKey: 'consult.timing1to3' },
+                  { value: 'later', labelKey: 'consult.timingLater' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -216,23 +214,22 @@ export default function ConsultWrapper() {
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                     }`}
                   >
-                    {option.label}
+                    {t(option.labelKey, langCode)}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Contact Method */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                How should we contact you? <span className="text-red-500">*</span>
+                {t("consult.labelContact", langCode)} <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.contactMethod}
                 onChange={(e) => setFormData({...formData, contactMethod: e.target.value})}
                 className="w-full p-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition text-sm bg-white text-gray-700 font-medium mb-2"
               >
-                <option value="">Select method...</option>
+                <option value="">{t("consult.selectMethod", langCode)}</option>
                 <option value="WhatsApp">WhatsApp</option>
                 <option value="LINE">LINE</option>
                 <option value="WeChat">WeChat</option>
@@ -248,34 +245,31 @@ export default function ConsultWrapper() {
                   placeholder={
                     formData.contactMethod === 'Email' 
                       ? 'your@email.com' 
-                      : 'Phone number or ID'
+                      : t("consult.placeholderPhone", langCode)
                   }
                 />
               )}
             </div>
 
-            {/* 안내 메시지 */}
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle size={18} className="text-teal-600 shrink-0 mt-0.5" />
               <p className="text-xs text-teal-800 leading-relaxed">
-                <span className="font-bold">What happens next:</span> Our medical coordinator will review your case and contact you with personalized recommendations within 24 hours.
+                <span className="font-bold">{t("consult.whatsNextLabel", langCode)}</span> {t("consult.whatsNextDesc", langCode)}
               </p>
             </div>
 
-            {/* Submit 버튼 */}
             <button
               onClick={handleSubmit}
               disabled={loading}
               className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-teal-700 transition-colors shadow-lg shadow-teal-600/20 disabled:bg-gray-400 disabled:cursor-not-allowed transform active:scale-[0.98]"
             >
-              {loading ? 'Submitting...' : 'Connect me'}
+              {loading ? t("consult.submitting", langCode) : t("consult.connectMe", langCode)}
             </button>
           </div>
         </div>
 
-        {/* 하단 안내 */}
         <p className="text-center text-xs text-gray-500 mt-6">
-          This is a beta feature. Your information is encrypted and handled securely.
+          {t("consult.betaDisclaimer", langCode)}
         </p>
       </div>
     </div>

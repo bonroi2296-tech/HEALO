@@ -9,7 +9,7 @@ import {
   MessageCircle, X, ArrowRight, Stethoscope, Building2, Settings,
   FileText, UserCheck, Clock, ShieldCheck, Shield, Sparkles, User, LogOut
 } from 'lucide-react';
-import { getLangCodeFromCookie, getLangCodeFromLabel, t } from "./lib/i18n";
+import { getLangCodeFromCookie, setLangCookie, LANG_OPTIONS as I18N_LANG_OPTIONS, LANG_OPTIONS_PRIMARY, t } from "./lib/i18n";
 
 /**
  * 유틸: 바깥 클릭 시 닫기
@@ -28,18 +28,7 @@ const useOutsideClose = (isOpen, onClose) => {
   return ref;
 };
 
-const getLangFromCookie = () => {
-  if (typeof document === 'undefined') return 'ENG';
-  const cookies = document.cookie.split(';');
-  const langCookie = cookies.find((row) => row.trim().startsWith('googtrans='));
-  if (langCookie) {
-    const langCode = langCookie.split('=')[1].split('/').pop();
-    if (langCode === 'ko') return 'KOR';
-    if (langCode === 'zh-CN') return 'CHN';
-    if (langCode === 'ja') return 'JPN';
-  }
-  return 'ENG';
-};
+// 언어 코드는 i18n getLangCodeFromCookie() 사용 (healo_lang 우선, 20개 언어)
 
 const useLangCode = () => {
   const [langCode, setLangCode] = useState('en');
@@ -105,40 +94,22 @@ const UserMenu = ({ session, onLogout, langCode }) => {
   );
 };
 
-// --- 1. 헤더 ---
-export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, setIsMobileMenuOpen, onNavClick, session, onLogout, siteConfig, isHospitalUser }) => {
+// --- 1. 헤더 (langCode는 ClientShell에서 전달 — 푸터와 동일 소스) ---
+export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, setIsMobileMenuOpen, onNavClick, session, onLogout, siteConfig, isHospitalUser, langCode: langCodeProp }) => {
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState('ENG');
   const isAdmin = session?.user?.email === 'admin@healo.com';
-  const langCode = getLangCodeFromLabel(currentLang);
+  const langCode = langCodeProp ?? getLangCodeFromCookie();
   const langRef = useOutsideClose(isLangOpen, () => setIsLangOpen(false));
-  
-  useEffect(() => {
-    setCurrentLang(getLangFromCookie());
-  }, []);
+  const LANG_OPTIONS = I18N_LANG_OPTIONS;
 
-  const handleLanguageChange = (langLabel) => {
-      if (currentLang === langLabel) { setIsLangOpen(false); return; }
-      let googleLangCode = 'en';
-      switch (langLabel) {
-          case 'KOR': googleLangCode = 'ko'; break;
-          case 'CHN': googleLangCode = 'zh-CN'; break;
-          case 'JPN': googleLangCode = 'ja'; break;
-          default: googleLangCode = 'en';
-      }
-      document.cookie = `googtrans=/en/${googleLangCode}; path=/; domain=${window.location.hostname}`;
-      document.cookie = `googtrans=/en/${googleLangCode}; path=/;`;
-      setCurrentLang(langLabel);
-      setIsLangOpen(false);
-      window.location.reload();
+  const handleLanguageChange = (code) => {
+    if (langCode === code) { setIsLangOpen(false); return; }
+    setLangCookie(code);
+    setIsLangOpen(false);
+    window.location.reload();
   };
 
-  const LANG_OPTIONS = [
-    { code: 'ENG', label: 'English', flag: '🇺🇸' },
-    { code: 'KOR', label: '한국어', flag: '🇰🇷' },
-    { code: 'CHN', label: '中文', flag: '🇨🇳' },
-    { code: 'JPN', label: '日本語', flag: '🇯🇵' },
-  ];
+  const currentLangLabel = LANG_OPTIONS.find((l) => l.code === langCode)?.label ?? langCode;
 
   const isActive = (targetView) => String(view).includes(targetView);
 
@@ -193,20 +164,19 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all notranslate"
               >
                 <Globe size={15} />
-                <span className="text-sm font-medium">{currentLang}</span>
+                <span className="text-sm font-medium">{currentLangLabel}</span>
                 <ChevronDown size={13} className={`opacity-60 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
               </button>
               {isLangOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 py-1 notranslate">
-                  {LANG_OPTIONS.map((lang) => (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1 notranslate">
+                  {LANG_OPTIONS_PRIMARY.map((lang) => (
                     <button
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
-                      className={`w-full text-left px-3.5 py-2 text-sm flex items-center gap-2.5 transition-colors ${currentLang === lang.code ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                      className={`w-full text-left px-3.5 py-2 text-sm flex items-center gap-2.5 transition-colors ${langCode === lang.code ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
                     >
-                      <span className="text-base">{lang.flag}</span>
                       <span>{lang.label}</span>
-                      {currentLang === lang.code && <CheckCircle size={13} className="ml-auto text-teal-500" />}
+                      {langCode === lang.code && <CheckCircle size={13} className="ml-auto text-teal-500 shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -328,18 +298,17 @@ export const Header = ({ setView, view, handleGlobalInquiry, isMobileMenuOpen, s
                 </button>
               </div>
 
-              {/* Language */}
+              {/* Language — UI+콘텐츠 둘 다 지원하는 4개만 노출 */}
               <div className="px-5 py-3 border-t border-gray-100">
                 <div className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-2 px-1">Language</div>
                 <div className="grid grid-cols-2 gap-1.5 notranslate">
-                  {LANG_OPTIONS.map((lang) => (
+                  {LANG_OPTIONS_PRIMARY.map((lang) => (
                     <button
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentLang === lang.code ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200' : 'text-gray-600 hover:bg-gray-50'}`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${langCode === lang.code ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200' : 'text-gray-600 hover:bg-gray-50'}`}
                     >
-                      <span>{lang.flag}</span>
-                      <span>{lang.code}</span>
+                      <span>{lang.label}</span>
                     </button>
                   ))}
                 </div>

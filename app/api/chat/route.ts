@@ -12,7 +12,6 @@
 export const runtime = "nodejs";
 
 import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { supabaseAdmin, assertSupabaseEnv } from "../../../src/lib/rag/supabaseAdmin";
 import { checkRateLimit, getClientIp, RATE_LIMITS, getRateLimitHeaders } from "../../../src/lib/rateLimit";
@@ -40,7 +39,6 @@ import { safeRagSearch } from "../../../src/lib/rag/safeSearch";
 type ChatMessage = { role: string; content: string };
 
 const isProd = process.env.NODE_ENV === "production";
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai").toLowerCase();
 
 const jsonError = (
   status: number,
@@ -59,44 +57,14 @@ const jsonError = (
 };
 
 const getModel = () => {
-  if (LLM_PROVIDER === "google") {
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      console.error("[api/chat] GOOGLE_GENERATIVE_AI_API_KEY is missing");
-      return { error: jsonError(500, "google_key_missing", "GOOGLE_GENERATIVE_AI_API_KEY is missing") };
-    }
-    return { model: google("gemini-2.5-flash") as any };
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    console.error("[api/chat] GOOGLE_GENERATIVE_AI_API_KEY is missing");
+    return { error: jsonError(500, "google_key_missing", "GOOGLE_GENERATIVE_AI_API_KEY is missing") };
   }
-  if (!process.env.OPENAI_API_KEY) {
-    console.error("[api/chat] OPENAI_API_KEY is missing");
-    return { error: jsonError(500, "openai_key_missing", "OPENAI_API_KEY is missing") };
-  }
-  return { model: openai("gpt-4o-mini") as any };
+  return { model: google("gemini-2.5-flash") as any };
 };
 
-const getModelName = () =>
-  LLM_PROVIDER === "google" ? "gemini-2.5-flash" : "gpt-4o-mini";
-
-const classifyOpenAiError = (error: any) => {
-  const message = String(error?.message || "");
-  const lower = message.toLowerCase();
-
-  if (lower.includes("insufficient_quota") || lower.includes("quota")) {
-    return { status: 402, code: "openai_quota_exceeded", message };
-  }
-  if (lower.includes("invalid_api_key") || lower.includes("api key")) {
-    return { status: 401, code: "openai_invalid_key", message };
-  }
-  if (
-    lower.includes("model") &&
-    (lower.includes("not found") || lower.includes("does not exist") || lower.includes("access"))
-  ) {
-    return { status: 403, code: "openai_model_access", message };
-  }
-  if (lower.includes("rate limit")) {
-    return { status: 429, code: "openai_rate_limited", message };
-  }
-  return { status: 502, code: "openai_error", message };
-};
+const getModelName = () => "gemini-2.5-flash";
 
 const classifyGoogleError = (error: any) => {
   const message = String(error?.message || "");
@@ -365,10 +333,7 @@ export async function POST(request: Request) {
     return result.toDataStreamResponse();
   } catch (error: any) {
     console.error("[api/chat] LLM error:", error);
-    const classified =
-      LLM_PROVIDER === "google"
-        ? classifyGoogleError(error)
-        : classifyOpenAiError(error);
+    const classified = classifyGoogleError(error);
     return jsonError(classified.status, classified.code, classified.message);
   }
 }

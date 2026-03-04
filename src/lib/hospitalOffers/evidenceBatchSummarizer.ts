@@ -3,11 +3,11 @@
  */
 
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import type { OfferItem, TreatmentOffer, OfferEvidence } from "./types";
 import type { EvidenceChunk } from "./evidenceCollector";
 
-const MODEL = (process.env.OFFERS_SUMMARY_MODEL || "gpt-4o-mini").trim();
+const MODEL = (process.env.OFFERS_SUMMARY_MODEL || "gemini-2.5-flash").trim();
 const TIMEOUT_MS = 10_000;
 const TEMPERATURE = 0;
 
@@ -54,8 +54,8 @@ export interface BatchSummarizerResult {
 }
 
 function getModel() {
-  if (process.env.OPENAI_API_KEY) {
-    return openai(MODEL) as ReturnType<typeof openai>;
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return google(MODEL) as ReturnType<typeof google>;
   }
   return null;
 }

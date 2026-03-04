@@ -14,38 +14,20 @@ require("dotenv").config({ path: ".env.local" });
 const fs = require("fs");
 const path = require("path");
 
-// --key auto-detects provider: sk-* → OpenAI, AIza* → Gemini
+// --key for GOOGLE_GENERATIVE_AI_API_KEY (AIza*)
 const cliKeyIdx = process.argv.indexOf("--key");
-const CLI_KEY = cliKeyIdx !== -1 ? process.argv[cliKeyIdx + 1] : null;
+const GEMINI_KEY = cliKeyIdx !== -1 ? process.argv[cliKeyIdx + 1] : process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
-let GEMINI_KEY, OPENAI_KEY;
-if (CLI_KEY) {
-  if (CLI_KEY.startsWith("sk-")) {
-    OPENAI_KEY = CLI_KEY;
-    GEMINI_KEY = null;
-  } else {
-    GEMINI_KEY = CLI_KEY;
-    OPENAI_KEY = null;
-  }
-} else {
-  GEMINI_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  OPENAI_KEY = process.env.OPENAI_API_KEY;
-}
-
-const USE_OPENAI = !GEMINI_KEY && !!OPENAI_KEY;
-if (!GEMINI_KEY && !OPENAI_KEY) {
+if (!GEMINI_KEY) {
   console.error("API 키가 필요합니다:");
-  console.error("  --key <KEY>   (자동 감지: sk-* → OpenAI, AIza* → Gemini)");
-  console.error("  .env.local의 GOOGLE_GENERATIVE_AI_API_KEY 또는 OPENAI_API_KEY");
+  console.error("  --key <KEY>   (Google AI API Key, AIza* 형식)");
+  console.error("  .env.local의 GOOGLE_GENERATIVE_AI_API_KEY");
   process.exit(1);
 }
 
-const GEMINI_URL = GEMINI_KEY
-  ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`
-  : null;
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const BATCH_SIZE = USE_OPENAI ? 10 : 10;
-const REQUEST_DELAY_MS = USE_OPENAI ? 800 : 4500;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+const BATCH_SIZE = 10;
+const REQUEST_DELAY_MS = 4500;
 const MAX_RETRIES = 5;
 
 // ============================================================
@@ -113,19 +95,6 @@ function buildGeminiBody(batch) {
   };
 }
 
-function buildOpenAIBody(batch) {
-  return {
-    model: "gpt-4o-mini",
-    temperature: 0.1,
-    max_tokens: 8192,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT + '\n\nWrap your JSON array in {"results": [...]}.' },
-      { role: "user", content: buildUserMessage(batch) },
-    ],
-  };
-}
-
 function safeParseJsonArray(raw) {
   let text = raw.trim();
   // Strip markdown code fences
@@ -156,41 +125,7 @@ function safeParseJsonArray(raw) {
 
 async function callLLM(batch, attempt = 1) {
   try {
-    let parsed;
-
-    if (USE_OPENAI) {
-      const res = await fetch(OPENAI_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_KEY}`,
-        },
-        body: JSON.stringify(buildOpenAIBody(batch)),
-      });
-
-      if (res.status === 429 || res.status === 503) {
-        if (attempt <= MAX_RETRIES) {
-          const wait = 10000 * attempt;
-          console.log(`\n  Rate limited, ${wait / 1000}초 대기 후 재시도 (${attempt}/${MAX_RETRIES})...`);
-          await sleep(wait);
-          return callLLM(batch, attempt + 1);
-        }
-        throw new Error(`Rate limited after ${MAX_RETRIES} retries`);
-      }
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`OpenAI ${res.status}: ${errText.slice(0, 300)}`);
-      }
-
-      const json = await res.json();
-      const text = json?.choices?.[0]?.message?.content;
-      if (!text) throw new Error("Empty OpenAI response");
-
-      const obj = JSON.parse(text);
-      parsed = obj.results || obj;
-    } else {
-      const res = await fetch(GEMINI_URL, {
+    const res = await fetch(GEMINI_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildGeminiBody(batch)),
@@ -212,13 +147,11 @@ async function callLLM(batch, attempt = 1) {
         throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
       }
 
-      const json = await res.json();
-      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Empty Gemini response");
+    const json = await res.json();
+    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("Empty Gemini response");
 
-      parsed = safeParseJsonArray(text);
-    }
-
+    const parsed = safeParseJsonArray(text);
     if (!Array.isArray(parsed)) throw new Error("Response is not an array");
     return parsed;
   } catch (err) {
@@ -279,7 +212,7 @@ async function main() {
   }
 
   console.log("=== HIRA 데이터 영문 번역 ===\n");
-  console.log(`LLM: ${USE_OPENAI ? "OpenAI gpt-4o-mini" : "Google Gemini Flash"}`);
+  console.log(`LLM: Google Gemini Flash`);
   console.log(`입력: ${inputPath}`);
 
   const allData = JSON.parse(fs.readFileSync(inputPath, "utf-8"));

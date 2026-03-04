@@ -5,9 +5,9 @@
  */
 
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 
-const MODEL = "gpt-4o-mini";
+const MODEL = "gemini-2.5-flash";
 const TIMEOUT_MS = 8_000;
 const TEMPERATURE = 0;
 
@@ -24,8 +24,8 @@ Return ONLY valid JSON in this exact format (no markdown, no other text):
 - Preserve the exact "name" from input for each label. Output array length must equal input array length.`;
 
 function getModel() {
-  if (process.env.OPENAI_API_KEY) {
-    return openai(MODEL) as ReturnType<typeof openai>;
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return google(MODEL) as ReturnType<typeof google>;
   }
   return null;
 }

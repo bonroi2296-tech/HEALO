@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Check } from 'lucide-react';
 import { createSupabaseBrowserClient } from '../../src/lib/supabase/browser';
 import { useToast } from '../../src/components/Toast';
 import { PolicyModal } from '../../src/components/Modals';
 import { PRIVACY_CONTENT, TERMS_CONTENT } from '../../src/lib/policyContent';
+import { getLangCodeFromCookie, t } from '../../src/lib/i18n';
 
 const supabase = createSupabaseBrowserClient();
 
 export const SignUpPage = ({ setView }) => {
     const toast = useToast();
+    const [langCode, setLangCode] = useState('en');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -25,21 +27,25 @@ export const SignUpPage = ({ setView }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    useEffect(() => {
+        setLangCode(getLangCodeFromCookie());
+    }, []);
+
     const handleSignUp = async () => {
         if (!firstName || !lastName || !email) {
-            toast.error("Please fill in all required fields.");
+            toast.error(t("signup.errorRequired", langCode));
             return;
         }
         if (!isAgreed) {
-            toast.error("Please agree to the Terms and Privacy Policy.");
+            toast.error(t("signup.agreeError", langCode));
             return;
         }
         if (password.length < 6) {
-            toast.error("Password must be at least 6 characters.");
+            toast.error(t("signup.errorPasswordLength", langCode));
             return;
         }
         if (password !== confirmPassword) {
-            toast.error("Passwords do not match.");
+            toast.error(t("signup.passwordMismatch", langCode));
             return;
         }
 
@@ -58,9 +64,9 @@ export const SignUpPage = ({ setView }) => {
         });
 
         if (error) {
-            toast.error("Sign up failed: " + error.message);
+            toast.error(t("signup.errorFailed", langCode) + ": " + error.message);
         } else {
-            toast.success("Account created! 🎉\nPlease check your email.");
+            toast.success(t("signup.successCreated", langCode));
             setView('login');
         }
         setLoading(false);
@@ -70,14 +76,14 @@ export const SignUpPage = ({ setView }) => {
         <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 px-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 md:p-10 border border-gray-100">
                 <div className="text-center mb-8">
-                    <h2 className="text-3xl font-extrabold text-gray-900">Create Account</h2>
-                    <p className="text-gray-500 mt-2">Join HEALO for exclusive benefits</p>
+                    <h2 className="text-3xl font-extrabold text-gray-900">{t("signup.title", langCode)}</h2>
+                    <p className="text-gray-500 mt-2">{t("signup.subtitle", langCode)}</p>
                 </div>
 
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">First Name</label>
+                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t("signup.firstName", langCode)}</label>
                             <input 
                                 type="text" 
                                 placeholder="John" 
@@ -87,7 +93,7 @@ export const SignUpPage = ({ setView }) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Last Name</label>
+                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">{t("signup.lastName", langCode)}</label>
                             <input 
                                 type="text" 
                                 placeholder="Doe" 
@@ -98,7 +104,7 @@ export const SignUpPage = ({ setView }) => {
                         </div>
                     </div>
                     <p className="text-[10px] text-gray-400 px-1 -mt-2">
-                        Make sure this matches the name on your passport.
+                        {t("signup.passportNote", langCode)}
                     </p>
 
                     <div>
@@ -106,7 +112,7 @@ export const SignUpPage = ({ setView }) => {
                             <Mail className="absolute left-4 top-3.5 text-gray-400" size={20}/>
                             <input 
                                 type="email" 
-                                placeholder="Email Address" 
+                                placeholder={t("signup.emailPlaceholder", langCode)} 
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition text-sm"
@@ -120,7 +126,7 @@ export const SignUpPage = ({ setView }) => {
                             type={showPassword ? "text" : "password"} 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password (Min. 6 chars)" 
+                            placeholder={t("signup.passwordPlaceholder", langCode)} 
                             className="w-full pl-12 pr-12 py-3 rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition text-sm"
                         />
                         <button 
@@ -138,7 +144,7 @@ export const SignUpPage = ({ setView }) => {
                             type={showConfirmPassword ? "text" : "password"} 
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm Password" 
+                            placeholder={t("signup.confirmPassword", langCode)} 
                             className={`w-full pl-12 pr-12 py-3 rounded-xl border focus:ring-2 outline-none transition text-sm ${
                                 confirmPassword && password !== confirmPassword 
                                 ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
@@ -154,7 +160,7 @@ export const SignUpPage = ({ setView }) => {
                         </button>
                     </div>
                     {confirmPassword && password !== confirmPassword && (
-                        <p className="text-[10px] text-red-500 px-1 -mt-2">Passwords do not match.</p>
+                        <p className="text-[10px] text-red-500 px-1 -mt-2">{t("signup.passwordMismatch", langCode)}</p>
                     )}
 
                     <div className="space-y-3 pt-2">
@@ -172,7 +178,7 @@ export const SignUpPage = ({ setView }) => {
                                 </div>
                             </div>
                             <label htmlFor="terms" className="text-xs text-gray-500 cursor-pointer select-none leading-snug">
-                                I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">Privacy Policy</span> and <span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="text-teal-600 font-bold hover:underline">Terms</span>. <span className="text-red-500">*</span>
+                                {t("signup.agreePrefix", langCode)}<span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="text-teal-600 font-bold hover:underline">{t("signup.privacyPolicy", langCode)}</span>{t("signup.agreeAnd", langCode)}<span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="text-teal-600 font-bold hover:underline">{t("signup.terms", langCode)}</span>. <span className="text-red-500">*</span>
                             </label>
                         </div>
 
@@ -190,7 +196,7 @@ export const SignUpPage = ({ setView }) => {
                                 </div>
                             </div>
                             <label htmlFor="marketing" className="text-xs text-gray-500 cursor-pointer select-none leading-snug">
-                                I want to receive marketing emails including exclusive medical deals.
+                                {t("signup.marketingConsent", langCode)}
                             </label>
                         </div>
                     </div>
@@ -200,13 +206,13 @@ export const SignUpPage = ({ setView }) => {
                         disabled={loading}
                         className={`w-full font-bold py-3.5 rounded-xl transition shadow-lg ${isAgreed && !loading ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-teal-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                     >
-                        {loading ? 'Creating Account...' : 'Sign Up'}
+                        {loading ? t("signup.creatingAccount", langCode) : t("auth.signup", langCode)}
                     </button>
                 </div>
 
                 <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                    <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">Or sign up faster with Google</span></div>
+                    <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">{t("signup.orGoogle", langCode)}</span></div>
                 </div>
 
                 <div className="mb-8">
@@ -225,14 +231,14 @@ export const SignUpPage = ({ setView }) => {
                                 
                                 if (error) {
                                     console.error('[SignUpPage] ❌ OAuth error:', error);
-                                    toast.error('Google sign-up failed. Please try again.');
+                                    toast.error(t("signup.googleError", langCode));
                                     setLoading(false);
                                 } else {
                                     console.log('[SignUpPage] ✅ OAuth initiated, redirecting to Google...');
                                 }
                             } catch (err) {
                                 console.error('[SignUpPage] ❌ Google OAuth exception:', err);
-                                toast.error('An error occurred. Please try again.');
+                                toast.error(t("signup.errorOccurred", langCode));
                                 setLoading(false);
                             }
                         }}
@@ -247,26 +253,26 @@ export const SignUpPage = ({ setView }) => {
                         </svg>
                         
                         <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
-                            {loading ? 'Connecting to Google...' : 'Sign up with Google'}
+                            {loading ? t("signup.googleConnecting", langCode) : t("signup.googleButton", langCode)}
                         </span>
                     </button>
                 </div>
 
                 <div className="text-center text-sm text-gray-500">
-                    Already have an account? <span onClick={() => setView('login')} className="text-teal-600 font-bold cursor-pointer hover:underline">Log In</span>
+                    {t("signup.hasAccount", langCode)} <span onClick={() => setView('login')} className="text-teal-600 font-bold cursor-pointer hover:underline">{t("signup.loginLink", langCode)}</span>
                 </div>
             </div>
 
             <PolicyModal 
                 isOpen={activeModal === 'privacy'} 
                 onClose={() => setActiveModal(null)} 
-                title="Privacy Policy" 
+                title={t("signup.privacyPolicy", langCode)} 
                 content={PRIVACY_CONTENT} 
             />
             <PolicyModal 
                 isOpen={activeModal === 'terms'} 
                 onClose={() => setActiveModal(null)} 
-                title="Terms of Service" 
+                title={t("signup.terms", langCode)} 
                 content={TERMS_CONTENT} 
             />
         </div>

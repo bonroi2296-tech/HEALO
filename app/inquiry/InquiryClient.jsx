@@ -6,11 +6,38 @@ import { getPrivacyPolicyText, getTermsPolicyText } from '../../src/lib/policies
 import { PolicyModal } from '../../src/components/Modals';
 import { useToast } from '../../src/components/Toast';
 import { getLangCodeFromCookie, t } from '../../src/lib/i18n';
+import { SITE_INFO } from '../../src/lib/siteSettings';
 import { useLang } from '../../src/lib/i18n/LangContext';
 import { event } from '../../src/lib/ga';
 import { useChat } from 'ai/react';
 import { InquiryFormB } from './InquiryFormB';
 import { ThreadChat } from './ThreadChat';
+
+function MessengerCard({ name, url, iconColor, iconHref, regionKey, langCode, t, toast }) {
+  const handleClick = () => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.info(t('inquiry.messengerComingSoon', langCode));
+    }
+  };
+  const baseClass = "group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center w-full";
+  const borderStyle = url ? { '--hover-color': iconColor } : {};
+  return (
+    <button type="button" onClick={handleClick} className={baseClass} style={borderStyle}>
+      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-110 transition-transform duration-300 bg-gray-50">
+        <img src={iconHref} alt={name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
+      </div>
+      <div className="flex-1">
+        <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">{name}</h3>
+        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t(regionKey, langCode)}</p>
+      </div>
+      <div className="font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: iconColor }}>
+        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
+      </div>
+    </button>
+  );
+}
 
 // ✅ [수정 1] props에 treatments 추가 (App.jsx에서 받아옴)
 export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => {
@@ -412,44 +439,36 @@ export const InquiryPage = ({ setView, mode, setMode, onClose, treatments }) => 
             </div>
 
             <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-6 max-w-md md:max-w-none mx-auto">
-                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#25D366] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-[#25D366]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                        <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#25D366]"/>
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">WhatsApp</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.globalSupport', langCode)}</p>
-                    </div>
-                    <div className="text-[#25D366] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
-                    </div>
-                </button>
-                
-                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#06C755] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-[#06C755]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                        <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#06C755]"/>
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">LINE</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.japanThai', langCode)}</p>
-                    </div>
-                    <div className="text-[#06C755] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
-                    </div>
-                </button>
-
-                <button type="button" onClick={() => toast.info(t('inquiry.messengerComingSoon', langCode))} className="group bg-white border border-gray-200 rounded-2xl p-4 md:p-8 hover:border-[#07C160] hover:shadow-xl transition-all cursor-pointer flex flex-row md:flex-col items-center gap-4 md:gap-0 text-left md:text-center">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-[#07C160]/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                        <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-[#07C160]"/>
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-base md:text-xl font-bold text-gray-900 md:mb-1">WeChat</h3>
-                        <p className="text-xs md:text-sm text-gray-400 md:mb-6">{t('inquiry.chinaSupport', langCode)}</p>
-                    </div>
-                    <div className="text-[#07C160] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                        <span className="hidden md:inline">{t('inquiry.chatNow', langCode)}</span> <ArrowRight size={20}/>
-                    </div>
-                </button>
+                <MessengerCard
+                    name="WhatsApp"
+                    url={SITE_INFO.messenger?.whatsapp}
+                    iconColor="#25D366"
+                    iconHref="https://cdn.simpleicons.org/whatsapp/25D366"
+                    regionKey="inquiry.globalSupport"
+                    langCode={langCode}
+                    t={t}
+                    toast={toast}
+                />
+                <MessengerCard
+                    name="LINE"
+                    url={SITE_INFO.messenger?.line}
+                    iconColor="#06C755"
+                    iconHref="https://cdn.simpleicons.org/line/00B900"
+                    regionKey="inquiry.japanThai"
+                    langCode={langCode}
+                    t={t}
+                    toast={toast}
+                />
+                <MessengerCard
+                    name="WeChat"
+                    url={SITE_INFO.messenger?.wechat}
+                    iconColor="#07C160"
+                    iconHref="https://cdn.simpleicons.org/wechat/07C160"
+                    regionKey="inquiry.chinaSupport"
+                    langCode={langCode}
+                    t={t}
+                    toast={toast}
+                />
             </div>
         </div>
       )}

@@ -10,7 +10,6 @@
  * 주의: 실제 모델 학습은 포함하지 않음
  */
 
-import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { supabaseAdmin } from "../src/lib/rag/supabaseAdmin";
@@ -19,8 +18,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 // 환경 변수
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai").toLowerCase();
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 // 결과 타입
@@ -144,16 +141,10 @@ function generateInquiries(count: number = 200): Array<{ id: number; text: strin
  * LLM 모델 가져오기
  */
 function getModel() {
-  if (LLM_PROVIDER === "google") {
-    if (!GOOGLE_GENERATIVE_AI_API_KEY) {
-      throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is missing");
-    }
-    return google("gemini-2.0-flash");
+  if (!GOOGLE_GENERATIVE_AI_API_KEY) {
+    throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is missing");
   }
-  if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is missing");
-  }
-  return openai("gpt-4o-mini");
+  return google("gemini-2.0-flash");
 }
 
 /**
@@ -437,8 +428,8 @@ async function main() {
   console.log("=".repeat(60));
 
   // 환경 변수 확인
-  if (!OPENAI_API_KEY && !GOOGLE_GENERATIVE_AI_API_KEY) {
-    console.error("❌ Error: OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY is required");
+  if (!GOOGLE_GENERATIVE_AI_API_KEY) {
+    console.error("❌ Error: GOOGLE_GENERATIVE_AI_API_KEY is required");
     process.exit(1);
   }
 

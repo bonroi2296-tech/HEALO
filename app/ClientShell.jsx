@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, ExternalLink } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { supabaseClient } from "../src/lib/data/supabaseClient";
 import { SITE_INFO } from "../src/lib/siteSettings";
 import { getLangCodeFromCookie, t } from "../src/lib/i18n";
@@ -249,6 +249,7 @@ function ClientShellContent({
           onLogout={handleLogout}
           siteConfig={siteConfig}
           isHospitalUser={isHospitalUser}
+          langCode={langCode}
         />
       )}
 
@@ -262,7 +263,7 @@ function ClientShellContent({
             <div>
               <div className="text-gray-900 font-bold">{SITE_INFO.brand.name}</div>
               <div className="text-xs text-gray-500 mt-2">
-                {SITE_INFO.brand.tagline}
+                {t("footer.tagline", langCode)}
               </div>
             </div>
             <div>
@@ -342,37 +343,29 @@ function ClientShellContent({
 }
 
 /* ──────────────────────────────────────────────
-   Portal Top Bar — slim header for admin/hospital pages
+   Portal Top Bar — 메인과 동일한 teal 톤, 좌측 로고로 메인 이동
    ────────────────────────────────────────────── */
 function PortalTopBar({ session, onLogout, siteConfig, langCode }) {
   return (
-    <header className="fixed top-0 left-0 right-0 h-12 z-50 bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-4 pt-safe-area">
-      <Link href="/" className="flex items-center gap-2 shrink-0">
+    <header className="fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-teal-600 text-white shadow-sm flex items-center justify-between px-4 pt-safe-area">
+      <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
         {siteConfig?.logo ? (
-          <img src={siteConfig.logo} alt="HEALO" className="h-7 w-auto" />
+          <img src={siteConfig.logo} alt="HEALO" className="h-8 w-auto object-contain" />
         ) : (
-          <span className="text-lg font-bold text-teal-600">HEALO</span>
+          <span className="text-xl font-extrabold tracking-tight notranslate">HEALO</span>
         )}
       </Link>
 
       <div className="flex items-center gap-3 text-sm">
-        <Link
-          href="/"
-          className="hidden sm:flex items-center gap-1 text-gray-500 hover:text-teal-600 transition-colors"
-        >
-          <ExternalLink size={14} />
-          <span>{t("auth.mainSite", langCode)}</span>
-        </Link>
-
         {session?.user?.email && (
-          <span className="hidden md:block text-gray-400 truncate max-w-[180px]">
+          <span className="hidden md:block text-white/70 truncate max-w-[180px]">
             {session.user.email}
           </span>
         )}
 
         <button
           onClick={onLogout}
-          className="flex items-center gap-1 text-gray-500 hover:text-red-600 transition-colors ml-1"
+          className="flex items-center gap-1 text-white/80 hover:text-white transition-colors ml-1"
         >
           <LogOut size={15} />
           <span className="hidden sm:inline">{t("auth.logout", langCode)}</span>

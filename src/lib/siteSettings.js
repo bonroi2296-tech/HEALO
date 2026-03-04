@@ -1,4 +1,9 @@
 export const SITE_INFO = {
+  messenger: {
+    whatsapp: process.env.NEXT_PUBLIC_MESSENGER_WHATSAPP_URL || "",
+    line: process.env.NEXT_PUBLIC_MESSENGER_LINE_URL || "",
+    wechat: process.env.NEXT_PUBLIC_MESSENGER_WECHAT_URL || "",
+  },
   brand: {
     name: "HEALO",
     tagline: "AI Medical Concierge for Global Patients",

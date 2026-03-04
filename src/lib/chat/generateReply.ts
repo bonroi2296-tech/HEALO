@@ -13,6 +13,8 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { supabaseAdmin } from "../rag/supabaseAdmin";
 import { hashQuery, logRagDisabled } from "../rag/ragQueryEvents";
+import { searchHospitalsAndTreatments } from "./dbSearch";
+import { searchExternal } from "./externalSearch";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -160,29 +162,44 @@ export function buildContext(chunks: any[]) {
   return { text: lines.join("\n\n"), hasTier3, usedPatternIds };
 }
 
-export function buildSystemPrompt(contextText: string, hasTier3: boolean): string {
+export function buildSystemPrompt(
+  contextText: string,
+  hasTier3: boolean,
+  useWebSearch = false,
+  externalSources: string[] = [],
+): string {
+  const hasContext = !!contextText;
+  const hasDbData = contextText.includes("HEALO 등록");
+  const hasHira = externalSources.includes("hira");
+  const hasNaver = externalSources.includes("naver");
+
   return [
-    "You are a medical concierge assistant for HEALO, a platform connecting international patients with Korean hospitals.",
+    "You are HEALO's AI agent — a medical concierge connecting international patients with Korean hospitals.",
+    "",
+    "RESPONSE RULES:",
+    "- Keep answers SHORT and scannable: max 3-4 sentences per point, use bullet points.",
+    "- Lead with the recommendation, skip lengthy introductions.",
+    "- Respond in the same language the user writes in.",
     "",
     "CORE BEHAVIOR:",
-    "- ACTIVELY recommend specific hospitals, treatments, and programs from the provided Context.",
-    "- When the user describes symptoms, goals, or interests, match them to relevant hospitals/treatments in the Context and present them as recommendations.",
-    "- Include key details: hospital name, treatment name, estimated price range, specialties, and any distinguishing features.",
-    "- If multiple options exist, compare them briefly so the user can make an informed choice.",
-    "- Present recommendations confidently but note that prices are estimates and details should be confirmed through an inquiry.",
+    "- Recommend specific hospitals, treatments, and programs from the Context.",
+    "- Include: hospital name, key specialty, estimated price range.",
+    "- If multiple options, present as a brief comparison list.",
+    "- After recommendations, suggest submitting an inquiry for a personalized quote.",
     "",
-    "GUIDELINES:",
-    "- Respond in the same language the user is writing in.",
-    "- Ask clarifying questions when the user's needs are too vague to match (e.g., budget, specific condition, preferred location).",
-    "- Do NOT provide medical diagnosis or guarantee treatment outcomes.",
-    "- After giving recommendations, suggest submitting an inquiry for a personalized quote or connecting with a HEALO coordinator for more details.",
-    "- When citing context, prefer higher-tier (Tier 1/2) sources over lower-tier (Tier 3) sources.",
-    "- If the user explicitly asks for a human agent, respond that you will connect them with a coordinator.",
+    "SOURCE LABELING (IMPORTANT):",
+    hasDbData ? "- [HEALO 등록 병원] / [HEALO 등록 시술/프로그램]: HEALO's verified partner database. Present confidently." : "",
+    hasHira ? "- [공공 의료데이터 - HIRA]: Official Korean government medical data. Present as reliable public data." : "",
+    hasNaver ? "- [네이버 검색]: Naver local search results. Mention it's from Naver search." : "",
+    useWebSearch ? "- [웹 검색 - 미검증]: Google Search results — clearly state: '웹 검색 결과입니다. HEALO에서 직접 검증한 정보가 아니므로 참고용으로 활용해 주세요.' (translate to user's language)" : "",
     "",
-    contextText ? "Context:\n" + contextText : "(No hospital/treatment data available for this query. Guide the user to submit an inquiry so the HEALO team can help.)",
-    hasTier3
-      ? "\nNOTE: Some context is from public/unverified sources (Tier 3). When using Tier 3 information, briefly note it is based on publicly available information."
-      : "",
+    "SAFETY:",
+    "- No medical diagnosis or outcome guarantees.",
+    "- If the user asks for a human, connect them with a HEALO coordinator.",
+    "",
+    hasContext ? "Context:\n" + contextText : "",
+    useWebSearch ? "No internal or public data found. Use Google Search to find relevant Korean hospitals and treatments. Present findings concisely. ALWAYS add a disclaimer that these are unverified web search results." : "",
+    hasTier3 ? "\nNote: Some info is from public sources (Tier 3) — briefly note when citing." : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -290,7 +307,33 @@ export async function generateChatReply(
     const ragChunks = await fetchRagChunks(query, lang, threadId);
     ragScoring = ragChunks.length > 0 ? "vector_cosine_similarity" : "no_results";
     const { text: contextText, hasTier3, usedPatternIds: injectedPatternIds } = buildContext(ragChunks);
-    const systemPrompt = buildSystemPrompt(contextText, hasTier3);
+
+    // 2단계: DB 직접 검색 폴백 (RAG 결과가 부족할 때)
+    let dbContext = "";
+    if (ragChunks.length < 2) {
+      const dbResult = await searchHospitalsAndTreatments(query);
+      dbContext = dbResult.context;
+    }
+
+    const internalContext = [contextText, dbContext].filter(Boolean).join("\n");
+
+    // 3단계: 외부 API (HIRA + 네이버) 병렬 검색 — 내부 결과 부족 시
+    let externalContext = "";
+    let externalSources: string[] = [];
+    if (!internalContext) {
+      try {
+        const ext = await searchExternal(query);
+        externalContext = ext.context;
+        externalSources = ext.sources;
+      } catch (e) {
+        console.error("[generateReply] external search failed:", e);
+      }
+    }
+
+    const allContext = [internalContext, externalContext].filter(Boolean).join("\n\n");
+    // 4단계: Google Search — 내부 + 외부 모두 결과 없을 때만
+    const useWebSearch = !allContext;
+    const systemPrompt = buildSystemPrompt(allContext, hasTier3, useWebSearch, externalSources);
     const retrievedPatternIds = extractRetrievedPatternIds(ragChunks);
 
     const model = getModel();
@@ -318,6 +361,7 @@ export async function generateChatReply(
       model,
       system: fullSystemPrompt,
       messages: messages as any,
+      providerOptions: useWebSearch ? { google: { useSearchGrounding: true } } : undefined,
     });
 
     let finalReply: string;

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 import { buildDocument } from "./buildDocument";
 import { chunkText } from "./chunker";
+import { getEmbedding } from "../chat/generateReply";
 
 type SourceType =
   | "treatment"
@@ -118,18 +119,33 @@ const upsertDocumentAndChunks = async (doc: {
 
     const chunks = chunkText(doc.content);
     if (chunks.length > 0) {
-      const payload = chunks.map((chunk) => ({
-        document_id: documentId,
-        chunk_index: chunk.index,
-        content: chunk.content,
-        metadata: {
-          source_type: doc.source_type,
-          source_id: doc.source_id,
-          lang: doc.lang,
-          title: doc.title,
-          version,
-        },
-      }));
+      const payload = [];
+      for (const chunk of chunks) {
+        let embedding: number[] | null = null;
+        try {
+          embedding = await getEmbedding(chunk.content);
+        } catch (e) {
+          console.warn("[ingest] embedding failed for chunk, skipping:", e);
+        }
+        payload.push({
+          document_id: documentId,
+          chunk_index: chunk.index,
+          content: chunk.content,
+          ...(embedding ? {
+            embedding: JSON.stringify(embedding),
+            embedding_model: "gemini-embedding-001",
+            embedded_at: nowIso(),
+          } : {}),
+          metadata: {
+            source_type: doc.source_type,
+            source_id: doc.source_id,
+            lang: doc.lang,
+            title: doc.title,
+            version,
+            ingest_status: "done",
+          },
+        });
+      }
       const { error } = await supabaseAdmin.from("rag_chunks").insert(payload);
       if (error) throw error;
     }

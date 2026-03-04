@@ -2,17 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowRight, AlertCircle, Loader2, User, Bot } from "lucide-react";
-import { getLangCodeFromCookie } from "../../src/lib/i18n";
+import { getLangCodeFromCookie, t } from "../../src/lib/i18n";
 
 export function ThreadChat() {
   const [threadId, setThreadId] = useState(null);
   const [publicToken, setPublicToken] = useState(null);
+  const langCode = getLangCodeFromCookie();
   const [messages, setMessages] = useState([
     {
       id: "intro",
       role: "assistant",
-      content:
-        "Hello! I'm HEALO AI assistant. I can help you find the right treatment or hospital in Korea. What are you looking for?",
+      content: t("chat.intro", langCode),
     },
   ]);
   const [input, setInput] = useState("");
@@ -155,7 +155,7 @@ export function ThreadChat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-          placeholder="Ask about treatments, hospitals, or pricing..."
+          placeholder={t("chat.placeholder", langCode)}
           className="w-full border border-gray-300 rounded-full py-3 px-5 pr-12 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
           disabled={sending}
         />
@@ -171,8 +171,7 @@ export function ThreadChat() {
       <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start gap-2.5 text-left">
         <AlertCircle size={16} className="text-gray-500 shrink-0 mt-0.5" />
         <p className="text-xs text-gray-600 leading-relaxed">
-          <span className="font-bold text-gray-800">Note:</span> AI may produce inaccurate information.
-          This is not medical advice. All conversations are saved to improve our service.
+          <span className="font-bold text-gray-800">{t("chat.noteLabel", langCode)}</span> {t("chat.noteText", langCode)}
         </p>
       </div>
     </div>

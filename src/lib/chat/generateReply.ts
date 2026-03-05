@@ -165,9 +165,10 @@ export function buildContext(chunks: any[]) {
 const HOSPITAL_HARD_GUARD = [
   "",
   "⚠️ STRICT HOSPITAL QUERY RULES (OVERRIDE ALL OTHER RULES):",
+  "- PRESERVE THE USER'S ORIGINAL HOSPITAL NAME EXACTLY. Do NOT auto-correct, spell-fix, or replace it (e.g. do NOT change '면력' to '면역'). Use the name as-is.",
   "- You MUST ONLY mention hospitals that appear in the [HEALO 등록 병원] section of the Context above.",
   "- Do NOT mention, recommend, or compare ANY hospital NOT listed in the Context.",
-  "- Do NOT generate facts not present in the Context (doctor count, treatment protocols, success rates, founding year, etc.). For missing details, say '확인 필요' (or equivalent in the user's language).",
+  "- Do NOT generate facts not present in the Context (doctor count, treatment protocols, success rates, founding year, price ranges, etc.). For missing details, say '확인 필요' (or equivalent in the user's language).",
   "- Do NOT use external knowledge about this hospital. ONLY use the Context.",
   "- Response format:",
   "  1) Hospital name (number of branches if multiple listed)",
@@ -350,12 +351,13 @@ export async function generateChatReply(
     const { text: contextText, hasTier3, usedPatternIds: injectedPatternIds } = buildContext(ragChunks);
     const dbContext = dbResult.context;
     const matchedHospitalNames = dbResult.matchedHospitalNames ?? [];
+    const hospitalMatchType = dbResult.hospitalMatchType ?? "none";
 
     const HOSPITAL_KEYWORDS = /병원|의원|한방병원|클리닉|clinic|hospital/i;
     const hospitalIntent = HOSPITAL_KEYWORDS.test(query) || matchedHospitalNames.length > 0;
     const hospitalGuardActive = hospitalIntent && matchedHospitalNames.length > 0;
 
-    console.log(`[generateReply] query="${query.slice(0, 80)}" | hospitalIntent=${hospitalIntent} | dbHospitals=${matchedHospitalNames.length} | ragChunks=${ragChunks.length}`);
+    console.log(`[generateReply] query="${query.slice(0, 80)}" | hospitalIntent=${hospitalIntent} | matchType=${hospitalMatchType} | dbHospitals=${matchedHospitalNames.length} | ragChunks=${ragChunks.length}`);
     if (matchedHospitalNames.length > 0) {
       console.log(`[generateReply] matchedHospitals:`, matchedHospitalNames);
     }

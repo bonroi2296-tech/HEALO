@@ -48,11 +48,13 @@ const jsonError = (
   detail?: string,
   meta?: Record<string, any>
 ) => {
+  console.error(`[api/chat] jsonError ${status} ${code}:`, detail, meta);
   return Response.json(
     {
       ok: false,
       error: code,
-      ...(isProd ? {} : { detail, meta }),
+      detail: detail || undefined,
+      ...(isProd ? {} : { meta }),
     },
     { status }
   );
@@ -297,12 +299,12 @@ export async function POST(request: Request) {
 
   // 1단계: HEALO DB 직접 검색 (최우선) + RAG 벡터 검색 (병렬 실행)
   const [dbResult, ragResult] = await Promise.all([
-    searchHospitalsAndTreatments(query).catch((e) => {
-      console.error("[api/chat] db search failed:", e);
-      return { context: "", hospitalCount: 0, treatmentCount: 0 } as const;
+    searchHospitalsAndTreatments(query).catch((e: any) => {
+      console.error("[api/chat] db search failed:", e?.message || e);
+      return { context: "", hospitalCount: 0, treatmentCount: 0, matchedHospitalNames: [] as string[], hospitalMatchType: "none" as const };
     }),
-    safeRagSearch({ query, lang: lang || "en", matchCount: 6 }).catch((e) => {
-      console.error("[api/chat] rag search failed:", e);
+    safeRagSearch({ query, lang: lang || "en", matchCount: 6 }).catch((e: any) => {
+      console.error("[api/chat] rag search failed:", e?.message || e);
       return [] as any[];
     }),
   ]);
@@ -312,6 +314,7 @@ export async function POST(request: Request) {
   const dbContext = dbResult.context;
   const dbHospitalCount = dbResult.hospitalCount + dbResult.treatmentCount;
   const matchedHospitalNames = dbResult.matchedHospitalNames ?? [];
+  const hospitalMatchType = dbResult.hospitalMatchType ?? "none";
 
   // hospital_intent 감지: 병원명 질문인지 판별
   const HOSPITAL_KEYWORDS = /병원|의원|한방병원|클리닉|clinic|hospital/i;
@@ -319,7 +322,7 @@ export async function POST(request: Request) {
   const hospitalGuardActive = hospitalIntent && matchedHospitalNames.length > 0;
 
   // 진단 로그
-  console.log(`[api/chat] query="${query.slice(0, 80)}" | hospitalIntent=${hospitalIntent} | dbHospitals=${matchedHospitalNames.length} | ragChunks=${ragChunks.length}`);
+  console.log(`[api/chat] query="${query.slice(0, 80)}" | hospitalIntent=${hospitalIntent} | matchType=${hospitalMatchType} | dbHospitals=${matchedHospitalNames.length} | ragChunks=${ragChunks.length}`);
   if (matchedHospitalNames.length > 0) {
     console.log(`[api/chat] matchedHospitals:`, matchedHospitalNames);
   }
@@ -351,9 +354,10 @@ export async function POST(request: Request) {
   const HOSPITAL_HARD_GUARD = [
     "",
     "⚠️ STRICT HOSPITAL QUERY RULES (OVERRIDE ALL OTHER RULES):",
+    "- PRESERVE THE USER'S ORIGINAL HOSPITAL NAME EXACTLY. Do NOT auto-correct, spell-fix, or replace it (e.g. do NOT change '면력' to '면역'). Use the name as-is.",
     "- You MUST ONLY mention hospitals that appear in the [HEALO 등록 병원] section of the Context above.",
     "- Do NOT mention, recommend, or compare ANY hospital NOT listed in the Context.",
-    "- Do NOT generate facts not present in the Context (doctor count, treatment protocols, success rates, founding year, etc.). For missing details, say '확인 필요' (or equivalent in the user's language).",
+    "- Do NOT generate facts not present in the Context (doctor count, treatment protocols, success rates, founding year, price ranges, etc.). For missing details, say '확인 필요' (or equivalent in the user's language).",
     "- Do NOT use external knowledge about this hospital. ONLY use the Context.",
     "- Response format:",
     "  1) Hospital name (number of branches if multiple listed)",
@@ -415,13 +419,16 @@ export async function POST(request: Request) {
       messages: messages as any,
       providerOptions: useWebSearch ? { google: { useSearchGrounding: true } } : undefined,
       onError: ({ error }) => {
-        console.error("[api/chat] stream error:", error);
+        console.error("[api/chat] stream onError:", error instanceof Error ? error.message : error);
       },
     });
     return result.toDataStreamResponse();
   } catch (error: any) {
-    console.error("[api/chat] LLM error:", error);
+    const errMsg = error?.message || String(error);
+    const errStack = error?.stack || "";
+    console.error(`[api/chat] LLM FATAL: ${errMsg}`);
+    if (errStack) console.error(`[api/chat] stack: ${errStack.slice(0, 500)}`);
     const classified = classifyGoogleError(error);
-    return jsonError(classified.status, classified.code, classified.message);
+    return jsonError(classified.status, classified.code, errMsg);
   }
 }

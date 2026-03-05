@@ -77,11 +77,33 @@ export function ThreadChat() {
         }),
       });
 
-      const json = await res.json();
-      if (!json.ok) {
+      let json;
+      try {
+        json = await res.json();
+      } catch (parseErr) {
+        console.error("[ThreadChat] response parse failed:", parseErr, "status:", res.status);
         setMessages((prev) => [
           ...prev,
-          { id: `err_${Date.now()}`, role: "assistant", content: `Error: ${json.error}. Please try again.` },
+          { id: `err_${Date.now()}`, role: "assistant", content: t("chat.errorRetry", langCode) || "Something went wrong. Please try again." },
+        ]);
+        return;
+      }
+
+      console.log("[ThreadChat] response:", { status: res.status, ok: json.ok, hasReply: !!json.reply, aiError: json.ai_error || null });
+
+      if (!res.ok || !json.ok) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `err_${Date.now()}`, role: "assistant", content: `Error: ${json.error || res.statusText}. Please try again.` },
+        ]);
+        return;
+      }
+
+      if (json.ai_error) {
+        console.warn("[ThreadChat] AI returned error reply:", json.ai_error);
+        setMessages((prev) => [
+          ...prev,
+          { id: `ai_${Date.now()}`, role: "assistant", content: t("chat.aiUnavailable", langCode) || "I'm having trouble generating a response right now. Please try again in a moment, or submit an inquiry form for a faster reply." },
         ]);
         return;
       }
@@ -95,9 +117,10 @@ export function ThreadChat() {
         setHandOff(true);
       }
     } catch (e) {
+      console.error("[ThreadChat] unexpected error:", e);
       setMessages((prev) => [
         ...prev,
-        { id: `err_${Date.now()}`, role: "assistant", content: "Something went wrong. Please try again." },
+        { id: `err_${Date.now()}`, role: "assistant", content: t("chat.errorRetry", langCode) || "Something went wrong. Please try again." },
       ]);
     } finally {
       setSending(false);

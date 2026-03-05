@@ -141,7 +141,8 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
     setPage(0);
     setHasMore(true);
     fetchItems(false);
-  }, [type, activeTag, searchQuery, fetchItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, activeTag, searchQuery]);
 
   const chips = TAG_CHIPS[type] || [];
 
@@ -227,21 +228,47 @@ export default function PaginatedListClient({ type, title, withCta = false }) {
         </div>
       )}
 
-      {!loading && items.length > 0 && (
+      {!loading && items.length > 0 && type === "hospital" ? (() => {
+        const partnerItems = items.filter(item => item.is_partner);
+        const otherItems = items.filter(item => !item.is_partner);
+        const handleClick = (id) => {
+          const item = items.find((entry) => entry.id === id);
+          router.push(`/hospitals/${item?.slug || item?.id || id}`);
+        };
+        return (
+          <>
+            {partnerItems.length > 0 && (
+              <CardListSection
+                title={t("home.partnerHospitals", lang)}
+                items={partnerItems}
+                onCardClick={handleClick}
+                type="hospital"
+                showPartnerBadge
+              />
+            )}
+            {otherItems.length > 0 && (
+              <CardListSection
+                title={t("home.otherHospitals", lang)}
+                items={otherItems}
+                onCardClick={handleClick}
+                type="hospital"
+                showPartnerBadge={false}
+              />
+            )}
+          </>
+        );
+      })() : !loading && items.length > 0 ? (
       <CardListSection
         title={localTitle}
         items={items}
         onCardClick={(id) => {
           const item = items.find((entry) => entry.id === id);
           const slugOrId = item?.slug || item?.id || id;
-          router.push(
-            `/${type === "treatment" ? "treatments" : "hospitals"}/${slugOrId}`
-          );
+          router.push(`/treatments/${slugOrId}`);
         }}
         type={type}
-        showPartnerBadge={type === "hospital"}
       />
-      )}
+      ) : null}
       {isDev && itemsError && (
         <div className="max-w-6xl mx-auto px-4 mt-2">
           <p className="text-xs text-red-500">Error: {itemsError.message}</p>

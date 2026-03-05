@@ -69,17 +69,19 @@ export interface DbSearchResult {
   context: string;
   hospitalCount: number;
   treatmentCount: number;
+  matchedHospitalNames: string[];
 }
 
 export async function searchHospitalsAndTreatments(
   query: string
 ): Promise<DbSearchResult> {
   const keywords = extractKeywords(query);
-  if (keywords.length === 0) return { context: "", hospitalCount: 0, treatmentCount: 0 };
+  if (keywords.length === 0) return { context: "", hospitalCount: 0, treatmentCount: 0, matchedHospitalNames: [] };
 
   let context = "";
   let hospitalCount = 0;
   let treatmentCount = 0;
+  let matchedHospitalNames: string[] = [];
 
   try {
     const hospFilter = buildHospitalFilter(keywords);
@@ -93,8 +95,10 @@ export async function searchHospitalsAndTreatments(
 
     if (hospitals?.length) {
       hospitalCount = hospitals.length;
+      matchedHospitalNames = hospitals.map((h: any) => h.name);
       context +=
         "\n[HEALO 등록 병원]\n" + hospitals.map(formatHospital).join("\n");
+      console.log(`[dbSearch] matched hospitals (${hospitalCount}):`, matchedHospitalNames);
     }
   } catch (e) {
     console.error("[dbSearch] hospital search failed:", e);
@@ -121,5 +125,5 @@ export async function searchHospitalsAndTreatments(
     console.error("[dbSearch] treatment search failed:", e);
   }
 
-  return { context, hospitalCount, treatmentCount };
+  return { context, hospitalCount, treatmentCount, matchedHospitalNames };
 }

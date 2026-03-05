@@ -295,31 +295,43 @@ export async function POST(request: Request) {
     });
   }
 
-  // RAG retrieval — RPC 전용 (무필터 fallback 금지)
-  let ragChunks: any[] = [];
-  try {
-    ragChunks = await safeRagSearch({ query, lang: lang || "en", matchCount: 6 });
-  } catch (error) {
-    console.error("[api/chat] rag search failed:", error);
-  }
+  // 1단계: HEALO DB 직접 검색 (최우선) + RAG 벡터 검색 (병렬 실행)
+  const [dbResult, ragResult] = await Promise.all([
+    searchHospitalsAndTreatments(query).catch((e) => {
+      console.error("[api/chat] db search failed:", e);
+      return { context: "", hospitalCount: 0, treatmentCount: 0 } as const;
+    }),
+    safeRagSearch({ query, lang: lang || "en", matchCount: 6 }).catch((e) => {
+      console.error("[api/chat] rag search failed:", e);
+      return [] as any[];
+    }),
+  ]);
 
+  const ragChunks = ragResult;
   const { text: contextText, hasTier3 } = buildContext(ragChunks);
+  const dbContext = dbResult.context;
+  const dbHospitalCount = dbResult.hospitalCount + dbResult.treatmentCount;
+  const matchedHospitalNames = dbResult.matchedHospitalNames ?? [];
 
-  // 2단계: DB 직접 검색 폴백 (RAG 결과가 부족할 때)
-  let dbContext = "";
-  let dbHospitalCount = 0;
-  if (ragChunks.length < 2) {
-    const dbResult = await searchHospitalsAndTreatments(query);
-    dbContext = dbResult.context;
-    dbHospitalCount = dbResult.hospitalCount + dbResult.treatmentCount;
+  // hospital_intent 감지: 병원명 질문인지 판별
+  const HOSPITAL_KEYWORDS = /병원|의원|한방병원|클리닉|clinic|hospital/i;
+  const hospitalIntent = HOSPITAL_KEYWORDS.test(query) || matchedHospitalNames.length > 0;
+  const hospitalGuardActive = hospitalIntent && matchedHospitalNames.length > 0;
+
+  // 진단 로그
+  console.log(`[api/chat] query="${query.slice(0, 80)}" | hospitalIntent=${hospitalIntent} | dbHospitals=${matchedHospitalNames.length} | ragChunks=${ragChunks.length}`);
+  if (matchedHospitalNames.length > 0) {
+    console.log(`[api/chat] matchedHospitals:`, matchedHospitalNames);
   }
+  console.log(`[api/chat] context preview: db=${dbContext.length}chars, rag=${contextText.length}chars`);
 
-  const internalContext = [contextText, dbContext].filter(Boolean).join("\n");
+  // DB 결과를 RAG보다 앞에 배치 (HEALO 등록 데이터 우선)
+  const internalContext = [dbContext, contextText].filter(Boolean).join("\n");
 
-  // 3단계: 외부 API (HIRA + 네이버) 병렬 검색 — 내부 결과 부족 시
+  // 외부 검색: hospital_intent+DB매칭 시 외부 검색 차단 (환각 방지)
   let externalContext = "";
   let externalSources: string[] = [];
-  if (!internalContext) {
+  if (!internalContext && !hospitalGuardActive) {
     try {
       const ext = await searchExternal(query);
       externalContext = ext.context;
@@ -331,10 +343,34 @@ export async function POST(request: Request) {
 
   const allContext = [internalContext, externalContext].filter(Boolean).join("\n\n");
   const hasAnyContext = allContext.length > 0;
-  // 4단계: Google Search Grounding — 내부 DB + 외부 API 모두 결과 없을 때만
-  const useWebSearch = !hasAnyContext;
+  // Google Search: hospital_intent+DB매칭 시 웹 검색도 차단
+  const useWebSearch = !hasAnyContext && !hospitalGuardActive;
 
   const hasDbData = dbHospitalCount > 0;
+
+  const HOSPITAL_HARD_GUARD = [
+    "",
+    "⚠️ STRICT HOSPITAL QUERY RULES (OVERRIDE ALL OTHER RULES):",
+    "- You MUST ONLY mention hospitals that appear in the [HEALO 등록 병원] section of the Context above.",
+    "- Do NOT mention, recommend, or compare ANY hospital NOT listed in the Context.",
+    "- Do NOT generate facts not present in the Context (doctor count, treatment protocols, success rates, founding year, etc.). For missing details, say '확인 필요' (or equivalent in the user's language).",
+    "- Do NOT use external knowledge about this hospital. ONLY use the Context.",
+    "- Response format:",
+    "  1) Hospital name (number of branches if multiple listed)",
+    "  2) Branch list: branch name + location (only if present in Context)",
+    "  3) Key treatments/specialties (only if present in Context)",
+    "  4) Next step: 'HEALO를 통해 자세한 상담을 받아보세요' (translate to user's language). Do NOT suggest direct contact.",
+    "",
+  ].join("\n");
+
+  const HOSPITAL_NO_MATCH_GUARD = [
+    "",
+    "⚠️ HOSPITAL NOT FOUND IN HEALO:",
+    "- State clearly: 'HEALO에 등록된 정보가 없습니다' (translate to user's language).",
+    "- Do NOT fabricate hospital details. Do NOT hallucinate.",
+    "- You may use RAG/external context below, but prefix with '참고 정보 (HEALO 미등록):' and add disclaimer.",
+    "",
+  ].join("\n");
 
   const systemPrompt = [
     "You are HEALO's AI agent — a medical concierge connecting international patients with Korean hospitals.",
@@ -344,11 +380,11 @@ export async function POST(request: Request) {
     "- Lead with the recommendation, skip lengthy introductions.",
     "- Respond in the same language the user writes in.",
     "",
-    "CORE BEHAVIOR:",
-    "- Recommend specific hospitals, treatments, and programs from the Context.",
-    "- Include: hospital name, key specialty, estimated price range.",
-    "- If multiple options, present as a brief comparison list.",
-    "- After recommendations, suggest submitting an inquiry for a personalized quote.",
+    hospitalGuardActive ? "" : "CORE BEHAVIOR:",
+    hospitalGuardActive ? "" : "- Recommend specific hospitals, treatments, and programs from the Context.",
+    hospitalGuardActive ? "" : "- Include: hospital name, key specialty, estimated price range.",
+    hospitalGuardActive ? "" : "- If multiple options, present as a brief comparison list.",
+    hospitalGuardActive ? "" : "- After recommendations, suggest submitting an inquiry for a personalized quote.",
     "",
     "SOURCE LABELING (IMPORTANT):",
     hasDbData ? "- [HEALO 등록 병원] / [HEALO 등록 시술/프로그램]: HEALO's verified partner database. Present confidently." : "",
@@ -359,6 +395,8 @@ export async function POST(request: Request) {
     "SAFETY:",
     "- No medical diagnosis or outcome guarantees.",
     "- If the user asks for a human, connect them with a HEALO coordinator.",
+    hospitalGuardActive ? HOSPITAL_HARD_GUARD : "",
+    hospitalIntent && matchedHospitalNames.length === 0 ? HOSPITAL_NO_MATCH_GUARD : "",
     "",
     hasAnyContext ? "Context:\n" + allContext : "",
     useWebSearch ? "No internal or public data found. Use Google Search to find relevant Korean hospitals and treatments. Present findings concisely. ALWAYS add a disclaimer that these are unverified web search results." : "",

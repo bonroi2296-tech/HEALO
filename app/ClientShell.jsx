@@ -17,6 +17,9 @@ import ErrorBoundary from "../src/components/ErrorBoundary";
 import { useToast } from "../src/components/Toast";
 import CookieConsent from "../src/components/CookieConsent";
 
+/** 사이트 하단 푸터 표시 여부 (시연 등에서 끄려면 false) */
+const SHOW_SITE_FOOTER = false;
+
 export default function ClientShell({ children }) {
   const router = useRouter();
   const pathname = usePathname() || "/";
@@ -257,7 +260,7 @@ function ClientShellContent({
         <main className={isPortalPage ? "" : "pb-24 pb-safe-area"}>{children}</main>
       </ErrorBoundary>
 
-      {!isPortalPage && <footer className="bg-white border-t border-gray-100 pt-safe-area">
+      {SHOW_SITE_FOOTER && !isPortalPage && <footer className="bg-white border-t border-gray-100 pt-safe-area">
         <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 text-sm text-gray-600">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
